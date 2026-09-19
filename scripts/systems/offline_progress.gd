@@ -6,8 +6,10 @@ const MAX_AWAY: float = 28800.0
 static func advance(source: Dictionary, now: float) -> Dictionary:
 	var data := SaveMigration.upgrade(source)
 	var away: float = maxf(0.0, now - float(data.get("saved_at", now)))
-	var elapsed: float = minf(away, MAX_AWAY) * ActivityPace.IDLE_RATE
-	var report := {"away": away, "simulated": elapsed, "capped": away > MAX_AWAY,
+	var idle_level: int = int(data.get("asset_levels", {}).get("idle_duration", 0))
+	var away_limit: float = IdleAssets.idle_limit_for(idle_level)
+	var elapsed: float = minf(away, away_limit) * ActivityPace.IDLE_RATE
+	var report := {"away": away, "simulated": elapsed, "capped": away > away_limit, "away_limit": away_limit,
 		"first_loss_at": -1.0, "first_water_loss_at": -1.0, "first_old_age_loss_at": -1.0, "stock_empty_at": -1.0, "earned": 0, "collected": 0, "fed": 0, "stock_used": 0, "growth": 0, "mutations": 0, "lost": 0, "water_lost": 0, "old_age_lost": 0, "waste": 0, "spoiled": 0}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(JSON.stringify(source))

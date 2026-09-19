@@ -18,6 +18,9 @@ func run() -> void:
 	check(not BackupValidation.parse(JSON.stringify(tank.snapshot())).is_empty(), "backup stays valid before feeder purchase")
 	var data: Dictionary = tank.snapshot()
 	data.saved_at = 1000.0
+	var locked := OfflineProgress.advance(data, 1200.0)
+	check(locked.report.simulated == 0.0 and locked.report.away_limit == 0.0 and locked.report.capped, "new tanks begin with offline simulation locked")
+	data.asset_levels.idle_duration = 4
 	for fish in data.fish:
 		fish.hunger = 0.0
 		fish.coin_left = 20.0

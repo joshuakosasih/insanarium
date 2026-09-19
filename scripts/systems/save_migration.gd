@@ -49,6 +49,9 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	levels["puffer_speed"] = clampi(int(levels.get("puffer_speed", 0)), 0, 4)
 	levels["puffer_curiosity"] = clampi(int(levels.get("puffer_curiosity", 0)), 0, 4)
 	levels["coin_lifetime"] = clampi(int(levels.get("coin_lifetime", 0)), 0, 4)
+	levels["idle_duration"] = clampi(int(levels.get("idle_duration", 0)), 0, 4)
+	levels["bubble_capacity"] = clampi(int(levels.get("bubble_capacity", 0)), 0, 4)
+	levels["bubble_value"] = clampi(int(levels.get("bubble_value", 0)), 0, 4)
 	if not owned.get("snail", false):
 		levels.snail_speed = 0
 		levels.snail_stamina = 0

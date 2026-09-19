@@ -9,9 +9,14 @@ const SNAIL_SLEEPS := [20.0, 15.0, 11.0, 8.0, 5.0]
 const PUFFER_SPEEDS := [45.0, 60.0, 78.0, 100.0, 125.0]
 const PUFFER_CURIOSITIES := [0.30, 0.45, 0.60, 0.80, 1.0]
 const COIN_LIFETIMES := [8.0, 15.0, 25.0, 45.0, 75.0]
+const IDLE_LIMITS := [0.0, 300.0, 1800.0, 7200.0, 28800.0]
+const BUBBLE_CAPACITIES := [1, 2, 3, 5, 8]
+const BUBBLE_MULTIPLIERS := [1.0, 1.5, 2.25, 3.5, 5.0]
+const IDLE_UPGRADE_PRICES := [100, 250, 625, 1565]
+const BUBBLE_UPGRADE_PRICES := [75, 190, 475, 1190]
 const MAX_UPGRADE_LEVEL: int = 4
 var owned: Dictionary = {"snail": false, "seahorse": false, "puffer": false, "feeder": false}
-var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0}
+var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
 var reserve: Array[int] = []
 var feeder_left: float = 2.0
 const CAPACITY: int = 200
@@ -30,7 +35,13 @@ func upgrade_price(track: String) -> int:
 	if track.begins_with("puffer_") and not owned.puffer:
 		return 0
 	var level: int = int(levels[track])
-	return UPGRADE_PRICES[level] if level < MAX_UPGRADE_LEVEL else 0
+	if level >= MAX_UPGRADE_LEVEL:
+		return 0
+	if track == "idle_duration":
+		return IDLE_UPGRADE_PRICES[level]
+	if track.begins_with("bubble_"):
+		return BUBBLE_UPGRADE_PRICES[level]
+	return UPGRADE_PRICES[level]
 
 func upgrade(track: String, economy: Economy) -> bool:
 	var price := upgrade_price(track)
@@ -59,6 +70,18 @@ func coin_lifetime() -> float:
 
 static func coin_lifetime_for(level: int) -> float:
 	return COIN_LIFETIMES[clampi(level, 0, MAX_UPGRADE_LEVEL)]
+
+func idle_limit() -> float:
+	return idle_limit_for(int(levels.idle_duration))
+
+static func idle_limit_for(level: int) -> float:
+	return IDLE_LIMITS[clampi(level, 0, MAX_UPGRADE_LEVEL)]
+
+func bubble_capacity() -> int:
+	return BUBBLE_CAPACITIES[clampi(int(levels.bubble_capacity), 0, MAX_UPGRADE_LEVEL)]
+
+func bubble_multiplier() -> float:
+	return BUBBLE_MULTIPLIERS[clampi(int(levels.bubble_value), 0, MAX_UPGRADE_LEVEL)]
 
 func restock(tier: int, feeds: Array[FeedProfile], economy: Economy) -> bool:
 	if not owned.feeder or tier < 0 or tier >= feeds.size():

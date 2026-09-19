@@ -4,7 +4,8 @@ extends RefCounted
 static func assess(data: Dictionary) -> Dictionary:
 	var checkpoint: Dictionary = data.duplicate(true)
 	checkpoint.saved_at = 0.0
-	var result := OfflineProgress.advance(checkpoint, OfflineProgress.MAX_AWAY)
+	var limit: float = IdleAssets.idle_limit_for(int(data.get("asset_levels", {}).get("idle_duration", 0)))
+	var result := OfflineProgress.advance(checkpoint, limit)
 	var profile := FishProfile.new()
 	# Fish eat at the hunger threshold; early meals cannot use all pellet nutrition.
 	var meal_relief: float = minf(profile.hungry_threshold, FeedProfile.new().nutrition)
@@ -15,27 +16,31 @@ static func assess(data: Dictionary) -> Dictionary:
 	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + (0.125 if data.owned.seahorse else 0.0)
 	return {"count": data.fish.size(), "stock": data.reserve.size(),
 		"demand": demand * 60.0, "supply": supply * 60.0,
-		"adequate": supply >= demand, "report": result.report}
+		"adequate": supply >= demand, "report": result.report, "away_limit": limit}
 
 static func forecast_text(care: Dictionary) -> String:
 	if care.count == 0:
 		return "No fish to care for. Pop income bubbles to rebuild your tank."
 	var report: Dictionary = care.report
-	var coverage: String = "No starvation predicted within 8h away."
+	var away_limit: float = float(care.get("away_limit", 0.0))
+	if away_limit <= 0.0:
+		return "Offline simulation is locked. Upgrade Away Time in the shop before leaving this tank unattended."
+	var horizon: String = duration(away_limit)
+	var coverage: String = "No starvation predicted within %s away." % horizon
 	if report.first_loss_at >= 0.0:
 		coverage = "First starvation risk in about %s away." % duration(report.first_loss_at / ActivityPace.IDLE_RATE)
-	var stock: String = "Reserve lasts beyond this 8h forecast."
+	var stock: String = "Reserve lasts beyond this %s forecast." % horizon
 	if care.stock == 0:
 		stock = "No stocked pellets available."
 	elif report.stock_empty_at >= 0.0:
 		stock = "Reserve runs out in about %s away (%s active)." % [duration(report.stock_empty_at / ActivityPace.IDLE_RATE), duration(report.stock_empty_at)]
-	var water: String = "No water-quality deaths predicted within 8h away."
+	var water: String = "No water-quality deaths predicted within %s away." % horizon
 	if report.first_water_loss_at >= 0.0:
 		water = "First water-quality loss in about %s away." % duration(report.first_water_loss_at / ActivityPace.IDLE_RATE)
-	var aging: String = "No old-age deaths predicted within 8h away."
+	var aging: String = "No old-age deaths predicted within %s away." % horizon
 	if report.first_old_age_loss_at >= 0.0:
 		aging = "First old-age loss in about %s away." % duration(report.first_old_age_loss_at / ActivityPace.IDLE_RATE)
-	return "%s\n%s\n%s\n%s\n8h estimate: %d meals, %d pellets used, %d fish lost." % [coverage, stock, water, aging, report.fed, report.stock_used, report.lost]
+	return "%s\n%s\n%s\n%s\n%s estimate: %d meals, %d pellets used, %d fish lost." % [coverage, stock, water, aging, horizon, report.fed, report.stock_used, report.lost]
 
 static func duration(seconds: float) -> String:
 	if seconds < 60.0:

@@ -23,4 +23,6 @@ static func catalog() -> Array[ShopItemDefinition]:
 		ShopItemDefinition.new("feeder", "Auto-feeder", "EQUIPMENT", "Uses purchased pellet stock to feed hungry fish automatically.", "feeder"),
 		ShopItemDefinition.new("stock", "Pellet stock", "SUPPLY", "Load up to 20 pellets of the currently unlocked feed into the auto-feeder.", "stock"),
 		ShopItemDefinition.new("feed", "Feed quality", "UPGRADE", "Permanently replace manual feed with the next quality tier.", "feed"),
-		ShopItemDefinition.new("coin_lifetime", "Coin preservation", "UPGRADE", "Increase how long coins and diamonds remain available before fading away.", "coin")]
+		ShopItemDefinition.new("coin_lifetime", "Coin lifetime", "UPGRADE", "Increase how long coins and diamonds remain available before fading away.", "coin"),
+		ShopItemDefinition.new("idle_duration", "Away time", "UPGRADE", "Unlock and extend the real time simulated after leaving the aquarium.", "clock"),
+		ShopItemDefinition.new("bubbles", "Income bubbles", "UPGRADE", "Increase the number of simultaneous bubbles and the value of every pop.", "bubble")]

@@ -6,9 +6,11 @@ const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
 const BubblePufferScript = preload("res://scripts/pets/bubble_puffer.gd")
 const FishTraitBarScript = preload("res://scripts/ui/fish_trait_bar.gd")
 const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
+const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation_gate.gd")
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
 var feeds: Array[FeedProfile] = FeedProfile.tiers()
+var hud_layer: CanvasLayer
 var feed_upgrades := FeedUpgrades.new()
 var feed_label: Label
 var feed_status: Label
@@ -79,6 +81,8 @@ func _ready() -> void:
 	economy = Economy.new()
 	add_child(economy)
 	build_hud()
+	get_tree().root.size_changed.connect(update_viewport_layout)
+	update_viewport_layout()
 	water_overlay = WaterQualityOverlay.new()
 	water_overlay.z_index = 8
 	add_child(water_overlay)
@@ -109,7 +113,7 @@ func _ready() -> void:
 func set_idle(idle: bool) -> void:
 	ActivityPace.set_idle(idle)
 	if is_instance_valid(pace_label):
-		pace_label.text = "AWAY · estimated at 0.1×" if idle else "ACTIVE · 1× simulation"
+		pace_label.text = "AWAY · 0.1× EST." if idle else "ACTIVE · 1×"
 	if not persistence or not offline_ready or applying_offline:
 		return
 	if idle and away_data.is_empty():
@@ -120,6 +124,13 @@ func set_idle(idle: bool) -> void:
 		var data: Dictionary = away_data
 		away_data = {}
 		apply_catchup(data)
+
+func update_viewport_layout() -> void:
+	# Stretch-aspect expand adds logical space on wide phones; keep the fixed tank centered.
+	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
+	position = Vector2(extra_width * 0.5, -70.0)
+	if is_instance_valid(hud_layer):
+		hud_layer.offset.x = extra_width * 0.5
 
 func apply_catchup(data: Dictionary) -> void:
 	applying_offline = true
@@ -162,7 +173,7 @@ Waste produced: %d · Pellets spoiled: %d
 Fish lost: %d · Water-quality: %d · Old age: %d
 
 Estimated care; no offline breeding or alien attacks." % [
-		FishInspector.duration(report.away), FishInspector.duration(report.simulated), " (8-hour cap)" if report.capped else "",
+		FishInspector.duration(report.away), FishInspector.duration(report.simulated), " (%s cap)" % FishInspector.duration(float(report.away_limit)) if report.capped else "",
 		report.earned, report.collected, report.fed, report.stock_used, report.growth, report.mutations, report.waste, report.spoiled, report.lost, report.water_lost, report.old_age_lost]
 	return_dialog.popup_centered(Vector2i(550, 360))
 
@@ -217,9 +228,10 @@ func restock() -> void:
 	update_money(economy.money)
 
 func spawn_income_bubble() -> IncomeBubble:
-	if get_tree().get_nodes_in_group("income_bubbles").size() >= 3:
+	if get_tree().get_nodes_in_group("income_bubbles").size() >= assets.bubble_capacity():
 		return null
 	var bubble := IncomeBubble.new()
+	bubble_rewards.multiplier = assets.bubble_multiplier()
 	bubble.value = bubble_rewards.roll(bubble_rng)
 	bubble.position = Vector2(bubble_rng.randf_range(120, 1020), bubble_rng.randf_range(615, 645))
 	bubble.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -602,6 +614,8 @@ func activate_shop_item() -> void:
 		"stock": restock()
 		"feed": purchase_feed_upgrade()
 		"coin_lifetime": purchase_upgrade("coin_lifetime")
+		"idle_duration": purchase_upgrade("idle_duration")
+		"bubbles": purchase_upgrade("bubble_capacity")
 	refresh_shop()
 
 func activate_shop_secondary() -> void:
@@ -609,6 +623,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("snail_stamina")
 	elif shop_selected_id == "puffer" and assets.owned.puffer:
 		purchase_upgrade("puffer_curiosity")
+	elif shop_selected_id == "bubbles":
+		purchase_upgrade("bubble_value")
 	refresh_shop()
 
 func activate_shop_tertiary() -> void:
@@ -634,13 +650,15 @@ func refresh_shop() -> void:
 		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
-		"coin_lifetime": "Lv. %d · %ds" % [int(assets.levels.coin_lifetime) + 1, int(assets.coin_lifetime())]}
+		"coin_lifetime": "Lv. %d · %ds" % [int(assets.levels.coin_lifetime) + 1, int(assets.coin_lifetime())],
+		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
+		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
 	for key in shop_cards:
 		shop_cards[key].set_status(statuses[key])
 	var item = shop_items[shop_selected_id]
 	shop_detail_title.text = item.title
 	shop_detail_description.text = item.description
-	shop_action_button.position = Vector2(24, 430)
+	shop_action_button.position = Vector2(24, 350)
 	shop_action_button.size = Vector2(333, 58)
 	shop_action_button.add_theme_font_size_override("font_size", 17)
 	shop_secondary_button.add_theme_font_size_override("font_size", 15)
@@ -666,13 +684,13 @@ func refresh_shop() -> void:
 				var sleep_level: int = int(assets.levels.snail_sleep)
 				action_price = assets.upgrade_price("snail_speed")
 				shop_detail_state.text = "Speed Lv. %d: %d px/s\nStamina Lv. %d: %ds moving\nSleep Lv. %d: %ds resting" % [speed_level + 1, int(assets.snail_speed()), stamina_level + 1, int(assets.snail_stamina()), sleep_level + 1, int(assets.snail_sleep())]
-				shop_action_button.position = Vector2(24, 430)
+				shop_action_button.position = Vector2(24, 350)
 				shop_action_button.size = Vector2(105, 58)
 				shop_action_button.add_theme_font_size_override("font_size", 13)
 				shop_action_button.text = "Speed\nMAX" if action_price == 0 else "Speed +1\n$%d" % action_price
 				unavailable = action_price == 0
 				var stamina_price: int = assets.upgrade_price("snail_stamina")
-				shop_secondary_button.position = Vector2(138, 430)
+				shop_secondary_button.position = Vector2(138, 350)
 				shop_secondary_button.size = Vector2(105, 58)
 				shop_secondary_button.add_theme_font_size_override("font_size", 12)
 				shop_secondary_button.text = "Stamina\nMAX" if stamina_price == 0 else "Stamina +1\n$%d" % stamina_price
@@ -680,7 +698,7 @@ func refresh_shop() -> void:
 				shop_secondary_button.show()
 				var sleep_price: int = assets.upgrade_price("snail_sleep")
 				var sleep_reduction: int = 0 if sleep_price == 0 else int(assets.snail_sleep() - IdleAssets.SNAIL_SLEEPS[sleep_level + 1])
-				shop_tertiary_button.position = Vector2(252, 430)
+				shop_tertiary_button.position = Vector2(252, 350)
 				shop_tertiary_button.size = Vector2(105, 58)
 				shop_tertiary_button.add_theme_font_size_override("font_size", 12)
 				shop_tertiary_button.text = "Sleep\nMAX" if sleep_price == 0 else "Sleep -%ds\n$%d" % [sleep_reduction, sleep_price]
@@ -701,12 +719,12 @@ func refresh_shop() -> void:
 				var curiosity_level: int = int(assets.levels.puffer_curiosity)
 				action_price = assets.upgrade_price("puffer_speed")
 				shop_detail_state.text = "Speed Lv. %d: %d px/s\nCuriosity Lv. %d: %d%% chase chance\nPuffs briefly after a catch." % [puffer_speed_level + 1, int(assets.puffer_speed()), curiosity_level + 1, int(assets.puffer_curiosity() * 100)]
-				shop_action_button.position = Vector2(24, 430)
+				shop_action_button.position = Vector2(24, 350)
 				shop_action_button.size = Vector2(160, 58)
 				shop_action_button.text = "Speed MAX" if action_price == 0 else "Speed +1  $%d" % action_price
 				unavailable = action_price == 0
 				var curiosity_price: int = assets.upgrade_price("puffer_curiosity")
-				shop_secondary_button.position = Vector2(197, 430)
+				shop_secondary_button.position = Vector2(222, 350)
 				shop_secondary_button.size = Vector2(160, 58)
 				shop_secondary_button.text = "Curiosity MAX" if curiosity_price == 0 else "Curiosity +1  $%d" % curiosity_price
 				shop_secondary_button.disabled = curiosity_price == 0 or curiosity_price > economy.money
@@ -733,6 +751,29 @@ func refresh_shop() -> void:
 			var next_text: String = "Maximum preservation reached" if unavailable else "%d → %d simulation seconds" % [int(assets.coin_lifetime()), int(IdleAssets.COIN_LIFETIMES[level + 1])]
 			shop_detail_state.text = "Level %d / 5\n%s\nExisting rewards gain the added time." % [level + 1, next_text]
 			shop_action_button.text = "Fully upgraded" if unavailable else "Preserve longer  $%d" % action_price
+		"idle_duration":
+			var idle_level: int = int(assets.levels.idle_duration)
+			action_price = assets.upgrade_price("idle_duration")
+			unavailable = action_price == 0
+			var current_limit: String = "Locked: no offline simulation" if assets.idle_limit() <= 0.0 else "Current limit: %s real time" % FishInspector.duration(assets.idle_limit())
+			var next_limit: String = "Maximum away time reached" if unavailable else "Next: %s real time" % FishInspector.duration(IdleAssets.IDLE_LIMITS[idle_level + 1])
+			shop_detail_state.text = "%s\n%s\nAway care advances at 10%% speed." % [current_limit, next_limit]
+			shop_action_button.text = "Fully upgraded" if unavailable else "Extend away time  $%d" % action_price
+		"bubbles":
+			var capacity_level: int = int(assets.levels.bubble_capacity)
+			var value_level: int = int(assets.levels.bubble_value)
+			action_price = assets.upgrade_price("bubble_capacity")
+			unavailable = action_price == 0
+			shop_detail_state.text = "Capacity Lv. %d: %d bubbles\nValue Lv. %d: ×%.2f per pop\nBubbles remain active-play income." % [capacity_level + 1, assets.bubble_capacity(), value_level + 1, assets.bubble_multiplier()]
+			shop_action_button.position = Vector2(24, 350)
+			shop_action_button.size = Vector2(160, 58)
+			shop_action_button.text = "Capacity MAX" if unavailable else "Capacity +1  $%d" % action_price
+			var value_price: int = assets.upgrade_price("bubble_value")
+			shop_secondary_button.position = Vector2(222, 350)
+			shop_secondary_button.size = Vector2(160, 58)
+			shop_secondary_button.text = "Value MAX" if value_price == 0 else "Value +1  $%d" % value_price
+			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money
+			shop_secondary_button.show()
 	shop_action_button.disabled = unavailable or action_price > economy.money
 	buy_button = shop_action_button
 
@@ -764,6 +805,7 @@ func refresh_care() -> void:
 
 func build_hud() -> void:
 	var hud := CanvasLayer.new()
+	hud_layer = hud
 	add_child(hud)
 	label_at(hud, "I N S A N A R I U M", Vector2(48, 30), 29, Color("e8f2ed"))
 	label_at(hud, "A little world beneath the surface.", Vector2(49, 73), 16, Color("83a9b7"))
@@ -784,18 +826,14 @@ func build_hud() -> void:
 	hud.add_child(shop_button)
 	shop_button.pressed.connect(toggle_shop)
 	label_at(hud, "01  /  THE QUIET TANK", Vector2(49, 127), 14, Color("c7dfdb"))
-	make_button(hud, "Tank care", Vector2(550, 65), Vector2(160, 34), func() -> void:
+	make_button(hud, "CONTROLS", Vector2(550, 50), Vector2(160, 42), func() -> void:
 		care_panel.visible = not care_panel.visible
 		if care_panel.visible:
 			refresh_care())
-	sound_button = make_button(hud, "Sound: off" if audio.muted else "Sound: on", Vector2(550, 25), Vector2(160, 32), func() -> void:
-		audio.set_muted(not audio.muted)
-		sound_button.text = "Sound: off" if audio.muted else "Sound: on"
-		if not audio.muted:
-			audio.play("bubble"))
 	care_panel = Panel.new()
-	care_panel.position = Vector2(70, 215)
-	care_panel.size = Vector2(650, 370)
+	care_panel.position = Vector2(251, 10)
+	care_panel.size = Vector2(650, 580)
+	care_panel.z_index = 25
 	var care_style := StyleBoxFlat.new()
 	care_style.bg_color = Color("0c2636")
 	care_style.border_color = Color("729b9e")
@@ -803,12 +841,12 @@ func build_hud() -> void:
 	care_style.set_corner_radius_all(12)
 	care_panel.add_theme_stylebox_override("panel", care_style)
 	hud.add_child(care_panel)
-	label_at(care_panel, "TANK CARE / AWAY FORECAST", Vector2(18, 15), 19, Color("e8f2ed"))
+	label_at(care_panel, "CONTROLS & TANK CARE", Vector2(18, 15), 19, Color("e8f2ed"))
 	care_warnings = label_at(care_panel, "", Vector2(18, 52), 15, Color("ffa86b"))
 	care_warnings.size = Vector2(612, 50)
 	care_warnings.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	care_details = label_at(care_panel, "", Vector2(18, 107), 15, Color("c7dfdb"))
-	care_details.size = Vector2(612, 240)
+	care_details.size = Vector2(612, 230)
 	care_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	make_button(care_panel, "Close", Vector2(550, 10), Vector2(82, 30), care_panel.hide)
 	care_panel.hide()
@@ -818,10 +856,9 @@ func build_hud() -> void:
 	clean_button = make_button(hud, "Full clean", Vector2(385, 119), Vector2(150, 34), purchase_full_clean)
 	clean_button.add_theme_font_size_override("font_size", 13)
 	update_cleanliness()
-	feed_label = label_at(hud, "", Vector2(49, 697), 16, Color("c7dfdb"))
-	feed_status = label_at(hud, "", Vector2(375, 698), 13, Color("c7dfdb"))
-	label_at(hud, "Orange = hungry · Red bar = starving · Click waste to clean", Vector2(49, 736), 14, Color("83a9b7"))
-	label_at(hud, "Growth: 10 Adult · 30 Royal · 75 meals Diamond", Vector2(688, 736), 14, Color("83a9b7"))
+	feed_label = label_at(hud, "", Vector2(49, 552), 15, Color("e8f2ed"))
+	feed_status = label_at(hud, "", Vector2(375, 553), 13, Color("c7dfdb"))
+	label_at(hud, "Tap water to feed · rewards/waste to collect", Vector2(764, 553), 13, Color("83a9b7"))
 	var debug := DebugControls.new()
 	debug.hunger_requested.connect(func() -> void:
 		for fish in get_tree().get_nodes_in_group("fish"):
@@ -833,10 +870,10 @@ func build_hud() -> void:
 		if challenges:
 			invasions.begin_warning())
 	hud.add_child(debug)
-	label_at(hud, "Pop bubbles for a surprise · Visit the shop for fish, helpers, and feed", Vector2(49, 800), 16, Color("8edfe9"))
 	inspector_panel = Panel.new()
-	inspector_panel.position = Vector2(735, 190)
-	inspector_panel.size = Vector2(348, 478)
+	inspector_panel.position = Vector2(735, 66)
+	inspector_panel.size = Vector2(348, 524)
+	inspector_panel.z_index = 15
 	var inspector_style := StyleBoxFlat.new()
 	inspector_style.bg_color = Color("0c2636")
 	inspector_style.border_color = Color("729b9e")
@@ -858,12 +895,12 @@ func build_hud() -> void:
 		selected_fish = null
 		update_inspection())
 	inspector_panel.hide()
-	inspect_label = label_at(hud, "Click a fish to inspect its sale value", Vector2(49, 850), 16, Color("c7dfdb"))
-	sell_button = make_button(hud, "Select a fish to sell", Vector2(430, 841), Vector2(210, 38), sell_selected)
+	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 99), 14, Color("83a9b7"))
+	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 478), Vector2(210, 38), sell_selected)
 	sell_button.disabled = true
 	var challenge := CheckButton.new()
 	challenge.text = "Alien challenges"
-	challenge.position = Vector2(662, 843)
+	challenge.position = Vector2(350, 390)
 	challenge.button_pressed = challenges
 	challenge.toggled.connect(func(enabled: bool) -> void:
 		challenges = enabled
@@ -874,23 +911,28 @@ func build_hud() -> void:
 				invasions.active.queue_free()
 		else:
 			invasions.schedule_next())
-	hud.add_child(challenge)
+	care_panel.add_child(challenge)
 	breeding_toggle = CheckButton.new()
 	breeding_toggle.text = "Allow breeding"
-	breeding_toggle.position = Vector2(49, 892)
+	breeding_toggle.position = Vector2(18, 390)
 	breeding_toggle.button_pressed = breeding.enabled
 	breeding_toggle.toggled.connect(func(value: bool) -> void: breeding.enabled = value)
-	hud.add_child(breeding_toggle)
-	pace_label = label_at(hud, "ACTIVE · 1× simulation", Vector2(850, 900), 14, Color("83a9b7"))
-	breeding_status = label_at(hud, "Well-fed adult pairs · 5 min cooldown", Vector2(290, 900), 14, Color("83a9b7"))
-	save_label = label_at(hud, "Autosave every 15s", Vector2(900, 850), 13, Color("83a9b7"))
+	care_panel.add_child(breeding_toggle)
+	pace_label = label_at(hud, "ACTIVE · 1×", Vector2(878, 99), 13, Color("83a9b7"))
+	breeding_status = label_at(care_panel, "Well-fed adult pairs · 5 min cooldown", Vector2(18, 428), 14, Color("83a9b7"))
+	save_label = label_at(hud, "Autosave", Vector2(1015, 99), 12, Color("83a9b7"))
 	transfer = SaveTransfer.new()
 	add_child(transfer)
 	transfer.import_ready.connect(confirm_import)
 	transfer.status.connect(func(message: String) -> void: save_label.text = message)
-	make_button(hud, "Export backup", Vector2(49, 946), Vector2(180, 36), func() -> void: transfer.export_save(snapshot()))
-	make_button(hud, "Import backup", Vector2(245, 946), Vector2(180, 36), transfer.import_save)
-	label_at(hud, "Offline: up to 8h · No breeding or aliens", Vector2(455, 955), 14, Color("83a9b7"))
+	sound_button = make_button(care_panel, "Sound: off" if audio.muted else "Sound: on", Vector2(18, 465), Vector2(180, 42), func() -> void:
+		audio.set_muted(not audio.muted)
+		sound_button.text = "Sound: off" if audio.muted else "Sound: on"
+		if not audio.muted:
+			audio.play("bubble"))
+	make_button(care_panel, "Export backup", Vector2(214, 465), Vector2(180, 42), func() -> void: transfer.export_save(snapshot()))
+	make_button(care_panel, "Import backup", Vector2(410, 465), Vector2(180, 42), transfer.import_save)
+	label_at(care_panel, "Away time is upgradeable · No offline breeding or aliens", Vector2(18, 531), 12, Color("83a9b7"))
 	return_dialog = AcceptDialog.new()
 	return_dialog.title = "Welcome back"
 	add_child(return_dialog)
@@ -900,16 +942,18 @@ func build_hud() -> void:
 	add_child(import_dialog)
 	build_shop(hud)
 	reveal_panel = FishRevealPanelScript.new()
-	reveal_panel.position = Vector2(300, 170)
+	reveal_panel.position = Vector2(300, 5)
 	reveal_panel.z_index = 30
 	hud.add_child(reveal_panel)
 	reveal_panel.dismissed.connect(advance_fish_reveal)
 	reveal_panel.inspect_requested.connect(inspect_revealed_fish)
+	var orientation_gate: MobileOrientationGate = MobileOrientationGateScript.new()
+	hud.add_child(orientation_gate)
 
 func build_shop(hud: CanvasLayer) -> void:
 	shop_panel = Panel.new()
-	shop_panel.position = Vector2(32, 110)
-	shop_panel.size = Vector2(1088, 800)
+	shop_panel.position = Vector2(16, 10)
+	shop_panel.size = Vector2(1120, 580)
 	shop_panel.z_index = 20
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color("0b2230")
@@ -918,14 +962,14 @@ func build_shop(hud: CanvasLayer) -> void:
 	panel_style.set_corner_radius_all(16)
 	shop_panel.add_theme_stylebox_override("panel", panel_style)
 	hud.add_child(shop_panel)
-	label_at(shop_panel, "AQUARIUM SHOP", Vector2(30, 24), 27, Color("e8f2ed"))
-	label_at(shop_panel, "Select a card to see its details, purchase it, or upgrade it.", Vector2(31, 62), 15, Color("83a9b7"))
-	make_button(shop_panel, "Close", Vector2(960, 24), Vector2(96, 36), toggle_shop)
+	label_at(shop_panel, "AQUARIUM SHOP", Vector2(30, 14), 25, Color("e8f2ed"))
+	label_at(shop_panel, "Tap a card to see details, purchase it, or upgrade it.", Vector2(31, 49), 14, Color("83a9b7"))
+	make_button(shop_panel, "Close", Vector2(960, 14), Vector2(96, 42), toggle_shop)
 
 	var grid := GridContainer.new()
-	grid.position = Vector2(30, 112)
-	grid.size = Vector2(620, 530)
-	grid.columns = 3
+	grid.position = Vector2(30, 72)
+	grid.size = Vector2(600, 430)
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	shop_panel.add_child(grid)
@@ -938,8 +982,8 @@ func build_shop(hud: CanvasLayer) -> void:
 		shop_cards[item.id] = card
 
 	var detail := Panel.new()
-	detail.position = Vector2(675, 112)
-	detail.size = Vector2(381, 530)
+	detail.position = Vector2(650, 72)
+	detail.size = Vector2(440, 430)
 	var detail_style := StyleBoxFlat.new()
 	detail_style.bg_color = Color("0e2b39")
 	detail_style.border_color = Color("315b68")
@@ -950,30 +994,30 @@ func build_shop(hud: CanvasLayer) -> void:
 	label_at(detail, "SELECTED", Vector2(24, 22), 12, Color("8edfe9"))
 	shop_detail_title = label_at(detail, "", Vector2(24, 53), 25, Color("e8f2ed"))
 	shop_detail_description = label_at(detail, "", Vector2(24, 102), 15, Color("c7dfdb"))
-	shop_detail_description.size = Vector2(333, 105)
+	shop_detail_description.size = Vector2(392, 105)
 	shop_detail_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	shop_detail_state = label_at(detail, "", Vector2(24, 229), 16, Color("83a9b7"))
-	shop_detail_state.size = Vector2(333, 120)
+	shop_detail_state.size = Vector2(392, 100)
 	shop_detail_state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	shop_action_button = make_button(detail, "", Vector2(24, 430), Vector2(333, 58), activate_shop_item)
+	shop_action_button = make_button(detail, "", Vector2(24, 350), Vector2(392, 58), activate_shop_item)
 	shop_action_button.add_theme_font_size_override("font_size", 17)
-	shop_secondary_button = make_button(detail, "", Vector2(197, 430), Vector2(160, 58), activate_shop_secondary)
+	shop_secondary_button = make_button(detail, "", Vector2(222, 350), Vector2(194, 58), activate_shop_secondary)
 	shop_secondary_button.add_theme_font_size_override("font_size", 15)
 	shop_secondary_button.hide()
-	shop_tertiary_button = make_button(detail, "", Vector2(252, 430), Vector2(105, 58), activate_shop_tertiary)
+	shop_tertiary_button = make_button(detail, "", Vector2(286, 350), Vector2(130, 58), activate_shop_tertiary)
 	shop_tertiary_button.add_theme_font_size_override("font_size", 13)
 	shop_tertiary_button.hide()
 
 	var rule := ColorRect.new()
-	rule.position = Vector2(30, 673)
-	rule.size = Vector2(1026, 1)
+	rule.position = Vector2(30, 512)
+	rule.size = Vector2(1060, 1)
 	rule.color = Color("305764")
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shop_panel.add_child(rule)
-	shop_status = label_at(shop_panel, "Choose something for your aquarium.", Vector2(31, 696), 17, Color("ffdb80"))
+	shop_status = label_at(shop_panel, "Choose something for your aquarium.", Vector2(31, 523), 15, Color("ffdb80"))
 	shop_status.size = Vector2(1025, 35)
 	shop_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label_at(shop_panel, "Purchases and upgrade levels are saved locally with your aquarium.", Vector2(31, 750), 13, Color("83a9b7"))
+	label_at(shop_panel, "Purchases and upgrades are saved locally.", Vector2(760, 528), 12, Color("83a9b7"))
 	select_shop_item("fish")
 	shop_panel.hide()
 

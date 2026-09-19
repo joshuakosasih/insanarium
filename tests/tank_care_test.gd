@@ -15,6 +15,8 @@ func run() -> void:
 		tank.spawn_fish()
 	tank.set_process(false)
 	var data: Dictionary = tank.snapshot()
+	check(TankCare.forecast_text(TankCare.assess(data)).contains("locked"), "new tank care explains locked offline simulation")
+	data.asset_levels.idle_duration = 4
 	for fish in data.fish:
 		fish.hunger = 0.0
 		fish.starving = 0.0

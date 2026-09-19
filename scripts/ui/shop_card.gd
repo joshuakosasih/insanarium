@@ -17,7 +17,7 @@ func configure(item) -> void:
 	category = item.category
 	icon_kind = item.icon
 	text = ""
-	custom_minimum_size = Vector2(190, 168)
+	custom_minimum_size = Vector2(142, 136)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	for state in ["normal", "hover", "pressed", "focus"]:
 		var style := StyleBoxFlat.new()
@@ -44,12 +44,12 @@ func set_pellet_preview(color: Color, growth_credit: int) -> void:
 func _draw() -> void:
 	if selected:
 		draw_style_box(selection_style(), Rect2(Vector2(2, 2), size - Vector2(4, 4)))
-	var center := Vector2(size.x * 0.5, 67)
+	var center := Vector2(size.x * 0.5, 56)
 	draw_icon(center)
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(12, 20), category, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 11, Color("8edfe9"))
-	draw_string(font, Vector2(12, 126), display_title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 17, Color("e8f2ed"))
-	draw_string(font, Vector2(12, 151), status, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 13, Color("ffdb80"))
+	draw_string(font, Vector2(12, size.y - 34), display_title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 15, Color("e8f2ed"))
+	draw_string(font, Vector2(12, size.y - 12), status, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 11, Color("ffdb80"))
 
 func selection_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -83,6 +83,16 @@ func draw_icon(at: Vector2) -> void:
 			VectorArt.draw_pellet(self, at, pellet_growth, pellet_color, 1.15)
 		"coin":
 			VectorArt.draw_coin(self, at, 1.5, 3, false)
+		"clock":
+			draw_circle(at, 31, Color("d8eef0"))
+			draw_circle(at, 27, Color("173847"))
+			draw_line(at, at + Vector2(0, -17), Color("8edfe9"), 4, true)
+			draw_line(at, at + Vector2(14, 8), Color("8edfe9"), 4, true)
+			draw_circle(at, 4, Color("ffdb80"))
+		"bubble":
+			for bubble in [Vector3(-22, 10, 14), Vector3(8, -8, 20), Vector3(28, 18, 10)]:
+				draw_circle(at + Vector2(bubble.x, bubble.y), bubble.z, Color(0.55, 0.88, 0.95, 0.12))
+				draw_arc(at + Vector2(bubble.x, bubble.y), bubble.z, 0, TAU, 24, Color("a9edf2"), 3, true)
 
 func machine_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

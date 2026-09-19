@@ -23,7 +23,7 @@ func run() -> void:
 	for fish in get_nodes_in_group("fish"):
 		fish.set_process(false)
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 8, "shop starts closed with reusable product cards")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 10, "shop starts closed with reusable product cards")
 	tank.toggle_shop()
 	check(tank.shop_panel.visible, "shop opens from its shared toggle")
 	tank.toggle_shop()
@@ -76,7 +76,7 @@ func run() -> void:
 	check(tank.reveal_panel.heading_label.text == "QUEUED FISH", "dismissing advances to the next queued fish")
 	tank.advance_fish_reveal()
 	check(not tank.reveal_panel.visible, "final reveal dismisses cleanly")
-	tank.economy.credit(2000)
+	tank.economy.credit(2500)
 	for kind in ["snail", "seahorse", "puffer", "feeder"]:
 		balance = tank.economy.money
 		tank.purchase_asset(kind)
@@ -150,6 +150,21 @@ func run() -> void:
 	tank.activate_shop_item()
 	check(tank.assets.levels.coin_lifetime == 1 and tank.assets.coin_lifetime() == 15.0 and falling_coin.lifetime == old_life + 7.0 and tank.economy.money == balance - 100, "coin preservation upgrades future and existing reward lifetime")
 	check(tank.assets.upgrade_price("coin_lifetime") == 190, "upgrade prices grow geometrically")
+	tank.select_shop_item("idle_duration")
+	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$100"), "away-time card explains the initial lock and first price")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.levels.idle_duration == 1 and tank.assets.idle_limit() == 300.0 and tank.economy.money == balance - 100, "first away-time upgrade unlocks five minutes")
+	check(tank.assets.upgrade_price("idle_duration") == 250, "away-time price rises geometrically")
+	tank.select_shop_item("bubbles")
+	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$75") and tank.shop_secondary_button.text.contains("$75"), "bubble card exposes separate capacity and value tracks")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 75, "bubble capacity upgrade raises the simultaneous limit")
+	balance = tank.economy.money
+	tank.activate_shop_secondary()
+	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 75, "bubble value upgrade raises every pop multiplier")
+	check(tank.assets.upgrade_price("bubble_capacity") == 190 and tank.assets.upgrade_price("bubble_value") == 190, "both bubble tracks use exponential prices")
 	tank.restock()
 	check(tank.assets.reserve.size() == 20 and tank.assets.reserve[0] == 0 and "20 basic pellets" in tank.shop_status.text.to_lower(), "reserve stores purchased basic pellets and confirms restock")
 	tank.purchase_feed_upgrade()
@@ -168,7 +183,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()

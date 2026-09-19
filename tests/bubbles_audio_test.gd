@@ -77,7 +77,12 @@ func run() -> void:
 	surface.free()
 	for i in range(5):
 		tank.spawn_income_bubble()
-	check(get_nodes_in_group("income_bubbles").size() == 3, "bubble count is capped")
+	check(get_nodes_in_group("income_bubbles").size() == 1, "base bubble capacity starts at one")
+	tank.assets.levels.bubble_capacity = 4
+	for i in range(10):
+		tank.spawn_income_bubble()
+	check(get_nodes_in_group("income_bubbles").size() == 8, "bubble capacity upgrades to eight")
+	check(IdleAssets.BUBBLE_UPGRADE_PRICES == [75, 190, 475, 1190] and IdleAssets.BUBBLE_MULTIPLIERS[4] == 5.0, "bubble count and value use separate exponential upgrades")
 	var expired = get_nodes_in_group("income_bubbles")[0]
 	expired._process(31.0)
 	expired.pop()
