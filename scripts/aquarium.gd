@@ -9,6 +9,7 @@ const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
 const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation_gate.gd")
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
+const TANK_BOTTOM_MARGIN := 16.0
 var feeds: Array[FeedProfile] = FeedProfile.tiers()
 var hud_layer: CanvasLayer
 var feed_upgrades := FeedUpgrades.new()
@@ -127,10 +128,19 @@ func set_idle(idle: bool) -> void:
 
 func update_viewport_layout() -> void:
 	# Stretch-aspect expand adds logical space on wide phones; keep the fixed tank centered.
-	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
-	position = Vector2(extra_width * 0.5, -70.0)
+	var viewport_size := get_viewport_rect().size
+	var extra_width: float = maxf(0.0, viewport_size.x - 1152.0)
+	# Preserve the desktop placement, but move the world slightly upward on short
+	# phone viewports so the tank keeps a visible safe gap beneath its border.
+	var tank_y: float = minf(-70.0, viewport_size.y - TANK.end.y - TANK_BOTTOM_MARGIN)
+	position = Vector2(extra_width * 0.5, tank_y)
 	if is_instance_valid(hud_layer):
 		hud_layer.offset.x = extra_width * 0.5
+
+func viewport_to_tank(viewport_position: Vector2) -> Vector2:
+	# Pointer events arrive in viewport coordinates. Convert through the complete
+	# canvas transform once so centering, vertical offsets, and stretch all agree.
+	return get_global_transform_with_canvas().affine_inverse() * viewport_position
 
 func apply_catchup(data: Dictionary) -> void:
 	applying_offline = true
@@ -482,9 +492,9 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		handle_tank_click(get_global_mouse_position())
+		handle_tank_click(viewport_to_tank(event.position))
 	elif event is InputEventScreenTouch and event.pressed:
-		handle_tank_click(get_global_transform_with_canvas().affine_inverse() * event.position)
+		handle_tank_click(viewport_to_tank(event.position))
 
 func handle_tank_click(at: Vector2) -> void:
 	for bubble in get_tree().get_nodes_in_group("income_bubbles"):

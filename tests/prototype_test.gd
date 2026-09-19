@@ -22,6 +22,20 @@ func run() -> void:
 	tank.set_process(false)
 	for fish in get_nodes_in_group("fish"):
 		fish.set_process(false)
+	var sample_tank_point := Vector2(500, 400)
+	var sample_viewport_point: Vector2 = tank.get_global_transform_with_canvas() * sample_tank_point
+	check(tank.viewport_to_tank(sample_viewport_point).is_equal_approx(sample_tank_point), "pointer conversion reverses the complete scaled and centered canvas transform")
+	check(tank.position.y + tank.TANK.end.y <= tank.get_viewport_rect().size.y - tank.TANK_BOTTOM_MARGIN, "short viewports retain a safe margin below the tank")
+	var pointer_event := InputEventMouseButton.new()
+	pointer_event.button_index = MOUSE_BUTTON_LEFT
+	pointer_event.pressed = true
+	pointer_event.position = sample_viewport_point
+	tank._unhandled_input(pointer_event)
+	var pointer_food = get_nodes_in_group("food")[0]
+	check(pointer_food.position.is_equal_approx(sample_tank_point), "scaled mouse clicks drop food at the visible tank position")
+	pointer_food.free()
+	tank.economy.credit(2)
+	tank.food_cooldown = 0.0
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
 	check(not tank.shop_panel.visible and tank.shop_cards.size() == 10, "shop starts closed with reusable product cards")
 	tank.toggle_shop()
