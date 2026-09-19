@@ -26,6 +26,10 @@ func run() -> void:
 	var sample_viewport_point: Vector2 = tank.get_global_transform_with_canvas() * sample_tank_point
 	check(tank.viewport_to_tank(sample_viewport_point).is_equal_approx(sample_tank_point), "pointer conversion reverses the complete scaled and centered canvas transform")
 	check(tank.position.y + tank.TANK.end.y <= tank.get_viewport_rect().size.y - tank.TANK_BOTTOM_MARGIN, "short viewports retain a safe margin below the tank")
+	var visible_tank_top: float = tank.position.y + tank.TANK.position.y
+	var visible_tank_bottom: float = tank.position.y + tank.TANK.end.y
+	check(tank.controls_button.position.y + tank.controls_button.size.y < visible_tank_top and tank.shop_button.position.y + tank.shop_button.size.y < visible_tank_top, "shop and controls occupy the header above the tank")
+	check(tank.feed_label.position.y > visible_tank_bottom and tank.feed_status.position.y > visible_tank_bottom and tank.footer_hint.position.y > visible_tank_bottom, "feeding and help text occupy the footer below the tank")
 	var pointer_event := InputEventMouseButton.new()
 	pointer_event.button_index = MOUSE_BUTTON_LEFT
 	pointer_event.pressed = true

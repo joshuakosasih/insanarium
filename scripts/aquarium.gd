@@ -9,12 +9,13 @@ const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
 const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation_gate.gd")
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
-const TANK_BOTTOM_MARGIN := 16.0
+const TANK_BOTTOM_MARGIN := 36.0
 var feeds: Array[FeedProfile] = FeedProfile.tiers()
 var hud_layer: CanvasLayer
 var feed_upgrades := FeedUpgrades.new()
 var feed_label: Label
 var feed_status: Label
+var footer_hint: Label
 var invasions: InvasionDirector
 var pace_label: Label
 var away_data: Dictionary = {}
@@ -50,6 +51,7 @@ var clean_button: Button
 var water_overlay: WaterQualityOverlay
 var buy_button: Button
 var shop_button: Button
+var controls_button: Button
 var shop_panel: Panel
 var shop_status: Label
 var shop_cards: Dictionary = {}
@@ -136,6 +138,13 @@ func update_viewport_layout() -> void:
 	position = Vector2(extra_width * 0.5, tank_y)
 	if is_instance_valid(hud_layer):
 		hud_layer.offset.x = extra_width * 0.5
+	var footer_y: float = position.y + TANK.end.y + 6.0
+	if is_instance_valid(feed_label):
+		feed_label.position.y = footer_y
+		feed_status.position.y = footer_y
+		footer_hint.position.y = footer_y
+		pace_label.position.y = footer_y
+		save_label.position.y = footer_y
 
 func viewport_to_tank(viewport_position: Vector2) -> Vector2:
 	# Pointer events arrive in viewport coordinates. Convert through the complete
@@ -817,13 +826,13 @@ func build_hud() -> void:
 	var hud := CanvasLayer.new()
 	hud_layer = hud
 	add_child(hud)
-	label_at(hud, "I N S A N A R I U M", Vector2(48, 30), 29, Color("e8f2ed"))
-	label_at(hud, "A little world beneath the surface.", Vector2(49, 73), 16, Color("83a9b7"))
-	label_at(hud, "YOUR WALLET", Vector2(785, 31), 12, Color("83a9b7"))
-	money_label = label_at(hud, "", Vector2(782, 49), 28, Color("ffdb80"))
+	label_at(hud, "I N S A N A R I U M", Vector2(48, 4), 23, Color("e8f2ed"))
+	label_at(hud, "01  /  THE QUIET TANK", Vector2(300, 5), 13, Color("c7dfdb"))
+	label_at(hud, "YOUR WALLET", Vector2(785, 4), 11, Color("83a9b7"))
+	money_label = label_at(hud, "", Vector2(782, 20), 23, Color("ffdb80"))
 	shop_button = Button.new()
-	shop_button.position = Vector2(920, 37)
-	shop_button.size = Vector2(184, 52)
+	shop_button.position = Vector2(930, 7)
+	shop_button.size = Vector2(174, 46)
 	shop_button.text = "SHOP"
 	shop_button.add_theme_font_size_override("font_size", 18)
 	var style := StyleBoxFlat.new()
@@ -835,8 +844,7 @@ func build_hud() -> void:
 	shop_button.add_theme_stylebox_override("normal", style)
 	hud.add_child(shop_button)
 	shop_button.pressed.connect(toggle_shop)
-	label_at(hud, "01  /  THE QUIET TANK", Vector2(49, 127), 14, Color("c7dfdb"))
-	make_button(hud, "CONTROLS", Vector2(550, 50), Vector2(160, 42), func() -> void:
+	controls_button = make_button(hud, "CONTROLS", Vector2(600, 7), Vector2(150, 46), func() -> void:
 		care_panel.visible = not care_panel.visible
 		if care_panel.visible:
 			refresh_care())
@@ -860,15 +868,15 @@ func build_hud() -> void:
 	care_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	make_button(care_panel, "Close", Vector2(550, 10), Vector2(82, 30), care_panel.hide)
 	care_panel.hide()
-	count_label = label_at(hud, "", Vector2(851, 127), 14, Color("83a9b7"))
-	cleanliness_label = label_at(hud, "", Vector2(210, 127), 14, Color("8edfe9"))
-	cleanliness_label.size = Vector2(170, 28)
-	clean_button = make_button(hud, "Full clean", Vector2(385, 119), Vector2(150, 34), purchase_full_clean)
-	clean_button.add_theme_font_size_override("font_size", 13)
+	count_label = label_at(hud, "", Vector2(300, 31), 12, Color("83a9b7"))
+	cleanliness_label = label_at(hud, "", Vector2(450, 4), 12, Color("8edfe9"))
+	cleanliness_label.size = Vector2(150, 28)
+	clean_button = make_button(hud, "Full clean", Vector2(450, 27), Vector2(130, 28), purchase_full_clean)
+	clean_button.add_theme_font_size_override("font_size", 12)
 	update_cleanliness()
-	feed_label = label_at(hud, "", Vector2(49, 552), 15, Color("e8f2ed"))
-	feed_status = label_at(hud, "", Vector2(375, 553), 13, Color("c7dfdb"))
-	label_at(hud, "Tap water to feed · rewards/waste to collect", Vector2(764, 553), 13, Color("83a9b7"))
+	feed_label = label_at(hud, "", Vector2(49, 570), 14, Color("e8f2ed"))
+	feed_status = label_at(hud, "", Vector2(285, 570), 12, Color("c7dfdb"))
+	footer_hint = label_at(hud, "Tap water to feed · tap rewards/waste to collect", Vector2(680, 570), 12, Color("83a9b7"))
 	var debug := DebugControls.new()
 	debug.hunger_requested.connect(func() -> void:
 		for fish in get_tree().get_nodes_in_group("fish"):
@@ -905,7 +913,7 @@ func build_hud() -> void:
 		selected_fish = null
 		update_inspection())
 	inspector_panel.hide()
-	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 99), 14, Color("83a9b7"))
+	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 32), 12, Color("83a9b7"))
 	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 478), Vector2(210, 38), sell_selected)
 	sell_button.disabled = true
 	var challenge := CheckButton.new()
@@ -928,9 +936,9 @@ func build_hud() -> void:
 	breeding_toggle.button_pressed = breeding.enabled
 	breeding_toggle.toggled.connect(func(value: bool) -> void: breeding.enabled = value)
 	care_panel.add_child(breeding_toggle)
-	pace_label = label_at(hud, "ACTIVE · 1×", Vector2(878, 99), 13, Color("83a9b7"))
+	pace_label = label_at(hud, "ACTIVE · 1×", Vector2(520, 570), 11, Color("83a9b7"))
 	breeding_status = label_at(care_panel, "Well-fed adult pairs · 5 min cooldown", Vector2(18, 428), 14, Color("83a9b7"))
-	save_label = label_at(hud, "Autosave", Vector2(1015, 99), 12, Color("83a9b7"))
+	save_label = label_at(hud, "Autosave", Vector2(1040, 570), 10, Color("83a9b7"))
 	transfer = SaveTransfer.new()
 	add_child(transfer)
 	transfer.import_ready.connect(confirm_import)
