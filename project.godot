@@ -1,0 +1,17 @@
+config_version=5
+
+[application]
+config/name="Insanarium"
+run/main_scene="res://scenes/aquarium.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+config/icon="res://assets/icon.svg"
+
+[display]
+window/size/viewport_width=1152
+window/size/viewport_height=1010
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.024, 0.063, 0.094, 1)
