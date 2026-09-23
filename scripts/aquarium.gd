@@ -9,11 +9,15 @@ const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
 const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation_gate.gd")
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
+const STARTER_TANK_WIDTH := 900.0
+const CREATURE_PRESENTATION_SCALE := 1.22
+const COLLECTIBLE_PRESENTATION_SCALE := 1.30
+const PET_PRESENTATION_SCALE := 1.16
 const TANK_BOTTOM_MARGIN := 36.0
 const POINTER_DUPLICATE_MS := 180
 const POINTER_DUPLICATE_RADIUS := 28.0
-var tank_rect := TANK
-var swim_bounds := SWIM_BOUNDS
+var tank_rect := Rect2(TANK.position, Vector2(STARTER_TANK_WIDTH, TANK.size.y))
+var swim_bounds := Rect2(SWIM_BOUNDS.position, Vector2(STARTER_TANK_WIDTH - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
 var feeds: Array[FeedProfile] = FeedProfile.tiers()
 var hud_layer: CanvasLayer
 var feed_upgrades := FeedUpgrades.new()
@@ -101,6 +105,8 @@ func _ready() -> void:
 	economy.money_changed.connect(update_money)
 	update_money(economy.money)
 	invasions = InvasionDirector.new()
+	invasions.presentation_scale = PET_PRESENTATION_SCALE
+	invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
 	invasions.alien_defeated.connect(func(at: Vector2) -> void: spawn_coin(at, 10, true))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
@@ -136,16 +142,16 @@ func set_idle(idle: bool) -> void:
 		apply_catchup(data)
 
 func update_viewport_layout() -> void:
-	# Stretch-aspect expand adds logical width on wide screens. Use that width for
-	# the habitat itself while keeping the fixed-width HUD centered above it.
+	# The starter habitat has one fixed world size on every device. Center it in
+	# the available viewport so creatures keep the same proportion to the tank.
 	var viewport_size := get_viewport_rect().size
 	var extra_width: float = maxf(0.0, viewport_size.x - 1152.0)
-	tank_rect = Rect2(TANK.position, Vector2(maxf(TANK.size.x, viewport_size.x - TANK.position.x * 2.0), TANK.size.y))
-	swim_bounds = Rect2(SWIM_BOUNDS.position, Vector2(tank_rect.size.x - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
+	tank_rect = Rect2(TANK.position, Vector2(STARTER_TANK_WIDTH, TANK.size.y))
+	swim_bounds = Rect2(SWIM_BOUNDS.position, Vector2(STARTER_TANK_WIDTH - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
 	# Preserve the desktop placement, but move the world slightly upward on short
 	# phone viewports so the tank keeps a visible safe gap beneath its border.
 	var tank_y: float = minf(-70.0, viewport_size.y - tank_rect.end.y - TANK_BOTTOM_MARGIN)
-	position = Vector2(0.0, tank_y)
+	position = Vector2((viewport_size.x - tank_rect.size.x) * 0.5 - tank_rect.position.x, tank_y)
 	if is_instance_valid(hud_layer):
 		hud_layer.offset.x = extra_width * 0.5
 	var footer_y: float = position.y + tank_rect.end.y + 6.0
@@ -168,7 +174,12 @@ func update_viewport_layout() -> void:
 			pet.bounds = Rect2(swim_bounds.position + Vector2(25, 23), swim_bounds.size - Vector2(50, 73))
 			pet.position = pet.position.clamp(pet.bounds.position, pet.bounds.end)
 	for coin in get_tree().get_nodes_in_group("coins"):
-		coin.collection_target.x = 825.0 + extra_width * 0.5
+		coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
+	if is_instance_valid(invasions):
+		invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
+		if is_instance_valid(invasions.active):
+			invasions.active.bounds = invasions.bounds
+			invasions.active.position = invasions.active.position.clamp(invasions.bounds.position, invasions.bounds.end)
 	queue_redraw()
 
 func viewport_to_tank(viewport_position: Vector2) -> Vector2:
@@ -247,6 +258,7 @@ func purchase_asset(kind: String) -> void:
 func spawn_asset(kind: String) -> void:
 	if kind == "snail":
 		var snail := SnailPet.new()
+		snail.presentation_scale = PET_PRESENTATION_SCALE
 		snail.position = Vector2(300, 650)
 		snail.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(snail)
@@ -254,11 +266,13 @@ func spawn_asset(kind: String) -> void:
 		snail.apply_upgrades(int(assets.levels.snail_speed), int(assets.levels.snail_stamina), int(assets.levels.snail_sleep))
 	elif kind == "seahorse":
 		var seahorse := SeahorsePet.new()
+		seahorse.presentation_scale = PET_PRESENTATION_SCALE
 		seahorse.feed_produced.connect(supply_pet_food)
 		seahorse.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(seahorse)
 	elif kind == "puffer":
 		var puffer = BubblePufferScript.new()
+		puffer.presentation_scale = PET_PRESENTATION_SCALE
 		puffer.position = Vector2(760, 440)
 		puffer.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(puffer)
@@ -277,6 +291,7 @@ func spawn_income_bubble() -> IncomeBubble:
 	if get_tree().get_nodes_in_group("income_bubbles").size() >= assets.bubble_capacity():
 		return null
 	var bubble := IncomeBubble.new()
+	bubble.scale = Vector2.ONE * COLLECTIBLE_PRESENTATION_SCALE
 	bubble_rewards.multiplier = assets.bubble_multiplier()
 	bubble.value = bubble_rewards.roll(bubble_rng)
 	bubble.position = Vector2(bubble_rng.randf_range(swim_bounds.position.x + 35, swim_bounds.end.x - 35), bubble_rng.randf_range(615, 645))
@@ -378,6 +393,7 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased") -> Aquari
 	if not from_save and get_tree().get_nodes_in_group("fish").size() >= breeding.CAPACITY:
 		return null
 	var fish := AquariumFish.new()
+	fish.presentation_scale = CREATURE_PRESENTATION_SCALE
 	if not from_save:
 		fish.genome.randomize_traits()
 	if not from_save:
@@ -408,10 +424,13 @@ func spawn_coin(at: Vector2, value: int, diamond: bool = false) -> TankCoin:
 		existing.queue_redraw()
 		return existing
 	var coin := TankCoin.new()
+	coin.scale = Vector2.ONE * COLLECTIBLE_PRESENTATION_SCALE
 	coin.position = at
 	coin.value = value
 	coin.diamond = diamond
 	coin.lifetime = assets.coin_lifetime()
+	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
+	coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
 	coin.grounded = coin.position.y >= coin.floor_y
 	coin.collected.connect(economy.credit)
 	coin.collected.connect(func(_value: int) -> void: audio.play("coin"))
@@ -426,6 +445,7 @@ func spawn_waste(at: Vector2) -> FishWaste:
 	if get_tree().get_nodes_in_group("waste").size() >= 100:
 		return null
 	var waste := FishWaste.new()
+	waste.scale = Vector2.ONE * COLLECTIBLE_PRESENTATION_SCALE
 	waste.position = at.clamp(swim_bounds.position, Vector2(swim_bounds.end.x, waste.floor_y))
 	waste.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(waste)
@@ -469,6 +489,7 @@ func drop_food(at: Vector2) -> FishFood:
 
 func spawn_food(at: Vector2, feed: FeedProfile) -> FishFood:
 	var food := FishFood.new()
+	food.scale = Vector2.ONE * COLLECTIBLE_PRESENTATION_SCALE
 	food.profile = feed
 	food.position = at.clamp(swim_bounds.position, swim_bounds.end)
 	food.expired.connect(on_food_expired)
@@ -546,20 +567,20 @@ func handle_pointer_press(viewport_position: Vector2) -> void:
 
 func handle_tank_click(at: Vector2) -> void:
 	for bubble in get_tree().get_nodes_in_group("income_bubbles"):
-		if bubble.position.distance_to(at) <= IncomeBubble.HIT_RADIUS:
+		if bubble.position.distance_to(at) <= IncomeBubble.HIT_RADIUS * absf(bubble.scale.x):
 			bubble.pop()
 			return
 	for alien in get_tree().get_nodes_in_group("invaders"):
-		if not alien.dead and alien.position.distance_to(at) <= 48.0:
+		if not alien.dead and alien.position.distance_to(at) <= 48.0 * absf(alien.scale.x):
 			alien.hit(at)
 			audio.play("hit")
 			return
 	for coin in get_tree().get_nodes_in_group("coins"):
-		if not coin.claimed and coin.position.distance_to(at) <= 24.0:
+		if not coin.claimed and coin.position.distance_to(at) <= 24.0 * absf(coin.scale.x):
 			coin.collect()
 			return
 	for waste in get_tree().get_nodes_in_group("waste"):
-		if waste.position.distance_to(at) <= 20.0:
+		if waste.position.distance_to(at) <= 20.0 * absf(waste.scale.x):
 			clean_waste(waste)
 			return
 	for fish in get_tree().get_nodes_in_group("fish"):

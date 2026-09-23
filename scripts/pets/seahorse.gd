@@ -7,9 +7,11 @@ signal feed_produced(at: Vector2)
 var feed_left: float = 8.0
 var phase: float = 0.0
 var anchor := Vector2(180, 320)
+var presentation_scale: float = 1.0
 
 func _ready() -> void:
 	add_to_group("pets")
+	scale = Vector2.ONE * presentation_scale
 	position = anchor
 
 func _process(delta: float) -> void:

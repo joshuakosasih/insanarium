@@ -9,6 +9,8 @@ var warning_left: float = 0.0
 var spawn_at := Vector2.ZERO
 var active: TankAlien
 var running: bool = true
+var bounds := Rect2(98, 218, 956, 410)
+var presentation_scale: float = 1.0
 
 func _ready() -> void:
 	z_index = 9
@@ -20,7 +22,7 @@ func schedule_next() -> void:
 func begin_warning() -> void:
 	if not running or warning_left > 0.0 or is_instance_valid(active):
 		return
-	spawn_at = Vector2(100 if randf() < 0.5 else 1050, randf_range(245, 580))
+	spawn_at = Vector2(bounds.position.x if randf() < 0.5 else bounds.end.x, randf_range(bounds.position.y + 27, bounds.end.y - 48))
 	warning_left = warning_duration
 	warning_started.emit()
 	queue_redraw()
@@ -33,6 +35,8 @@ func _process(delta: float) -> void:
 		warning_left = maxf(0.0, warning_left - delta)
 		if warning_left <= 0.0:
 			active = TankAlien.new()
+			active.scale = Vector2.ONE * presentation_scale
+			active.bounds = bounds
 			active.position = spawn_at
 			active.defeated.connect(_on_defeated)
 			add_child(active)

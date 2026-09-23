@@ -26,7 +26,10 @@ func run() -> void:
 	var sample_viewport_point: Vector2 = tank.get_global_transform_with_canvas() * sample_tank_point
 	check(tank.viewport_to_tank(sample_viewport_point).is_equal_approx(sample_tank_point), "pointer conversion reverses the complete scaled and centered canvas transform")
 	check(tank.position.y + tank.tank_rect.end.y <= tank.get_viewport_rect().size.y - tank.TANK_BOTTOM_MARGIN, "short viewports retain a safe margin below the tank")
-	check(tank.tank_rect.size.x == maxf(tank.TANK.size.x, tank.get_viewport_rect().size.x - tank.TANK.position.x * 2.0), "tank width follows the available landscape viewport")
+	check(tank.tank_rect.size.x == tank.STARTER_TANK_WIDTH, "starter tank keeps one consistent world width across devices")
+	var visible_tank_left: float = tank.position.x + tank.tank_rect.position.x
+	var visible_tank_right: float = tank.position.x + tank.tank_rect.end.x
+	check(is_equal_approx(visible_tank_left, tank.get_viewport_rect().size.x - visible_tank_right), "starter tank remains centered in the available viewport")
 	var visible_tank_top: float = tank.position.y + tank.tank_rect.position.y
 	var visible_tank_bottom: float = tank.position.y + tank.tank_rect.end.y
 	check(tank.controls_button.position.y + tank.controls_button.size.y < visible_tank_top and tank.shop_button.position.y + tank.shop_button.size.y < visible_tank_top, "shop and controls occupy the header above the tank")

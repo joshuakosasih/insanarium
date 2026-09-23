@@ -8,9 +8,11 @@ var stamina_left: float = 10.0
 var sleep_left: float = 0.0
 var sleep_duration: float = 20.0
 var horizontal_bounds := Vector2(85, 1067)
+var presentation_scale: float = 1.0
 
 func _ready() -> void:
 	add_to_group("pets")
+	scale = Vector2.ONE * presentation_scale
 	apply_upgrades(0, 0, 0)
 
 func apply_upgrades(speed_level: int, stamina_level: int, sleep_level: int) -> void:
@@ -41,7 +43,7 @@ func _process(delta: float) -> void:
 		return
 	var direction: float = target.position.x - position.x
 	if absf(direction) > 2.0:
-		scale.x = signf(direction)
+		scale.x = signf(direction) * presentation_scale
 		position.x = clampf(move_toward(position.x, target.position.x, crawl_speed * delta), horizontal_bounds.x, horizontal_bounds.y)
 		stamina_left = maxf(0.0, stamina_left - delta)
 	if absf(position.x - target.position.x) <= 20.0:

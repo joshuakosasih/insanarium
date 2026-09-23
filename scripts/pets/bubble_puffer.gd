@@ -12,11 +12,13 @@ var target_bubble: IncomeBubble
 var seen_bubbles: Dictionary = {}
 var phase: float = 0.0
 var rng := RandomNumberGenerator.new()
+var presentation_scale: float = 1.0
 const CONTACT_RADIUS: float = 22.0
 const PUFF_DURATION: float = 0.7
 
 func _ready() -> void:
 	add_to_group("pets")
+	scale = Vector2.ONE * presentation_scale
 	rng.randomize()
 	destination = position
 	z_index = 4
@@ -34,7 +36,7 @@ func _process(delta: float) -> void:
 	if is_instance_valid(target_bubble) and not target_bubble.claimed and not target_bubble.is_queued_for_deletion():
 		destination = target_bubble.position
 		move_toward_point(destination, delta)
-		if position.distance_to(target_bubble.position) <= CONTACT_RADIUS + target_bubble.RADIUS:
+		if position.distance_to(target_bubble.position) <= CONTACT_RADIUS * presentation_scale + target_bubble.RADIUS * absf(target_bubble.scale.x):
 			target_bubble.pop()
 			target_bubble = null
 			puff_left = PUFF_DURATION
@@ -63,7 +65,7 @@ func consider_new_bubbles() -> void:
 func move_toward_point(point: Vector2, delta: float) -> void:
 	var direction: Vector2 = point - position
 	if absf(direction.x) > 1.0:
-		scale.x = signf(direction.x)
+		scale.x = signf(direction.x) * presentation_scale
 	position = position.move_toward(point.clamp(bounds.position, bounds.end), move_speed * delta)
 
 func _draw() -> void:

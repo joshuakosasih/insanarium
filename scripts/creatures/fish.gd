@@ -18,6 +18,7 @@ var dead: bool = false
 var selected: bool = false
 var growth := FishGrowth.new()
 var visual_size: float = 0.75
+var presentation_scale: float = 1.0
 var profile: FishProfile
 var bounds: Rect2
 var hunger: float = 0.0
@@ -34,7 +35,7 @@ func _ready() -> void:
 		profile = FishProfile.new()
 	health.configure_maximum(genome.max_health(), true)
 	growth.stage_changed.connect(_on_stage_changed)
-	visual_size = profile.growth_sizes[growth.stage]
+	visual_size = profile.growth_sizes[growth.stage] * presentation_scale
 	scale = Vector2.ONE * visual_size
 	hunger = randf_range(0.1, 0.48)
 	coin_left = randf_range(3.0, genome.output_interval(profile.coin_interval))
@@ -84,7 +85,7 @@ func _process(delta: float) -> void:
 	position = position.clamp(bounds.position, bounds.end)
 	if absf(movement.x) > 3.0:
 		facing = signf(movement.x)
-	visual_size = move_toward(visual_size, profile.growth_sizes[growth.stage], delta * 0.5)
+	visual_size = move_toward(visual_size, profile.growth_sizes[growth.stage] * presentation_scale, delta * 0.5)
 	scale.x = move_toward(scale.x, facing * visual_size, delta * 5.0)
 	scale.y = visual_size
 	phase += delta * 7.0
