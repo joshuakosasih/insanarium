@@ -25,9 +25,10 @@ func run() -> void:
 	var sample_tank_point := Vector2(500, 400)
 	var sample_viewport_point: Vector2 = tank.get_global_transform_with_canvas() * sample_tank_point
 	check(tank.viewport_to_tank(sample_viewport_point).is_equal_approx(sample_tank_point), "pointer conversion reverses the complete scaled and centered canvas transform")
-	check(tank.position.y + tank.TANK.end.y <= tank.get_viewport_rect().size.y - tank.TANK_BOTTOM_MARGIN, "short viewports retain a safe margin below the tank")
-	var visible_tank_top: float = tank.position.y + tank.TANK.position.y
-	var visible_tank_bottom: float = tank.position.y + tank.TANK.end.y
+	check(tank.position.y + tank.tank_rect.end.y <= tank.get_viewport_rect().size.y - tank.TANK_BOTTOM_MARGIN, "short viewports retain a safe margin below the tank")
+	check(tank.tank_rect.size.x == maxf(tank.TANK.size.x, tank.get_viewport_rect().size.x - tank.TANK.position.x * 2.0), "tank width follows the available landscape viewport")
+	var visible_tank_top: float = tank.position.y + tank.tank_rect.position.y
+	var visible_tank_bottom: float = tank.position.y + tank.tank_rect.end.y
 	check(tank.controls_button.position.y + tank.controls_button.size.y < visible_tank_top and tank.shop_button.position.y + tank.shop_button.size.y < visible_tank_top, "shop and controls occupy the header above the tank")
 	check(tank.feed_label.position.y > visible_tank_bottom and tank.feed_status.position.y > visible_tank_bottom and tank.footer_hint.position.y > visible_tank_bottom, "feeding and help text occupy the footer below the tank")
 	var pointer_event := InputEventMouseButton.new()
@@ -40,6 +41,22 @@ func run() -> void:
 	pointer_food.free()
 	tank.economy.credit(2)
 	tank.food_cooldown = 0.0
+	check(not ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", true), "touch does not request a second synthetic mouse click")
+	var tapped_bubble = tank.spawn_income_bubble()
+	tapped_bubble.position = sample_tank_point
+	tapped_bubble.value = 1.0
+	var before_bubble_tap: float = tank.economy.money
+	tank.last_pointer_msec = -1000
+	var touch_event := InputEventScreenTouch.new()
+	touch_event.pressed = true
+	touch_event.position = sample_viewport_point
+	tank._unhandled_input(touch_event)
+	var synthetic_mouse := InputEventMouseButton.new()
+	synthetic_mouse.button_index = MOUSE_BUTTON_LEFT
+	synthetic_mouse.pressed = true
+	synthetic_mouse.position = sample_viewport_point
+	tank._unhandled_input(synthetic_mouse)
+	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap is consumed once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
 	check(not tank.shop_panel.visible and tank.shop_cards.size() == 10, "shop starts closed with reusable product cards")
 	tank.toggle_shop()

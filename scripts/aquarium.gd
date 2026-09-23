@@ -10,6 +10,10 @@ const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
 const TANK_BOTTOM_MARGIN := 36.0
+const POINTER_DUPLICATE_MS := 180
+const POINTER_DUPLICATE_RADIUS := 28.0
+var tank_rect := TANK
+var swim_bounds := SWIM_BOUNDS
 var feeds: Array[FeedProfile] = FeedProfile.tiers()
 var hud_layer: CanvasLayer
 var feed_upgrades := FeedUpgrades.new()
@@ -75,6 +79,8 @@ var bubble_rng := RandomNumberGenerator.new()
 var food_cooldown: float = 0.0
 var snail_collection_progress: float = 0.0
 var environment := TankEnvironment.new()
+var last_pointer_position := Vector2(-10000, -10000)
+var last_pointer_msec: int = -1000
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -89,6 +95,7 @@ func _ready() -> void:
 	water_overlay = WaterQualityOverlay.new()
 	water_overlay.z_index = 8
 	add_child(water_overlay)
+	water_overlay.set_area(Rect2(tank_rect.position + Vector2(2, 2), tank_rect.size - Vector2(4, 24)))
 	breeding.offspring_requested.connect(birth)
 	feed_upgrades.upgraded.connect(func(_tier: int) -> void: update_money(economy.money))
 	economy.money_changed.connect(update_money)
@@ -129,22 +136,40 @@ func set_idle(idle: bool) -> void:
 		apply_catchup(data)
 
 func update_viewport_layout() -> void:
-	# Stretch-aspect expand adds logical space on wide phones; keep the fixed tank centered.
+	# Stretch-aspect expand adds logical width on wide screens. Use that width for
+	# the habitat itself while keeping the fixed-width HUD centered above it.
 	var viewport_size := get_viewport_rect().size
 	var extra_width: float = maxf(0.0, viewport_size.x - 1152.0)
+	tank_rect = Rect2(TANK.position, Vector2(maxf(TANK.size.x, viewport_size.x - TANK.position.x * 2.0), TANK.size.y))
+	swim_bounds = Rect2(SWIM_BOUNDS.position, Vector2(tank_rect.size.x - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
 	# Preserve the desktop placement, but move the world slightly upward on short
 	# phone viewports so the tank keeps a visible safe gap beneath its border.
-	var tank_y: float = minf(-70.0, viewport_size.y - TANK.end.y - TANK_BOTTOM_MARGIN)
-	position = Vector2(extra_width * 0.5, tank_y)
+	var tank_y: float = minf(-70.0, viewport_size.y - tank_rect.end.y - TANK_BOTTOM_MARGIN)
+	position = Vector2(0.0, tank_y)
 	if is_instance_valid(hud_layer):
 		hud_layer.offset.x = extra_width * 0.5
-	var footer_y: float = position.y + TANK.end.y + 6.0
+	var footer_y: float = position.y + tank_rect.end.y + 6.0
 	if is_instance_valid(feed_label):
 		feed_label.position.y = footer_y
 		feed_status.position.y = footer_y
 		footer_hint.position.y = footer_y
 		pace_label.position.y = footer_y
 		save_label.position.y = footer_y
+	if is_instance_valid(water_overlay):
+		water_overlay.set_area(Rect2(tank_rect.position + Vector2(2, 2), tank_rect.size - Vector2(4, 24)))
+	for fish in get_tree().get_nodes_in_group("fish"):
+		fish.bounds = swim_bounds
+		fish.position = fish.position.clamp(swim_bounds.position, swim_bounds.end)
+	for pet in get_tree().get_nodes_in_group("pets"):
+		if pet is SnailPet:
+			pet.horizontal_bounds = Vector2(swim_bounds.position.x, swim_bounds.end.x)
+			pet.position.x = clampf(pet.position.x, pet.horizontal_bounds.x, pet.horizontal_bounds.y)
+		elif pet is BubblePufferScript:
+			pet.bounds = Rect2(swim_bounds.position + Vector2(25, 23), swim_bounds.size - Vector2(50, 73))
+			pet.position = pet.position.clamp(pet.bounds.position, pet.bounds.end)
+	for coin in get_tree().get_nodes_in_group("coins"):
+		coin.collection_target.x = 825.0 + extra_width * 0.5
+	queue_redraw()
 
 func viewport_to_tank(viewport_position: Vector2) -> Vector2:
 	# Pointer events arrive in viewport coordinates. Convert through the complete
@@ -225,6 +250,7 @@ func spawn_asset(kind: String) -> void:
 		snail.position = Vector2(300, 650)
 		snail.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(snail)
+		snail.horizontal_bounds = Vector2(swim_bounds.position.x, swim_bounds.end.x)
 		snail.apply_upgrades(int(assets.levels.snail_speed), int(assets.levels.snail_stamina), int(assets.levels.snail_sleep))
 	elif kind == "seahorse":
 		var seahorse := SeahorsePet.new()
@@ -236,6 +262,7 @@ func spawn_asset(kind: String) -> void:
 		puffer.position = Vector2(760, 440)
 		puffer.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(puffer)
+		puffer.bounds = Rect2(swim_bounds.position + Vector2(25, 23), swim_bounds.size - Vector2(50, 73))
 		puffer.apply_upgrades(int(assets.levels.puffer_speed), int(assets.levels.puffer_curiosity))
 	queue_redraw()
 
@@ -252,7 +279,7 @@ func spawn_income_bubble() -> IncomeBubble:
 	var bubble := IncomeBubble.new()
 	bubble_rewards.multiplier = assets.bubble_multiplier()
 	bubble.value = bubble_rewards.roll(bubble_rng)
-	bubble.position = Vector2(bubble_rng.randf_range(120, 1020), bubble_rng.randf_range(615, 645))
+	bubble.position = Vector2(bubble_rng.randf_range(swim_bounds.position.x + 35, swim_bounds.end.x - 35), bubble_rng.randf_range(615, 645))
 	bubble.process_mode = Node.PROCESS_MODE_PAUSABLE
 	bubble.popped.connect(func(value: float) -> void:
 		economy.credit(value)
@@ -296,7 +323,7 @@ func purchase_full_clean() -> void:
 	if environment.cleanliness > TankEnvironment.FULL_CLEAN_THRESHOLD:
 		return
 	if not economy.spend(TankEnvironment.FULL_CLEAN_COST):
-		show_feedback(TANK.get_center(), "Need $%d" % int(TankEnvironment.FULL_CLEAN_COST))
+		show_feedback(tank_rect.get_center(), "Need $%d" % int(TankEnvironment.FULL_CLEAN_COST))
 		return
 	for waste in get_tree().get_nodes_in_group("waste"):
 		waste.remove_from_group("waste")
@@ -304,7 +331,7 @@ func purchase_full_clean() -> void:
 	environment.full_clean()
 	audio.play("buy")
 	update_cleanliness()
-	show_feedback(Vector2(TANK.get_center().x, TANK.position.y + 35), "Tank fully cleaned")
+	show_feedback(Vector2(tank_rect.get_center().x, tank_rect.position.y + 35), "Tank fully cleaned")
 
 func update_inspection() -> void:
 	var valid: bool = is_instance_valid(selected_fish) and not selected_fish.dead
@@ -341,7 +368,7 @@ func birth(at: Vector2, father_id: String = "", mother_id: String = "") -> void:
 			child.genome = FishGenome.inherit(father.genome, mother.genome)
 			child.apply_genome(true)
 			child.coin_left = randf_range(3.0, child.genome.output_interval(child.profile.coin_interval))
-		child.position = at.clamp(SWIM_BOUNDS.position, SWIM_BOUNDS.end)
+		child.position = at.clamp(swim_bounds.position, swim_bounds.end)
 		child.hunger = 0.1
 		child.life.parent_ids = PackedStringArray([father_id, mother_id])
 		show_feedback(child.position, "New offspring!")
@@ -357,8 +384,8 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased") -> Aquari
 		life_registry.allocate(fish.life, origin)
 	fish.profile = FishProfile.new()
 	fish.sex = randi_range(0, 2) as AquariumFish.Sex
-	fish.bounds = SWIM_BOUNDS
-	fish.position = Vector2(randf_range(150, 1000), randf_range(240, 540))
+	fish.bounds = swim_bounds
+	fish.position = Vector2(randf_range(swim_bounds.position.x + 65, swim_bounds.end.x - 67), randf_range(240, 540))
 	fish.coin_produced.connect(spawn_coin)
 	fish.waste_produced.connect(spawn_waste)
 	fish.grew.connect(show_growth)
@@ -399,7 +426,7 @@ func spawn_waste(at: Vector2) -> FishWaste:
 	if get_tree().get_nodes_in_group("waste").size() >= 100:
 		return null
 	var waste := FishWaste.new()
-	waste.position = at.clamp(SWIM_BOUNDS.position, Vector2(SWIM_BOUNDS.end.x, waste.floor_y))
+	waste.position = at.clamp(swim_bounds.position, Vector2(swim_bounds.end.x, waste.floor_y))
 	waste.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(waste)
 	return waste
@@ -430,7 +457,7 @@ func show_growth(at: Vector2, stage_name: String) -> void:
 	show_feedback(at, stage_name + "!")
 
 func drop_food(at: Vector2) -> FishFood:
-	if not TANK.has_point(at) or food_cooldown > 0.0 or get_tree().get_nodes_in_group("food").size() >= 80:
+	if not tank_rect.has_point(at) or food_cooldown > 0.0 or get_tree().get_nodes_in_group("food").size() >= 80:
 		return null
 	if not economy.spend(feeds[feed_upgrades.unlocked_tier].price):
 		show_feedback(at, "Need $%d" % feeds[feed_upgrades.unlocked_tier].price)
@@ -443,7 +470,7 @@ func drop_food(at: Vector2) -> FishFood:
 func spawn_food(at: Vector2, feed: FeedProfile) -> FishFood:
 	var food := FishFood.new()
 	food.profile = feed
-	food.position = at.clamp(SWIM_BOUNDS.position, SWIM_BOUNDS.end)
+	food.position = at.clamp(swim_bounds.position, swim_bounds.end)
 	food.expired.connect(on_food_expired)
 	food.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(food)
@@ -501,9 +528,21 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		handle_tank_click(viewport_to_tank(event.position))
+		handle_pointer_press(event.position)
 	elif event is InputEventScreenTouch and event.pressed:
-		handle_tank_click(viewport_to_tank(event.position))
+		handle_pointer_press(event.position)
+
+func handle_pointer_press(viewport_position: Vector2) -> void:
+	var now: int = Time.get_ticks_msec()
+	# Some mobile browsers emit a touch followed by a synthetic mouse click.
+	# Treat that pair as one press so collecting a reward cannot also drop food.
+	if now - last_pointer_msec <= POINTER_DUPLICATE_MS and viewport_position.distance_to(last_pointer_position) <= POINTER_DUPLICATE_RADIUS:
+		get_viewport().set_input_as_handled()
+		return
+	last_pointer_msec = now
+	last_pointer_position = viewport_position
+	handle_tank_click(viewport_to_tank(viewport_position))
+	get_viewport().set_input_as_handled()
 
 func handle_tank_click(at: Vector2) -> void:
 	for bubble in get_tree().get_nodes_in_group("income_bubbles"):
@@ -1050,28 +1089,31 @@ func make_button(parent: Node, text: String, at: Vector2, dimensions: Vector2, a
 
 
 func _draw() -> void:
-	draw_style_box(tank_style(), TANK)
+	draw_style_box(tank_style(), tank_rect)
 	if assets.owned.feeder:
-		VectorArt.draw_feeder(self, Vector2(520, 155), 1.0, true)
+		VectorArt.draw_feeder(self, Vector2(tank_rect.get_center().x - 56, 155), 1.0, true)
 	for i in range(12):
 		var y: float = 174.0 + i * 40.0
-		draw_rect(Rect2(50, y, 1052, 40), Color(0.07, 0.25, 0.31, 0.12 + i * 0.015))
-	draw_colored_polygon(PackedVector2Array([Vector2(160, 168), Vector2(290, 168), Vector2(610, 638), Vector2(350, 638)]), Color(0.6, 0.9, 0.87, 0.035))
-	draw_colored_polygon(PackedVector2Array([Vector2(710, 168), Vector2(770, 168), Vector2(1000, 638), Vector2(870, 638)]), Color(0.6, 0.9, 0.87, 0.035))
+		draw_rect(Rect2(tank_rect.position.x + 2, y, tank_rect.size.x - 4, 40), Color(0.07, 0.25, 0.31, 0.12 + i * 0.015))
+	var left := tank_rect.position.x
+	var right := tank_rect.end.x
+	draw_colored_polygon(PackedVector2Array([Vector2(left + 112, 168), Vector2(left + 242, 168), Vector2(left + 562, 638), Vector2(left + 302, 638)]), Color(0.6, 0.9, 0.87, 0.035))
+	draw_colored_polygon(PackedVector2Array([Vector2(right - 394, 168), Vector2(right - 334, 168), Vector2(right - 104, 638), Vector2(right - 234, 638)]), Color(0.6, 0.9, 0.87, 0.035))
 	var murk: float = clampf((70.0 - environment.cleanliness) / 70.0, 0.0, 1.0)
-	draw_rect(Rect2(50, 168, 1052, 480), Color(0.22, 0.20, 0.07, murk * 0.16))
-	draw_rect(Rect2(50, 648, 1052, 20), Color("344b49"))
-	for i in range(28):
-		var x: float = 63.0 + i * 38.0
+	draw_rect(Rect2(left + 2, 168, tank_rect.size.x - 4, 480), Color(0.22, 0.20, 0.07, murk * 0.16))
+	draw_rect(Rect2(left + 2, 648, tank_rect.size.x - 4, 20), Color("344b49"))
+	var gravel_count: int = floori((tank_rect.size.x - 20.0) / 38.0)
+	for i in range(gravel_count):
+		var x: float = left + 15.0 + i * 38.0
 		draw_circle(Vector2(x, 652 + sin(i * 2.4) * 4), 3, Color("6d8070"))
-	for x in [100.0, 135.0, 990.0, 1030.0, 1060.0]:
+	for x in [left + 52.0, left + 87.0, right - 114.0, right - 74.0, right - 44.0]:
 		for j in range(3):
 			var points := PackedVector2Array()
 			for k in range(12):
 				points.append(Vector2(x + sin(k * 0.5 + j) * 12 + j * 7, 649 - k * (6 + j * 2)))
 			draw_polyline(points, Color("397f76") if j % 2 == 0 else Color("4c9881"), 6, true)
 	for i in range(16):
-		var at := Vector2(80 + fmod(i * 173.0, 1000.0), 220 + fmod(i * 97.0, 360.0))
+		var at := Vector2(left + 32.0 + fmod(i * 173.0, tank_rect.size.x - 64.0), 220 + fmod(i * 97.0, 360.0))
 		draw_arc(at, 2.0 + i % 3, 0, TAU, 16, Color(0.55, 0.82, 0.86, 0.18), 1, true)
 
 func tank_style() -> StyleBoxFlat:
@@ -1171,7 +1213,7 @@ func restore(data: Dictionary) -> void:
 		fish.apply_genome(false)
 		fish.sex = clampi(int(item.get("sex", fish.sex)), 0, 2) as AquariumFish.Sex
 		fish.breeding_left = clampf(float(item.get("breeding_left", 0)), 0, 300)
-		fish.position = Vector2(item.get("x", 500), item.get("y", 350)).clamp(SWIM_BOUNDS.position, SWIM_BOUNDS.end)
+		fish.position = Vector2(item.get("x", 500), item.get("y", 350)).clamp(swim_bounds.position, swim_bounds.end)
 		fish.hunger = clampf(float(item.get("hunger", 0)), 0, 1)
 		fish.health.current = clampf(float(item.get("health", fish.health.maximum)), 0.01, fish.health.maximum)
 		var saved_starvation: float = float(item.get("starving", 0))
@@ -1191,7 +1233,7 @@ func restore(data: Dictionary) -> void:
 		coin.grounded = bool(item.get("grounded", coin.position.y >= coin.floor_y))
 	for item in data.get("waste", []).slice(0, 100):
 		var waste := FishWaste.new()
-		waste.position = Vector2(float(item.get("x", 500)), float(item.get("y", 642))).clamp(SWIM_BOUNDS.position, Vector2(SWIM_BOUNDS.end.x, waste.floor_y))
+		waste.position = Vector2(float(item.get("x", 500)), float(item.get("y", 642))).clamp(swim_bounds.position, Vector2(swim_bounds.end.x, waste.floor_y))
 		waste.settled = bool(item.get("settled", waste.position.y >= waste.floor_y))
 		waste.lifetime = clampf(float(item.get("life", FishWaste.FLOOR_LIFETIME)), 0.01, FishWaste.FLOOR_LIFETIME)
 		waste.process_mode = Node.PROCESS_MODE_PAUSABLE
