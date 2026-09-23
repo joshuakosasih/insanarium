@@ -108,6 +108,8 @@ Install Godot 4.5.1 export templates through **Editor → Manage Export Template
 
 The wide tank-first browser layout supports desktop, tablet, and mobile landscape screens. On a phone, rotate to landscape; portrait mode shows a dedicated rotation prompt instead of shrinking the aquarium into an unusable strip. The initial habitat is a smaller fixed-size starter tank centered on every display, with one consistent enlarged presentation scale for its creatures and collectibles. Header controls remain above its border and feeding/help text stays in a dedicated footer below it. Touches work for feeding, bubbles, rewards, waste, fish inspection, combat, and all buttons; a collected target consumes the press without also dropping food. Sound, Tank Care, breeding, challenges, and backup actions live in the expandable **Controls** panel so the main tank remains uncluttered at smaller sizes.
 
+The web export is an installable Progressive Web App. Open the HTTPS GitHub Pages build in Chrome, then choose **Install app** from the address bar or browser menu. On Android the same action may be named **Add to Home screen**. Launching the installed app uses a standalone landscape window without Chrome's address bar. The first online visit installs its offline cache; game progress still lives only in that browser/PWA's local storage, so keep a JSON backup before clearing site data.
+
 ```sh
 mkdir -p build/web
 godot --headless --path . --export-release Web build/web/index.html
