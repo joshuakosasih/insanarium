@@ -49,7 +49,7 @@ var sell_button: Button
 var inspect_label: Label
 var save_label: Label
 var autosave_left: float = 15.0
-var challenges: bool = false
+var challenges: bool = true
 var persistence: bool = not "--test" in OS.get_cmdline_user_args()
 var economy: Economy
 var money_label: Label
@@ -76,7 +76,8 @@ var care_details: Label
 var care_warnings: Label
 var care_refresh: float = 0.0
 var audio: AquariumAudio
-var sound_button: Button
+var music_button: Button
+var effects_button: Button
 var bubble_left: float = 3.0
 var bubble_rewards := BubbleRewards.new()
 var bubble_rng := RandomNumberGenerator.new()
@@ -112,7 +113,7 @@ func _ready() -> void:
 		audio.set_danger_music(false))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
-	invasions.running = false
+	invasions.running = challenges
 	invasions.warning_started.connect(func() -> void:
 		audio.play("alert")
 		audio.set_danger_music(true))
@@ -571,14 +572,14 @@ func handle_pointer_press(viewport_position: Vector2) -> void:
 	get_viewport().set_input_as_handled()
 
 func handle_tank_click(at: Vector2) -> void:
+	for alien in get_tree().get_nodes_in_group("invaders"):
+		if not alien.dead and alien.contains_point(at):
+			alien.hit(at)
+			audio.play("hit")
+			return
 	for bubble in get_tree().get_nodes_in_group("income_bubbles"):
 		if bubble.position.distance_to(at) <= IncomeBubble.HIT_RADIUS * absf(bubble.scale.x):
 			bubble.pop()
-			return
-	for alien in get_tree().get_nodes_in_group("invaders"):
-		if not alien.dead and alien.position.distance_to(at) <= 48.0 * absf(alien.scale.x):
-			alien.hit(at)
-			audio.play("hit")
 			return
 	for coin in get_tree().get_nodes_in_group("coins"):
 		if not coin.claimed and coin.position.distance_to(at) <= 24.0 * absf(coin.scale.x):
@@ -597,6 +598,19 @@ func handle_tank_click(at: Vector2) -> void:
 			update_inspection()
 			return
 	drop_food(at)
+
+func set_challenges_enabled(enabled: bool) -> void:
+	challenges = enabled
+	invasions.running = enabled
+	audio.set_danger_music(false)
+	if enabled:
+		invasions.warning_left = 0.0
+		invasions.schedule_next()
+	else:
+		invasions.stop()
+		if is_instance_valid(invasions.active):
+			invasions.active.queue_free()
+		invasions.active = null
 
 func purchase_fish() -> void:
 	var population: int = get_tree().get_nodes_in_group("fish").size()
@@ -994,16 +1008,7 @@ func build_hud() -> void:
 	challenge.text = "Alien challenges"
 	challenge.position = Vector2(350, 390)
 	challenge.button_pressed = challenges
-	challenge.toggled.connect(func(enabled: bool) -> void:
-		challenges = enabled
-		invasions.running = enabled
-		if not enabled:
-			audio.set_danger_music(false)
-			invasions.stop()
-			if is_instance_valid(invasions.active):
-				invasions.active.queue_free()
-		else:
-			invasions.schedule_next())
+	challenge.toggled.connect(set_challenges_enabled)
 	care_panel.add_child(challenge)
 	breeding_toggle = CheckButton.new()
 	breeding_toggle.text = "Allow breeding"
@@ -1018,13 +1023,16 @@ func build_hud() -> void:
 	add_child(transfer)
 	transfer.import_ready.connect(confirm_import)
 	transfer.status.connect(func(message: String) -> void: save_label.text = message)
-	sound_button = make_button(care_panel, "Sound: off" if audio.muted else "Sound: on", Vector2(18, 465), Vector2(180, 42), func() -> void:
-		audio.set_muted(not audio.muted)
-		sound_button.text = "Sound: off" if audio.muted else "Sound: on"
-		if not audio.muted:
+	music_button = make_button(care_panel, "Music: off" if audio.music_muted else "Music: on", Vector2(18, 465), Vector2(140, 42), func() -> void:
+		audio.set_music_muted(not audio.music_muted)
+		music_button.text = "Music: off" if audio.music_muted else "Music: on")
+	effects_button = make_button(care_panel, "Effects: off" if audio.effects_muted else "Effects: on", Vector2(172, 465), Vector2(140, 42), func() -> void:
+		audio.set_effects_muted(not audio.effects_muted)
+		effects_button.text = "Effects: off" if audio.effects_muted else "Effects: on"
+		if not audio.effects_muted:
 			audio.play("bubble"))
-	make_button(care_panel, "Export backup", Vector2(214, 465), Vector2(180, 42), func() -> void: transfer.export_save(snapshot()))
-	make_button(care_panel, "Import backup", Vector2(410, 465), Vector2(180, 42), transfer.import_save)
+	make_button(care_panel, "Export backup", Vector2(326, 465), Vector2(140, 42), func() -> void: transfer.export_save(snapshot()))
+	make_button(care_panel, "Import backup", Vector2(480, 465), Vector2(140, 42), transfer.import_save)
 	label_at(care_panel, "Away time is upgradeable · No offline breeding or aliens", Vector2(18, 531), 12, Color("83a9b7"))
 	return_dialog = AcceptDialog.new()
 	return_dialog.title = "Welcome back"

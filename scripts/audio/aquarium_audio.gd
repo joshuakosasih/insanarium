@@ -8,7 +8,8 @@ const CALM_DB := -14.0
 const ALIEN_DB := -10.0
 const SILENT_DB := -60.0
 const MUSIC_FADE_DB_PER_SECOND := 28.0
-var muted: bool = false
+var music_muted: bool = false
+var effects_muted: bool = false
 var voices: Array[AudioStreamPlayer] = []
 var effects: Dictionary = {}
 var last_played: Dictionary = {}
@@ -20,7 +21,11 @@ func _ready() -> void:
 	if not "--test" in OS.get_cmdline_user_args():
 		var config := ConfigFile.new()
 		if config.load(SETTINGS) == OK:
-			muted = bool(config.get_value("audio", "muted", false))
+			# Older builds stored one mute switch. Use it as the default for both
+			# channels until each independent preference has been saved.
+			var legacy_muted: bool = bool(config.get_value("audio", "muted", false))
+			music_muted = bool(config.get_value("audio", "music_muted", legacy_muted))
+			effects_muted = bool(config.get_value("audio", "effects_muted", legacy_muted))
 	for kind in ["bubble", "feed", "coin", "buy", "grow", "loss", "alert", "hit"]:
 		effects[kind] = synthesize(kind)
 	for i in range(6):
@@ -30,11 +35,11 @@ func _ready() -> void:
 		voices.append(voice)
 	calm_music = make_music_player(looping_copy(CALM_MUSIC), CALM_DB)
 	alien_music = make_music_player(looping_copy(ALIEN_MUSIC), SILENT_DB)
-	if not muted:
+	if not music_muted:
 		start_music()
 
 func _process(delta: float) -> void:
-	if muted:
+	if music_muted:
 		return
 	var calm_target: float = SILENT_DB if danger_music else CALM_DB
 	var alien_target: float = ALIEN_DB if danger_music else SILENT_DB
@@ -51,23 +56,32 @@ func _exit_tree() -> void:
 			player.stream = null
 	effects.clear()
 
-func set_muted(value: bool) -> void:
-	muted = value
-	if muted:
-		for voice in voices:
-			voice.stop()
+func set_music_muted(value: bool) -> void:
+	music_muted = value
+	if music_muted:
 		calm_music.stop()
 		alien_music.stop()
 	else:
 		start_music()
+	save_preferences()
+
+func set_effects_muted(value: bool) -> void:
+	effects_muted = value
+	if effects_muted:
+		for voice in voices:
+			voice.stop()
+	save_preferences()
+
+func save_preferences() -> void:
 	if not "--test" in OS.get_cmdline_user_args():
 		var config := ConfigFile.new()
-		config.set_value("audio", "muted", muted)
+		config.set_value("audio", "music_muted", music_muted)
+		config.set_value("audio", "effects_muted", effects_muted)
 		config.save(SETTINGS)
 
 func set_danger_music(enabled: bool) -> void:
 	danger_music = enabled
-	if muted:
+	if music_muted:
 		return
 	if not calm_music.playing or not alien_music.playing:
 		start_music()
@@ -98,7 +112,7 @@ func looping_copy(source: AudioStream) -> AudioStream:
 	return stream
 
 func play(kind: String) -> void:
-	if muted or ActivityPace.multiplier < 1.0 or not effects.has(kind):
+	if effects_muted or ActivityPace.multiplier < 1.0 or not effects.has(kind):
 		return
 	var now: int = Time.get_ticks_msec()
 	if now - int(last_played.get(kind, -1000)) < 100:
@@ -121,13 +135,30 @@ static func synthesize(kind: String) -> AudioStreamWAV:
 	var bytes := PackedByteArray()
 	bytes.resize(samples * 2)
 	var phase: float = 0.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(kind)
 	for i in range(samples):
 		var t: float = float(i) / samples
-		phase += TAU * lerpf(settings[0], settings[1], t) / 22050.0
-		var envelope: float = minf(t * 40.0, 1.0) * pow(1.0 - t, 2.0)
-		if kind == "alert":
-			envelope *= 0.5 + 0.5 * sin(t * TAU * 3.0)
-		var sample: float = (sin(phase) + 0.15 * sin(phase * 2.0)) * envelope * 0.55
+		var seconds: float = float(i) / 22050.0
+		var sample: float
+		if kind == "bubble":
+			# A short air-pressure snap followed by a small round water resonance.
+			var snap: float = rng.randf_range(-1.0, 1.0) * exp(-seconds * 55.0)
+			var body: float = sin(TAU * lerpf(210.0, 105.0, t) * seconds) * exp(-seconds * 22.0)
+			sample = snap * 0.62 + body * 0.48
+		elif kind == "coin":
+			# Two clean metallic notes make collection distinct from bubble income.
+			var first: float = (sin(TAU * 880.0 * seconds) + 0.28 * sin(TAU * 1760.0 * seconds)) * exp(-seconds * 11.0)
+			var second_time: float = maxf(0.0, seconds - 0.075)
+			var second: float = 0.0 if seconds < 0.075 else (sin(TAU * 1320.0 * second_time) + 0.2 * sin(TAU * 2640.0 * second_time)) * exp(-second_time * 13.0)
+			sample = (first * 0.48 + second * 0.40) * minf(seconds * 180.0, 1.0)
+		else:
+			phase += TAU * lerpf(settings[0], settings[1], t) / 22050.0
+			var envelope: float = minf(t * 40.0, 1.0) * pow(1.0 - t, 2.0)
+			if kind == "alert":
+				envelope *= 0.5 + 0.5 * sin(t * TAU * 3.0)
+			sample = (sin(phase) + 0.15 * sin(phase * 2.0)) * envelope * 0.55
+		sample = clampf(sample, -1.0, 1.0)
 		bytes.encode_s16(i * 2, int(sample * 32767))
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS

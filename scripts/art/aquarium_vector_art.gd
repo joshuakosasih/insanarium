@@ -2,7 +2,7 @@ class_name AquariumVectorArt
 extends RefCounted
 ## Shared procedural silhouettes used by both live entities and shop previews.
 
-static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false) -> void:
+static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-20, 0), Vector2(-41, -17 + tail), Vector2(-38, 18 + tail)]), color.darkened(0.16))
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-10, -12), Vector2(-6, -25), Vector2(12, -12)]), color.darkened(0.12))
@@ -16,6 +16,11 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_line(Vector2(13, -1), Vector2(20, -8), Color("173348"), 2, true)
 	else:
 		canvas.draw_circle(Vector2(18, -5), 3, Color("173348"))
+	if crowned:
+		var crown := PackedVector2Array([Vector2(-8, -22), Vector2(-10, -39), Vector2(-1, -31), Vector2(5, -44), Vector2(11, -31), Vector2(20, -39), Vector2(18, -22)])
+		canvas.draw_colored_polygon(crown, Color("ffcf55"))
+		canvas.draw_polyline(PackedVector2Array([crown[0], crown[1], crown[2], crown[3], crown[4], crown[5], crown[6]]), Color("8d6132"), 1.5, true)
+		canvas.draw_circle(Vector2(5, -27), 2.5, Color("75cdf2"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:

@@ -127,6 +127,9 @@ func current_coin_value() -> int:
 func sell_value() -> int:
 	return mutation.sell_value(growth.stage)
 
+func wears_crown() -> bool:
+	return growth.stage >= profile.diamond_stage
+
 func _on_stage_changed(stage: int) -> void:
 	if mutation.roll():
 		grew.emit(position, mutation.NAMES[mutation.variant] + " mutation!")
@@ -137,7 +140,7 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, 33, 0, TAU, 40, Color("d4f0df"), 1.5, true)
 	var color: Color = mutation.COLORS[mutation.variant]
 	var tail: float = sin(phase) * 4.0
-	VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead)
+	VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
 	if not dead and hunger >= profile.hungry_threshold:
 		draw_circle(Vector2(0, -34), 5, Color("ff657f") if hunger >= 1.0 else Color("ffa86b"))
 	if not dead and hunger >= 1.0:

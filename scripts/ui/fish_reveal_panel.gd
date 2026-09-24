@@ -14,6 +14,7 @@ var inspect_button: Button
 var trait_bars: Array[FishTraitBar] = []
 var fish_id: String = ""
 var fish_color: Color = Color("f6be73")
+var crowned: bool = false
 
 func _ready() -> void:
 	size = Vector2(552, 590)
@@ -48,6 +49,7 @@ func _ready() -> void:
 func present(data: Dictionary) -> void:
 	fish_id = str(data.id)
 	fish_color = data.color
+	crowned = bool(data.get("crowned", false))
 	heading_label.text = str(data.heading)
 	identity_label.text = str(data.identity)
 	details_label.text = str(data.details)
@@ -86,10 +88,10 @@ static func capture(fish: AquariumFish, heading: String, parents: Array = []) ->
 	return {"heading": heading, "id": fish.life.id,
 		"identity": "%s · %s\n%s · %s · %s" % [fish.life.id, fish.profile.species_name, AquariumFish.SEX_NAMES[fish.sex], fish.profile.growth_names[fish.growth.stage], FishMutation.NAMES[fish.mutation.variant]],
 		"details": "Output interval %.1fs · Expected lifespan %s" % [fish.genome.output_interval(fish.profile.coin_interval), FishInspector.duration(lifespan)],
-		"comparison": comparison, "rows": rows, "color": FishMutation.COLORS[fish.mutation.variant]}
+		"comparison": comparison, "rows": rows, "color": FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown()}
 
 func _draw() -> void:
-	VectorArt.draw_fish(self, Vector2(size.x * 0.5, 142), 1.7, fish_color)
+	VectorArt.draw_fish(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned)
 	draw_string(ThemeDB.fallback_font, Vector2(24, 188), "DIRECT TRAITS", HORIZONTAL_ALIGNMENT_CENTER, size.x - 48, 12, Color("83a9b7"))
 
 func make_label(value: String, at: Vector2, font_size: int, color: Color) -> Label:

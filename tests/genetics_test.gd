@@ -48,5 +48,8 @@ func run() -> void:
 	var description := FishInspector.describe(fish)
 	var rows := FishInspector.trait_rows(fish)
 	check(not description.contains("Metabolism") and not description.contains("Allocation") and rows.size() == 6, "inspector exposes direct phenotype rows while hidden traits stay hidden")
+	check(not fish.wears_crown(), "non-Diamond fish do not wear a crown")
+	fish.growth.stage = fish.profile.diamond_stage
+	check(fish.wears_crown() and FishRevealPanel.capture(fish, "TEST").crowned, "Diamond fish wear their crown in the tank and reveal card")
 	print("Genetics failures: ", failures)
 	quit(1 if failures else 0)

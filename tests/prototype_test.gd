@@ -69,7 +69,7 @@ func run() -> void:
 	tank.controls_button.pressed.emit()
 	check(tank.care_panel.visible, "controls button opens its connected panel")
 	tank.care_panel.hide()
-	check(not tank.invasions.running, "lethal invasions disabled by default")
+	check(tank.invasions.running and tank.challenges, "alien encounters are enabled during active play by default")
 	check(Economy.fish_price(2) == 50 and Economy.fish_price(10) == 2745 and Economy.fish_price(19) == 249000, "fish purchase price climbs steeply with population")
 	var fish = get_nodes_in_group("fish")[0]
 	check(fish.mutation.variant == 0 and fish.current_coin_value() == 0, "normal fish start amber and babies do not produce coins")

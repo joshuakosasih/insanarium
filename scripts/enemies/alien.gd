@@ -33,6 +33,11 @@ func hit(at: Vector2) -> void:
 	hit_flash = 0.12
 	queue_redraw()
 
+func contains_point(tank_point: Vector2) -> bool:
+	# Include the health bar and side arms so every visible part consumes the tap.
+	var local_point := (tank_point - position) / scale
+	return Rect2(-52, -64, 104, 108).has_point(local_point)
+
 func _process(delta: float) -> void:
 	delta *= ActivityPace.multiplier
 	if dead:
