@@ -64,6 +64,7 @@ func run() -> void:
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
 	check(not tank.shop_panel.visible and tank.shop_cards.size() == 12, "shop starts closed with reusable product cards")
 	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
+	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible, "shop button opens its connected panel")
 	tank.toggle_shop()
@@ -133,6 +134,7 @@ func run() -> void:
 	while tank.acquisition_celebration.visible:
 		tank.acquisition_celebration.finish_now()
 	check(tank.shop_cards.snail.discovered and tank.shop_cards.seahorse.discovered and tank.shop_cards.puffer.discovered and tank.shop_cards.feeder.discovered, "purchased helpers reveal their normal shop artwork")
+	check(tank.shop_cards.snail.icon_preview.material == null, "discovery removes the grayscale material and reveals the original colors")
 	for pet in get_nodes_in_group("pets"):
 		pet.set_process(false)
 	check(get_nodes_in_group("pets").size() == 3, "purchased pets are spawned")

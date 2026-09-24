@@ -1,7 +1,7 @@
 class_name ShopCard
 extends Button
 ## Reusable visual selector for purchasable creatures, equipment, and upgrades.
-const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
+const ShopIconScript = preload("res://scripts/ui/shop_icon.gd")
 var item_id: String
 var display_title: String
 var category: String
@@ -11,6 +11,7 @@ var selected: bool = false
 var discovered: bool = true
 var pellet_color: Color = Color("ffa86b")
 var pellet_growth: int = 1
+var icon_preview: ShopIcon
 
 func configure(item) -> void:
 	item_id = item.id
@@ -27,6 +28,10 @@ func configure(item) -> void:
 		style.set_border_width_all(1)
 		style.set_corner_radius_all(12)
 		add_theme_stylebox_override(state, style)
+	icon_preview = ShopIconScript.new()
+	icon_preview.position = Vector2(71, 56)
+	icon_preview.icon_kind = icon_kind
+	add_child(icon_preview)
 	queue_redraw()
 
 func set_status(value: String) -> void:
@@ -39,21 +44,20 @@ func set_selected(value: bool) -> void:
 
 func set_discovered(value: bool) -> void:
 	discovered = value
+	if is_instance_valid(icon_preview):
+		icon_preview.set_discovered(value)
 	queue_redraw()
 
 func set_pellet_preview(color: Color, growth_credit: int) -> void:
 	pellet_color = color
 	pellet_growth = growth_credit
+	if is_instance_valid(icon_preview):
+		icon_preview.set_pellet_preview(color, growth_credit)
 	queue_redraw()
 
 func _draw() -> void:
 	if selected:
 		draw_style_box(selection_style(), Rect2(Vector2(2, 2), size - Vector2(4, 4)))
-	var center := Vector2(size.x * 0.5, 56)
-	if discovered:
-		draw_icon(center)
-	else:
-		draw_shadow_icon(center)
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(12, 20), category, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 11, Color("8edfe9"))
 	draw_string(font, Vector2(12, size.y - 34), display_title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 15, Color("e8f2ed"))
@@ -65,86 +69,4 @@ func selection_style() -> StyleBoxFlat:
 	style.border_color = Color("8edfe9")
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(11)
-	return style
-
-func draw_icon(at: Vector2) -> void:
-	match icon_kind:
-		"fish":
-			VectorArt.draw_fish(self, at, 1.25, Color("f6be73"))
-		"snail":
-			VectorArt.draw_snail(self, at + Vector2(0, 12), 1.25)
-		"seahorse":
-			VectorArt.draw_seahorse(self, at + Vector2(0, 8), 1.15)
-		"puffer":
-			VectorArt.draw_puffer(self, at, 1.15, true)
-		"feeder":
-			VectorArt.draw_feeder(self, at + Vector2(-50, -20), 0.9, true)
-		"stock":
-			draw_style_box(machine_style(), Rect2(at + Vector2(-45, -28), Vector2(90, 60)))
-			for row in range(3):
-				for column in range(4):
-					VectorArt.draw_pellet(self, at + Vector2(-27 + column * 18, -12 + row * 17), pellet_growth, pellet_color, 0.65)
-		"feed":
-			for i in range(5):
-				var angle: float = i * TAU / 5.0
-				VectorArt.draw_pellet(self, at + Vector2(cos(angle), sin(angle)) * 28, pellet_growth, pellet_color, 1.0)
-			VectorArt.draw_pellet(self, at, pellet_growth, pellet_color, 1.15)
-		"coin":
-			VectorArt.draw_coin(self, at, 1.5, 3, false)
-		"diamond":
-			VectorArt.draw_coin(self, at, 1.5, 10, true)
-		"clock":
-			draw_circle(at, 31, Color("d8eef0"))
-			draw_circle(at, 27, Color("173847"))
-			draw_line(at, at + Vector2(0, -17), Color("8edfe9"), 4, true)
-			draw_line(at, at + Vector2(14, 8), Color("8edfe9"), 4, true)
-			draw_circle(at, 4, Color("ffdb80"))
-		"bubble":
-			for bubble in [Vector3(-22, 10, 14), Vector3(8, -8, 20), Vector3(28, 18, 10)]:
-				draw_circle(at + Vector2(bubble.x, bubble.y), bubble.z, Color(0.55, 0.88, 0.95, 0.12))
-				draw_arc(at + Vector2(bubble.x, bubble.y), bubble.z, 0, TAU, 24, Color("a9edf2"), 3, true)
-
-func draw_shadow_icon(at: Vector2) -> void:
-	var shadow := Color("182830")
-	var rim := Color("31505b")
-	match icon_kind:
-		"fish", "puffer":
-			draw_colored_polygon(PackedVector2Array([at + Vector2(-16, 0), at + Vector2(-42, -20), at + Vector2(-39, 20)]), shadow)
-			draw_circle(at, 27 if icon_kind == "puffer" else 23, shadow)
-			draw_arc(at, 27 if icon_kind == "puffer" else 23, 0, TAU, 28, rim, 2.0, true)
-		"snail":
-			draw_rect(Rect2(at + Vector2(-42, 15), Vector2(82, 15)), shadow)
-			draw_circle(at + Vector2(-8, 3), 29, shadow)
-			draw_arc(at + Vector2(-8, 3), 29, 0, TAU, 28, rim, 2.0, true)
-		"seahorse":
-			draw_circle(at + Vector2(5, -21), 18, shadow)
-			draw_line(at + Vector2(0, -10), at + Vector2(-3, 30), shadow, 20, true)
-			draw_arc(at + Vector2(7, 29), 18, 0.2, 5.5, 24, shadow, 9, true)
-		"feeder", "stock":
-			draw_style_box(shadow_box(), Rect2(at + Vector2(-48, -28), Vector2(96, 62)))
-		"feed":
-			for i in range(6):
-				draw_circle(at + Vector2.from_angle(i * TAU / 6.0) * 26.0, 9, shadow)
-		"coin", "diamond", "clock":
-			draw_circle(at, 31, shadow)
-			draw_arc(at, 31, 0, TAU, 32, rim, 2.0, true)
-		"bubble":
-			for bubble in [Vector3(-22, 10, 14), Vector3(8, -8, 20), Vector3(28, 18, 10)]:
-				draw_circle(at + Vector2(bubble.x, bubble.y), bubble.z, shadow)
-	draw_string(ThemeDB.fallback_font, at + Vector2(-10, 7), "?", HORIZONTAL_ALIGNMENT_CENTER, 20, 22, Color("5f7680"))
-
-func shadow_box() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("182830")
-	style.border_color = Color("31505b")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	return style
-
-func machine_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("779caa")
-	style.border_color = Color("b0cbd1")
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
 	return style
