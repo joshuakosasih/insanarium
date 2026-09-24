@@ -550,8 +550,6 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		handle_pointer_press(event.position)
-	elif event is InputEventScreenTouch and event.pressed:
-		handle_pointer_press(event.position)
 
 func handle_pointer_press(viewport_position: Vector2) -> void:
 	var now: int = Time.get_ticks_msec()

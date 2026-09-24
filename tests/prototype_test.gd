@@ -44,7 +44,7 @@ func run() -> void:
 	pointer_food.free()
 	tank.economy.credit(2)
 	tank.food_cooldown = 0.0
-	check(not ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", true), "touch does not request a second synthetic mouse click")
+	check(ProjectSettings.get_setting("input_devices/pointing/emulate_mouse_from_touch", false), "touch is translated into mouse input for buttons and panels")
 	var tapped_bubble = tank.spawn_income_bubble()
 	tapped_bubble.position = sample_tank_point
 	tapped_bubble.value = 1.0
@@ -54,17 +54,21 @@ func run() -> void:
 	touch_event.pressed = true
 	touch_event.position = sample_viewport_point
 	tank._unhandled_input(touch_event)
+	check(not tapped_bubble.claimed and tank.economy.money == before_bubble_tap, "raw touch waits for Godot's single synthesized mouse event")
 	var synthetic_mouse := InputEventMouseButton.new()
 	synthetic_mouse.button_index = MOUSE_BUTTON_LEFT
 	synthetic_mouse.pressed = true
 	synthetic_mouse.position = sample_viewport_point
 	tank._unhandled_input(synthetic_mouse)
-	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap is consumed once without also dropping food")
+	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
 	check(not tank.shop_panel.visible and tank.shop_cards.size() == 10, "shop starts closed with reusable product cards")
+	tank.shop_button.pressed.emit()
+	check(tank.shop_panel.visible, "shop button opens its connected panel")
 	tank.toggle_shop()
-	check(tank.shop_panel.visible, "shop opens from its shared toggle")
-	tank.toggle_shop()
+	tank.controls_button.pressed.emit()
+	check(tank.care_panel.visible, "controls button opens its connected panel")
+	tank.care_panel.hide()
 	check(not tank.invasions.running, "lethal invasions disabled by default")
 	check(Economy.fish_price(2) == 50 and Economy.fish_price(10) == 2745 and Economy.fish_price(19) == 249000, "fish purchase price climbs steeply with population")
 	var fish = get_nodes_in_group("fish")[0]
