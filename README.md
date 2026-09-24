@@ -24,7 +24,7 @@ Start with two fully fed amber fish and $100. Click water to feed, click rewards
 | Royal | 30 growth credits | $3 gold | $350 | $700 |
 | Diamond | 75 actual meals | $10 blue diamond | $1,200 | $2,400 |
 
-Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Every normal fish is amber. Diamond fish wear a gold crown in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. A separate Coin Value upgrade multiplies future fish rewards by 1×, 2×, 3×, 5×, and 8× for $25, $75, $225, and $675; coin color continues to show the producing fish's stage.
+Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Every normal fish is amber. Diamond fish wear a small blue crown attached to the head in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. A separate Coin Value upgrade multiplies all future fish rewards by 1×, 2×, 3×, 5×, and 8× for $25, $75, $225, and $675. Diamond Value then multiplies blue diamonds by a further 1×, 2×, 4×, 7×, and 12× for $150, $450, $1,350, and $4,050. The two multipliers stack; coin color continues to show the producing fish's stage.
 
 ## Feed and survival
 
@@ -91,9 +91,9 @@ No pets or machine are granted free. Each can be purchased once. Unowned helpers
 
 ## Alien challenges
 
-Lethal alien encounters are **on by default during active play** and remain paused during away time. Random delays are 90–150 seconds, followed by a 5-second warning at the entry point. An alien chases at 90 pixels/second and kills fish on contact, at most once per 2 seconds. Eight clicks defeat it for a $10 diamond. Click its left side to push it right (and vice versa); there is no stun. Taps on every visible part of the alien, including its health bar and arms, are consumed by combat and never drop food. The **Alien challenges** control still allows players to opt out; reopening the game restores the default enabled state.
+Lethal alien encounters are **on by default during active play** and remain paused during away time. Random delays are 90–150 seconds, followed by a 5-second warning at the entry point. An alien chases at 90 pixels/second and kills fish on contact, at most once per 2 seconds. Eight clicks defeat it for a base $10 diamond. Coin Value and Diamond Value multiply that reward exactly as they multiply a Diamond fish's blue diamond. Click its left side to push it right (and vice versa); there is no stun. Taps on every visible part of the alien, including its health bar and arms, are consumed by combat and never drop food. The **Alien challenges** control still allows players to opt out; reopening the game restores the default enabled state.
 
-Debug builds provide speed, hunger, reward-spawn and invader controls. The invader shortcut requires challenges enabled. Release exports hide these controls.
+Debug builds add a compact **TEST** row to the Controls panel. It can toggle the whole simulation between 1× and 10×, make fish hungry, spawn rewards, trigger an invader, and run an autoplay caretaker through the real collection, feeding, cleaning, purchase, and upgrade rules. Reset asks for confirmation before restoring a fresh $100 tank with two starter fish. The invader shortcut requires challenges enabled. Release exports hide these controls and cannot invoke the reset or autoplay paths.
 
 ## Local persistence and long sessions
 
@@ -165,10 +165,11 @@ godot --headless --path . --script tests/opening_balance_test.gd -- --test
 godot --headless --path . --script tests/environment_test.gd -- --test
 godot --headless --path . --script tests/genetics_test.gd -- --test
 godot --headless --path . --script tests/population_benchmark.gd -- --test
+godot --headless --path . --script tests/autoplay_balance_test.gd -- --test
 godot --path . --script tests/render_preview.gd -- --test --idle
 ```
 
-Tests cover economy/recovery, mutations and sales, automation purchases, stock, mandatory upgraded manual feed, JSON save round-trip, slow starvation, optional combat, and one hour of automated care. The visual test writes `/tmp/insanarium-preview.png`. Offline tests cover capped catch-up, deterministic results, starvation, growth, automation, timestamp reuse, clock rollback, and backup validation. Matching export templates are required to build the browser version.
+Tests cover economy/recovery, mutations and sales, automation purchases, stock, mandatory upgraded manual feed, JSON save round-trip, slow starvation, optional combat, and one hour of automated care. The autoplay balance test starts from the real $100 opening and prints a comparable checkpoint after 30 active simulation minutes. The visual test writes `/tmp/insanarium-preview.png`. Offline tests cover capped catch-up, deterministic results, starvation, growth, automation, timestamp reuse, clock rollback, and backup validation. Matching export templates are required to build the browser version.
 
 Population measurements and their limits: [native behavior benchmark](docs/POPULATION_BENCHMARK.md).
 

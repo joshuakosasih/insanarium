@@ -81,6 +81,11 @@ var care_refresh: float = 0.0
 var audio: AquariumAudio
 var music_button: Button
 var effects_button: Button
+var debug_controls: DebugControls
+var debug_reset_dialog: ConfirmationDialog
+var debug_autoplay: bool = false
+var debug_autoplay_left: float = 0.0
+var debug_purchase_left: float = 0.0
 var bubble_left: float = 3.0
 var bubble_rewards := BubbleRewards.new()
 var bubble_rng := RandomNumberGenerator.new()
@@ -112,7 +117,7 @@ func _ready() -> void:
 	invasions.presentation_scale = PET_PRESENTATION_SCALE
 	invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
 	invasions.alien_defeated.connect(func(at: Vector2) -> void:
-		spawn_coin(at, 10, true)
+		spawn_coin(at, assets.reward_value(10, true), true, 4)
 		audio.set_danger_music(false))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
@@ -421,7 +426,7 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased") -> Aquari
 	fish.bounds = swim_bounds
 	fish.position = Vector2(randf_range(swim_bounds.position.x + 65, swim_bounds.end.x - 67), randf_range(240, 540))
 	fish.coin_produced.connect(func(at: Vector2, value: int, diamond: bool, grade: int) -> void:
-		spawn_coin(at, value * assets.coin_multiplier(), diamond, grade))
+		spawn_coin(at, assets.reward_value(value, diamond), diamond, grade))
 	fish.waste_produced.connect(spawn_waste)
 	fish.grew.connect(show_growth)
 	fish.died.connect(on_fish_died)
@@ -540,6 +545,12 @@ func _process(delta: float) -> void:
 	if care_panel.visible and care_refresh <= 0.0:
 		refresh_care()
 	var simulation_delta: float = delta * ActivityPace.multiplier
+	if debug_autoplay and OS.is_debug_build():
+		debug_autoplay_left -= simulation_delta
+		debug_purchase_left -= simulation_delta
+		if debug_autoplay_left <= 0.0:
+			debug_autoplay_left = 0.25
+			debug_autoplay_step()
 	life_registry.elapsed += simulation_delta
 	breeding.advance(simulation_delta, get_tree().get_nodes_in_group("fish"))
 	var count: int = get_tree().get_nodes_in_group("fish").size()
@@ -566,6 +577,95 @@ func _process(delta: float) -> void:
 	if persistence and autosave_left <= 0.0:
 		autosave_left = 15.0
 		save_now()
+
+func debug_autoplay_step() -> void:
+	# A deterministic caretaker for observing the economy over long accelerated runs.
+	# It uses the same collection, feeding, cleaning, and purchase rules as the player.
+	for alien in get_tree().get_nodes_in_group("invaders"):
+		if not alien.dead:
+			alien.hit(alien.position)
+	for coin in get_tree().get_nodes_in_group("coins"):
+		if not coin.claimed:
+			coin.collect()
+	for bubble in get_tree().get_nodes_in_group("income_bubbles"):
+		if not bubble.claimed:
+			bubble.pop()
+	for waste in get_tree().get_nodes_in_group("waste"):
+		clean_waste(waste)
+	var hungry: Array = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool:
+		return not fish.dead and fish.hunger >= fish.profile.hungry_threshold)
+	if not hungry.is_empty() and get_tree().get_nodes_in_group("food").size() < mini(hungry.size(), 8):
+		var hungriest: AquariumFish = hungry[0]
+		for fish in hungry:
+			if fish.hunger > hungriest.hunger:
+				hungriest = fish
+		var feed := feeds[feed_upgrades.unlocked_tier]
+		if economy.spend(feed.price):
+			spawn_food(hungriest.position + Vector2(0, -18), feed)
+	if environment.cleanliness <= 45.0 and economy.money >= TankEnvironment.FULL_CLEAN_COST:
+		purchase_full_clean()
+	if debug_purchase_left <= 0.0:
+		debug_purchase_left = 5.0
+		debug_autoplay_purchase()
+
+func debug_autoplay_purchase() -> void:
+	var reserve_cash: float = 20.0
+	if assets.owned.feeder and assets.reserve.size() < 20:
+		var stock_cost: int = mini(20, assets.CAPACITY - assets.reserve.size()) * feeds[feed_upgrades.unlocked_tier].price
+		if stock_cost > 0 and economy.money >= stock_cost + reserve_cash:
+			assets.restock(feed_upgrades.unlocked_tier, feeds, economy)
+			return
+	for kind in ["snail", "feeder", "seahorse", "puffer"]:
+		if not assets.owned[kind] and economy.money >= int(assets.PRICES[kind]) + reserve_cash:
+			if assets.purchase(kind, economy):
+				spawn_asset(kind)
+			return
+	var population: int = get_tree().get_nodes_in_group("fish").size()
+	var fish_price: int = Economy.fish_price(population)
+	if population < 6 and economy.money >= fish_price + reserve_cash and economy.buy_fish(population):
+		spawn_fish(false, "Autoplay")
+		return
+	var feed_price: int = feed_upgrades.next_price()
+	if feed_price > 0 and economy.money >= feed_price + reserve_cash:
+		feed_upgrades.purchase(economy)
+		return
+	var cheapest_track := ""
+	var cheapest_price := 2147483647
+	for track in assets.levels:
+		var price: int = assets.upgrade_price(track)
+		if price > 0 and price < cheapest_price:
+			cheapest_track = track
+			cheapest_price = price
+	if not cheapest_track.is_empty() and economy.money >= cheapest_price + reserve_cash:
+		purchase_upgrade(cheapest_track)
+
+func reset_test_tank() -> void:
+	if not OS.is_debug_build():
+		return
+	debug_autoplay = false
+	debug_autoplay_left = 0.0
+	debug_purchase_left = 0.0
+	debug_controls.reset_state()
+	away_data = {}
+	clear_tank()
+	life_registry = LifeRegistry.new()
+	feed_upgrades.unlocked_tier = 0
+	breeding = FishBreeding.new()
+	breeding.offspring_requested.connect(birth)
+	breeding_toggle.set_pressed_no_signal(true)
+	economy.money = 100.0
+	bubble_left = 3.0
+	food_cooldown = 0.0
+	snail_collection_progress = 0.0
+	for i in range(2):
+		spawn_fish(false, "Starter").hunger = 0.0
+	set_challenges_enabled(true)
+	update_money(economy.money)
+	update_cleanliness()
+	update_inspection()
+	if persistence:
+		save_now()
+	show_feedback(tank_rect.get_center(), "Fresh test tank")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -745,6 +845,7 @@ func activate_shop_item() -> void:
 		"feed": purchase_feed_upgrade()
 		"coin_lifetime": purchase_upgrade("coin_lifetime")
 		"coin_value": purchase_upgrade("coin_value")
+		"diamond_value": purchase_upgrade("diamond_value")
 		"idle_duration": purchase_upgrade("idle_duration")
 		"bubbles": purchase_upgrade("bubble_capacity")
 	refresh_shop()
@@ -783,6 +884,7 @@ func refresh_shop() -> void:
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coin_lifetime": "Lv. %d · %ds" % [int(assets.levels.coin_lifetime) + 1, int(assets.coin_lifetime())],
 		"coin_value": "Lv. %d · ×%d" % [int(assets.levels.coin_value) + 1, assets.coin_multiplier()],
+		"diamond_value": "Lv. %d · ×%d" % [int(assets.levels.diamond_value) + 1, assets.diamond_multiplier()],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
 		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
 	var discoveries := {
@@ -795,6 +897,7 @@ func refresh_shop() -> void:
 		"feed": feed_upgrades.unlocked_tier > 0,
 		"coin_lifetime": int(assets.levels.coin_lifetime) > 0,
 		"coin_value": int(assets.levels.coin_value) > 0,
+		"diamond_value": int(assets.levels.diamond_value) > 0,
 		"idle_duration": int(assets.levels.idle_duration) > 0,
 		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
 	for key in shop_cards:
@@ -903,6 +1006,13 @@ func refresh_shop() -> void:
 			var next_value: String = "Maximum value reached" if unavailable else "×%d → ×%d for future fish coins" % [assets.coin_multiplier(), IdleAssets.COIN_MULTIPLIERS[value_level + 1]]
 			shop_detail_state.text = "Level %d / 5\n%s\nCoin color still follows the fish's life stage." % [value_level + 1, next_value]
 			shop_action_button.text = "Fully upgraded" if unavailable else "Raise coin value  $%d" % action_price
+		"diamond_value":
+			var diamond_level: int = int(assets.levels.diamond_value)
+			action_price = assets.upgrade_price("diamond_value")
+			unavailable = action_price == 0
+			var next_diamond: String = "Maximum diamond value reached" if unavailable else "×%d → ×%d for every blue diamond" % [assets.diamond_multiplier(), IdleAssets.DIAMOND_MULTIPLIERS[diamond_level + 1]]
+			shop_detail_state.text = "Level %d / 5\n%s\nStacks with Coin Value for fish and alien drops." % [diamond_level + 1, next_diamond]
+			shop_action_button.text = "Fully upgraded" if unavailable else "Raise diamond value  $%d" % action_price
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
 			action_price = assets.upgrade_price("idle_duration")
@@ -1010,17 +1120,22 @@ func build_hud() -> void:
 	feed_label = label_at(hud, "", Vector2(49, 570), 14, Color("e8f2ed"))
 	feed_status = label_at(hud, "", Vector2(285, 570), 12, Color("c7dfdb"))
 	footer_hint = label_at(hud, "Tap water to feed · tap rewards/waste to collect", Vector2(680, 570), 12, Color("83a9b7"))
-	var debug := DebugControls.new()
-	debug.hunger_requested.connect(func() -> void:
+	debug_controls = DebugControls.new()
+	debug_controls.hunger_requested.connect(func() -> void:
 		for fish in get_tree().get_nodes_in_group("fish"):
 			fish.hunger = 1.0)
-	debug.coins_requested.connect(func() -> void:
+	debug_controls.coins_requested.connect(func() -> void:
 		for i in range(1, 5):
 			spawn_coin(Vector2(400 + i * 90, 320), 10 if i == 4 else i, i == 4, i))
-	debug.invasion_requested.connect(func() -> void:
+	debug_controls.invasion_requested.connect(func() -> void:
 		if challenges:
 			invasions.begin_warning())
-	hud.add_child(debug)
+	debug_controls.autoplay_toggled.connect(func(enabled: bool) -> void:
+		debug_autoplay = enabled
+		debug_autoplay_left = 0.0
+		debug_purchase_left = 0.0)
+	debug_controls.reset_requested.connect(func() -> void:
+		debug_reset_dialog.popup_centered(Vector2i(480, 170)))
 	inspector_panel = Panel.new()
 	inspector_panel.position = Vector2(735, 66)
 	inspector_panel.size = Vector2(348, 524)
@@ -1078,7 +1193,14 @@ func build_hud() -> void:
 			audio.play("bubble"))
 	make_button(care_panel, "Export backup", Vector2(326, 465), Vector2(140, 42), func() -> void: transfer.export_save(snapshot()))
 	make_button(care_panel, "Import backup", Vector2(480, 465), Vector2(140, 42), transfer.import_save)
-	label_at(care_panel, "Away time is upgradeable · No offline breeding or aliens", Vector2(18, 531), 12, Color("83a9b7"))
+	debug_controls.position = Vector2(18, 515)
+	care_panel.add_child(debug_controls)
+	label_at(care_panel, "Away time is upgradeable · No offline breeding or aliens", Vector2(18, 558), 10, Color("83a9b7"))
+	debug_reset_dialog = ConfirmationDialog.new()
+	debug_reset_dialog.title = "Reset test tank?"
+	debug_reset_dialog.dialog_text = "Replace local progress with a fresh $100 tank and two starter fish?"
+	debug_reset_dialog.confirmed.connect(reset_test_tank)
+	add_child(debug_reset_dialog)
 	return_dialog = AcceptDialog.new()
 	return_dialog.title = "Welcome back"
 	add_child(return_dialog)

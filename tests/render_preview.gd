@@ -20,8 +20,11 @@ func capture() -> void:
 		tank.selected_fish = specimen
 	if "--showcase" in OS.get_cmdline_user_args():
 		var fish = get_nodes_in_group("fish")[0]
-		for i in range(30):
-			fish.growth.record_meal(fish.profile)
+		fish.growth.stage = fish.profile.diamond_stage
+		fish.growth.meals = 75
+		fish.visual_size = fish.profile.growth_sizes[fish.growth.stage]
+		fish.scale = Vector2.ONE * fish.visual_size
+		fish.queue_redraw()
 		fish.position = Vector2(620, 340)
 		fish.destination = Vector2(680, 340)
 		fish.wander_left = 5.0

@@ -17,10 +17,11 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 	else:
 		canvas.draw_circle(Vector2(18, -5), 3, Color("173348"))
 	if crowned:
-		var crown := PackedVector2Array([Vector2(-8, -22), Vector2(-10, -39), Vector2(-1, -31), Vector2(5, -44), Vector2(11, -31), Vector2(20, -39), Vector2(18, -22)])
-		canvas.draw_colored_polygon(crown, Color("ffcf55"))
-		canvas.draw_polyline(PackedVector2Array([crown[0], crown[1], crown[2], crown[3], crown[4], crown[5], crown[6]]), Color("8d6132"), 1.5, true)
-		canvas.draw_circle(Vector2(5, -27), 2.5, Color("75cdf2"))
+		# A compact crown sits on the head instead of floating above the body.
+		var crown := PackedVector2Array([Vector2(4, -14), Vector2(3, -25), Vector2(9, -20), Vector2(13, -29), Vector2(17, -20), Vector2(23, -25), Vector2(22, -14)])
+		canvas.draw_colored_polygon(crown, Color("57b9ec"))
+		canvas.draw_polyline(PackedVector2Array([crown[0], crown[1], crown[2], crown[3], crown[4], crown[5], crown[6], crown[0]]), Color("1f6f9d"), 1.3, true)
+		canvas.draw_circle(Vector2(13, -17), 2.0, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:

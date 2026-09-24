@@ -16,11 +16,13 @@ const BUBBLE_CAPACITIES := [1, 2, 3, 5, 8]
 const BUBBLE_MULTIPLIERS := [1.0, 1.5, 2.25, 3.5, 5.0]
 const COIN_MULTIPLIERS := [1, 2, 3, 5, 8]
 const COIN_VALUE_PRICES := [25, 75, 225, 675]
+const DIAMOND_MULTIPLIERS := [1, 2, 4, 7, 12]
+const DIAMOND_VALUE_PRICES := [150, 450, 1350, 4050]
 const IDLE_UPGRADE_PRICES := [50, 150, 450, 1350]
 const BUBBLE_UPGRADE_PRICES := [30, 90, 270, 810]
 const MAX_UPGRADE_LEVEL: int = 4
 var owned: Dictionary = {"snail": false, "seahorse": false, "puffer": false, "feeder": false}
-var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
+var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
 var reserve: Array[int] = []
 var feeder_left: float = 2.0
 const CAPACITY: int = 200
@@ -49,6 +51,8 @@ func upgrade_price(track: String) -> int:
 		return BUBBLE_UPGRADE_PRICES[level]
 	if track == "coin_value":
 		return COIN_VALUE_PRICES[level]
+	if track == "diamond_value":
+		return DIAMOND_VALUE_PRICES[level]
 	return UPGRADE_PRICES[level]
 
 func upgrade(track: String, economy: Economy) -> bool:
@@ -81,6 +85,12 @@ static func coin_lifetime_for(level: int) -> float:
 
 func coin_multiplier() -> int:
 	return COIN_MULTIPLIERS[clampi(int(levels.coin_value), 0, MAX_UPGRADE_LEVEL)]
+
+func diamond_multiplier() -> int:
+	return DIAMOND_MULTIPLIERS[clampi(int(levels.diamond_value), 0, MAX_UPGRADE_LEVEL)]
+
+func reward_value(base_value: int, diamond: bool) -> int:
+	return base_value * coin_multiplier() * (diamond_multiplier() if diamond else 1)
 
 func idle_limit() -> float:
 	return idle_limit_for(int(levels.idle_duration))

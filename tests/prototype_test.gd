@@ -62,8 +62,8 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 11, "shop starts closed with reusable product cards")
-	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 12, "shop starts closed with reusable product cards")
+	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible, "shop button opens its connected panel")
 	tank.toggle_shop()
@@ -211,6 +211,16 @@ func run() -> void:
 	teen.coin_produced.emit(teen.position, 1, false, 1)
 	var upgraded_coin = get_nodes_in_group("coins")[-1]
 	check(upgraded_coin.value == 2 and upgraded_coin.grade == 1 and upgraded_coin.coin_color() == Color("d79b69"), "coin-value upgrade pays more while the Teen coin stays bronze")
+	tank.select_shop_item("diamond_value")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "diamond value upgrades independently from ordinary coin value")
+	teen.coin_produced.emit(teen.position, 10, true, 4)
+	var fish_diamond = get_nodes_in_group("coins")[-1]
+	check(fish_diamond.value == 40 and fish_diamond.diamond, "Diamond fish output stacks coin and diamond multipliers")
+	tank.invasions.alien_defeated.emit(Vector2(620, 320))
+	var alien_diamond = get_nodes_in_group("coins")[-1]
+	check(alien_diamond.value == fish_diamond.value and alien_diamond.diamond, "alien diamonds use the same upgraded value as fish diamonds")
 	tank.select_shop_item("idle_duration")
 	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$50"), "away-time card explains the initial lock and first price")
 	balance = tank.economy.money
@@ -244,7 +254,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()
@@ -263,7 +273,7 @@ func run() -> void:
 		elif pet is BubblePufferScript:
 			restored_puffer = pet
 	check(get_nodes_in_group("fish").size() == 2 and restored.assets.reserve.size() == 19 and restored.feed_upgrades.unlocked_tier == 2 and restored.economy.money == int(data.money), "JSON round-trip restores wallet fish upgrades and stock")
-	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
+	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored.assets.levels.diamond_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
 	check(restored.assets.owned.puffer and restored_puffer != null and restored_puffer.position == Vector2(data.puffer_x, data.puffer_y) and restored_puffer.move_speed == 60.0 and restored_puffer.curiosity == 0.45, "JSON round-trip restores the bubble puffer and its upgrades")
 	for living in get_nodes_in_group("fish"):
 		living.die("Test")
@@ -273,5 +283,24 @@ func run() -> void:
 	recovery.value = 1
 	restored.handle_tank_click(recovery.position)
 	check(restored.economy.money == 1 and get_nodes_in_group("fish").is_empty(), "extinction keeps click income available")
+	check(restored.debug_controls.visible, "test controls are available in debug builds")
+	restored.debug_controls.speed_button.pressed.emit()
+	check(Engine.time_scale == 10.0, "test speed button accelerates the whole simulation to 10x")
+	restored.debug_controls.speed_button.pressed.emit()
+	var auto_fish: AquariumFish = restored.spawn_fish(false, "Autoplay test")
+	auto_fish.hunger = 1.0
+	restored.economy.credit(100)
+	var auto_coin = restored.spawn_coin(Vector2(500, 650), 3)
+	var auto_bubble = restored.spawn_income_bubble()
+	var auto_waste = restored.spawn_waste(Vector2(520, 640))
+	restored.debug_purchase_left = 5.0
+	restored.debug_autoplay_step()
+	check(auto_coin.claimed and auto_bubble.claimed and auto_waste.is_queued_for_deletion() and not get_nodes_in_group("food").is_empty(), "autoplay collects rewards, cleans waste, and feeds hungry fish through normal game rules")
+	restored.debug_autoplay = true
+	restored.reset_test_tank()
+	var owns_nothing: bool = true
+	for value in restored.assets.owned.values():
+		owns_nothing = owns_nothing and not bool(value)
+	check(Engine.time_scale == 1.0 and not restored.debug_autoplay and restored.economy.money == 100 and get_nodes_in_group("fish").size() == 2 and owns_nothing, "confirmed test reset restores the clean two-fish starting state")
 	print("Idle checks: ", checks, "; failures: ", failures)
 	quit(1 if failures else 0)

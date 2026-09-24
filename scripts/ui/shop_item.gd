@@ -25,5 +25,6 @@ static func catalog() -> Array[ShopItemDefinition]:
 		ShopItemDefinition.new("feed", "Feed quality", "UPGRADE", "Permanently replace manual feed with the next quality tier.", "feed"),
 		ShopItemDefinition.new("coin_lifetime", "Coin lifetime", "UPGRADE", "Increase how long coins and diamonds remain available before fading away.", "coin"),
 		ShopItemDefinition.new("coin_value", "Coin value", "UPGRADE", "Multiply the value of future coins produced by your fish.", "coin"),
+		ShopItemDefinition.new("diamond_value", "Diamond value", "UPGRADE", "Multiply blue diamonds produced by Diamond fish and defeated aliens.", "diamond"),
 		ShopItemDefinition.new("idle_duration", "Away time", "UPGRADE", "Unlock and extend the real time simulated after leaving the aquarium.", "clock"),
 		ShopItemDefinition.new("bubbles", "Income bubbles", "UPGRADE", "Increase the number of simultaneous bubbles and the value of every pop.", "bubble")]

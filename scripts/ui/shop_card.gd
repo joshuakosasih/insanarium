@@ -91,6 +91,8 @@ func draw_icon(at: Vector2) -> void:
 			VectorArt.draw_pellet(self, at, pellet_growth, pellet_color, 1.15)
 		"coin":
 			VectorArt.draw_coin(self, at, 1.5, 3, false)
+		"diamond":
+			VectorArt.draw_coin(self, at, 1.5, 10, true)
 		"clock":
 			draw_circle(at, 31, Color("d8eef0"))
 			draw_circle(at, 27, Color("173847"))
@@ -123,7 +125,7 @@ func draw_shadow_icon(at: Vector2) -> void:
 		"feed":
 			for i in range(6):
 				draw_circle(at + Vector2.from_angle(i * TAU / 6.0) * 26.0, 9, shadow)
-		"coin", "clock":
+		"coin", "diamond", "clock":
 			draw_circle(at, 31, shadow)
 			draw_arc(at, 31, 0, TAU, 32, rim, 2.0, true)
 		"bubble":
