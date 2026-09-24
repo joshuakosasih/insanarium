@@ -14,6 +14,6 @@ static func read(path: String = PATH) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if not parsed is Dictionary or int(parsed.get("version", 0)) not in [1, 2]:
+	if not parsed is Dictionary or int(parsed.get("version", 0)) not in [1, 2, 3]:
 		return {}
 	return parsed

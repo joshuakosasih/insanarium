@@ -3,9 +3,14 @@ extends RefCounted
 ## Version 1 has no reliable ages or ancestry; never invent these facts.
 static func upgrade(source: Dictionary) -> Dictionary:
 	var data: Dictionary = source.duplicate(true)
+	var source_version: int = int(data.get("version", 1))
 	var registry := LifeRegistry.new()
 	registry.next_id = maxi(1, int(data.get("next_fish_id", 1)))
 	for item in data.get("fish", []):
+		if source_version < 3:
+			var old_stage: int = clampi(int(item.get("stage", 0)), 0, 3)
+			# Insert Teen while preserving the equivalent maturity of existing fish.
+			item["stage"] = old_stage + 1 if old_stage > 0 or float(item.get("credit", 0)) >= 2.0 else 0
 		var life: Dictionary = item.get("life", {})
 		var genome := FishGenome.new()
 		genome.from_data(item.get("genome", {}))
@@ -49,6 +54,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	levels["puffer_speed"] = clampi(int(levels.get("puffer_speed", 0)), 0, 4)
 	levels["puffer_curiosity"] = clampi(int(levels.get("puffer_curiosity", 0)), 0, 4)
 	levels["coin_lifetime"] = clampi(int(levels.get("coin_lifetime", 0)), 0, 4)
+	levels["coin_value"] = clampi(int(levels.get("coin_value", 0)), 0, 4)
 	levels["idle_duration"] = clampi(int(levels.get("idle_duration", 0)), 0, 4)
 	levels["bubble_capacity"] = clampi(int(levels.get("bubble_capacity", 0)), 0, 4)
 	levels["bubble_value"] = clampi(int(levels.get("bubble_value", 0)), 0, 4)
@@ -60,5 +66,5 @@ static func upgrade(source: Dictionary) -> Dictionary:
 		levels.puffer_speed = 0
 		levels.puffer_curiosity = 0
 	data["asset_levels"] = levels
-	data["version"] = 2
+	data["version"] = 3
 	return data

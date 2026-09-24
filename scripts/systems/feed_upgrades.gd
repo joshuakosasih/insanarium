@@ -3,7 +3,7 @@ extends RefCounted
 ## Sequential upgrades; unlocked_tier is the only player feed tier.
 signal upgraded(tier: int)
 var unlocked_tier: int = 0
-var prices: PackedInt32Array = PackedInt32Array([100, 250])
+var prices: PackedInt32Array = PackedInt32Array([50, 150])
 
 func next_price() -> int:
 	return prices[unlocked_tier] if unlocked_tier < prices.size() else 0

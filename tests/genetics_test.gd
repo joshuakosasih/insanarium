@@ -39,7 +39,7 @@ func run() -> void:
 	for i in range(9):
 		slow_growth.record_meal(profile, 1, slow.growth_multiplier())
 		fast_growth.record_meal(profile, 1, fast.growth_multiplier())
-	check(slow_growth.stage == 0 and fast_growth.stage == 1, "metabolism changes growth pace while preserving meal requirements")
+	check(slow_growth.stage == 1 and fast_growth.stage == 2, "metabolism changes growth pace while preserving meal requirements")
 	var fish := AquariumFish.new()
 	fish.profile = profile
 	fish.bounds = Rect2(0, 0, 100, 100)

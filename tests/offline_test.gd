@@ -24,6 +24,7 @@ func run() -> void:
 	for fish in data.fish:
 		fish.hunger = 0.0
 		fish.coin_left = 20.0
+		fish.stage = 1
 	var original: String = JSON.stringify(data)
 	var result := OfflineProgress.advance(data, 1200.0)
 	check(JSON.stringify(data) == original, "calculation does not mutate source checkpoint")

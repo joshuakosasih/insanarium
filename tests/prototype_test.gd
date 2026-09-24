@@ -62,7 +62,7 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 10, "shop starts closed with reusable product cards")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 11, "shop starts closed with reusable product cards")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible, "shop button opens its connected panel")
 	tank.toggle_shop()
@@ -72,7 +72,7 @@ func run() -> void:
 	check(not tank.invasions.running, "lethal invasions disabled by default")
 	check(Economy.fish_price(2) == 50 and Economy.fish_price(10) == 2745 and Economy.fish_price(19) == 249000, "fish purchase price climbs steeply with population")
 	var fish = get_nodes_in_group("fish")[0]
-	check(fish.mutation.variant == 0 and fish.current_coin_value() == 1, "normal fish start amber with one-dollar coins")
+	check(fish.mutation.variant == 0 and fish.current_coin_value() == 0, "normal fish start amber and babies do not produce coins")
 	var balance: int = tank.economy.money
 	var pellet = tank.drop_food(fish.position)
 	check(pellet != null and tank.economy.money == balance - 2, "basic feed costs two")
@@ -83,7 +83,7 @@ func run() -> void:
 	var mutation := FishMutation.new()
 	check(not mutation.roll(0.0) and mutation.variant == 0, "zero mutation probability preserves normal fish")
 	check(mutation.roll(1.0) and mutation.variant > 0, "mutation changes color variant")
-	check(not mutation.roll(1.0) and mutation.sell_value(3) == 2400, "mutation occurs only once and doubles mature sale value")
+	check(not mutation.roll(1.0) and mutation.sell_value(4) == 2400, "mutation occurs only once and doubles mature sale value")
 	var expiring_coin = tank.spawn_coin(Vector2(500, 650), 3)
 	var coin_balance: float = tank.economy.money
 	expiring_coin._process(5.9)
@@ -99,7 +99,7 @@ func run() -> void:
 	balance = tank.economy.money
 	tank.sell_selected()
 	tank.sell_selected()
-	check(tank.economy.money == balance + 700 and get_nodes_in_group("fish").size() == 1, "mutant sale pays once and removes fish")
+	check(tank.economy.money == balance + 240 and get_nodes_in_group("fish").size() == 1, "mutant sale pays once and removes fish")
 	tank.economy.money = 0
 	tank.update_money(0)
 	tank.purchase_asset("snail")
@@ -140,10 +140,10 @@ func run() -> void:
 	check(tank.shop_detail_title.text == "Bubble puffer" and tank.shop_secondary_button.visible, "puffer card exposes speed and curiosity upgrades")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.puffer_speed == 1 and puffer.move_speed == 60.0 and tank.economy.money == balance - 100, "puffer speed upgrades independently")
+	check(tank.assets.levels.puffer_speed == 1 and puffer.move_speed == 60.0 and tank.economy.money == balance - 40, "puffer speed upgrades independently")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
-	check(tank.assets.levels.puffer_curiosity == 1 and puffer.curiosity == 0.45 and tank.economy.money == balance - 100, "puffer curiosity upgrades independently")
+	check(tank.assets.levels.puffer_curiosity == 1 and puffer.curiosity == 0.45 and tank.economy.money == balance - 40, "puffer curiosity upgrades independently")
 	var missed_bubble = tank.spawn_income_bubble()
 	missed_bubble.position = Vector2(puffer.position.x + 150, puffer.position.y)
 	var bubble_balance: float = tank.economy.money
@@ -167,13 +167,13 @@ func run() -> void:
 	check(tank.shop_detail_title.text == "Snail" and tank.shop_secondary_button.visible and tank.shop_tertiary_button.visible, "snail card exposes speed, stamina, and sleep upgrades")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.snail_speed == 1 and snail.crawl_speed == 22.0 and tank.economy.money == balance - 100, "first exponential track upgrade increases snail speed")
+	check(tank.assets.levels.snail_speed == 1 and snail.crawl_speed == 30.0 and tank.economy.money == balance - 15, "cheap first upgrade sharply increases snail speed")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
-	check(tank.assets.levels.snail_stamina == 1 and snail.max_stamina == 16.0 and tank.economy.money == balance - 100, "independent stamina upgrade increases movement time")
+	check(tank.assets.levels.snail_stamina == 1 and snail.max_stamina == 28.0 and tank.economy.money == balance - 15, "cheap first stamina upgrade sharply increases movement time")
 	balance = tank.economy.money
 	tank.activate_shop_tertiary()
-	check(tank.assets.levels.snail_sleep == 1 and snail.sleep_duration == 15.0 and tank.economy.money == balance - 100, "independent sleep upgrade shortens rest time")
+	check(tank.assets.levels.snail_sleep == 1 and snail.sleep_duration == 11.0 and tank.economy.money == balance - 15, "cheap first sleep upgrade sharply shortens rest time")
 	var falling_coin = tank.spawn_coin(Vector2(snail.position.x + 100, 600), 1)
 	falling_coin.set_process(false)
 	var snail_x: float = snail.position.x
@@ -190,23 +190,32 @@ func run() -> void:
 	tank.select_shop_item("coin_lifetime")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.coin_lifetime == 1 and tank.assets.coin_lifetime() == 15.0 and falling_coin.lifetime == old_life + 7.0 and tank.economy.money == balance - 100, "coin preservation upgrades future and existing reward lifetime")
-	check(tank.assets.upgrade_price("coin_lifetime") == 190, "upgrade prices grow geometrically")
+	check(tank.assets.levels.coin_lifetime == 1 and tank.assets.coin_lifetime() == 15.0 and falling_coin.lifetime == old_life + 7.0 and tank.economy.money == balance - 40, "coin preservation upgrades future and existing reward lifetime")
+	check(tank.assets.upgrade_price("coin_lifetime") == 100, "upgrade prices grow geometrically")
+	tank.select_shop_item("coin_value")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.coin_multiplier() == 2 and tank.economy.money == balance - 25, "cheap coin-value upgrade doubles future fish rewards")
+	var teen := get_nodes_in_group("fish")[0] as AquariumFish
+	teen.growth.stage = 1
+	teen.coin_produced.emit(teen.position, 1, false, 1)
+	var upgraded_coin = get_nodes_in_group("coins")[-1]
+	check(upgraded_coin.value == 2 and upgraded_coin.grade == 1 and upgraded_coin.coin_color() == Color("d79b69"), "coin-value upgrade pays more while the Teen coin stays bronze")
 	tank.select_shop_item("idle_duration")
-	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$100"), "away-time card explains the initial lock and first price")
+	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$50"), "away-time card explains the initial lock and first price")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.idle_duration == 1 and tank.assets.idle_limit() == 300.0 and tank.economy.money == balance - 100, "first away-time upgrade unlocks five minutes")
-	check(tank.assets.upgrade_price("idle_duration") == 250, "away-time price rises geometrically")
+	check(tank.assets.levels.idle_duration == 1 and tank.assets.idle_limit() == 300.0 and tank.economy.money == balance - 50, "first away-time upgrade unlocks five minutes")
+	check(tank.assets.upgrade_price("idle_duration") == 150, "away-time price rises geometrically")
 	tank.select_shop_item("bubbles")
-	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$75") and tank.shop_secondary_button.text.contains("$75"), "bubble card exposes separate capacity and value tracks")
+	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$30") and tank.shop_secondary_button.text.contains("$30"), "bubble card exposes separate capacity and value tracks")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 75, "bubble capacity upgrade raises the simultaneous limit")
+	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 30, "bubble capacity upgrade raises the simultaneous limit")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
-	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 75, "bubble value upgrade raises every pop multiplier")
-	check(tank.assets.upgrade_price("bubble_capacity") == 190 and tank.assets.upgrade_price("bubble_value") == 190, "both bubble tracks use exponential prices")
+	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 30, "bubble value upgrade raises every pop multiplier")
+	check(tank.assets.upgrade_price("bubble_capacity") == 90 and tank.assets.upgrade_price("bubble_value") == 90, "both bubble tracks use exponential prices")
 	tank.restock()
 	check(tank.assets.reserve.size() == 20 and tank.assets.reserve[0] == 0 and "20 basic pellets" in tank.shop_status.text.to_lower(), "reserve stores purchased basic pellets and confirms restock")
 	tank.purchase_feed_upgrade()
@@ -225,7 +234,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()
@@ -244,7 +253,7 @@ func run() -> void:
 		elif pet is BubblePufferScript:
 			restored_puffer = pet
 	check(get_nodes_in_group("fish").size() == 2 and restored.assets.reserve.size() == 19 and restored.feed_upgrades.unlocked_tier == 2 and restored.economy.money == int(data.money), "JSON round-trip restores wallet fish upgrades and stock")
-	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored_snail != null and restored_snail.crawl_speed == 22.0 and restored_snail.max_stamina == 16.0 and restored_snail.sleep_duration == 15.0, "JSON round-trip restores snail and preservation upgrades")
+	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
 	check(restored.assets.owned.puffer and restored_puffer != null and restored_puffer.position == Vector2(data.puffer_x, data.puffer_y) and restored_puffer.move_speed == 60.0 and restored_puffer.curiosity == 0.45, "JSON round-trip restores the bubble puffer and its upgrades")
 	for living in get_nodes_in_group("fish"):
 		living.die("Test")

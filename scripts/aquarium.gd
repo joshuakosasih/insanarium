@@ -407,7 +407,8 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased") -> Aquari
 	fish.sex = randi_range(0, 2) as AquariumFish.Sex
 	fish.bounds = swim_bounds
 	fish.position = Vector2(randf_range(swim_bounds.position.x + 65, swim_bounds.end.x - 67), randf_range(240, 540))
-	fish.coin_produced.connect(spawn_coin)
+	fish.coin_produced.connect(func(at: Vector2, value: int, diamond: bool, grade: int) -> void:
+		spawn_coin(at, value * assets.coin_multiplier(), diamond, grade))
 	fish.waste_produced.connect(spawn_waste)
 	fish.grew.connect(show_growth)
 	fish.died.connect(on_fish_died)
@@ -422,7 +423,7 @@ func on_fish_died(at: Vector2, reason: String) -> void:
 	update_count()
 	update_inspection()
 
-func spawn_coin(at: Vector2, value: int, diamond: bool = false) -> TankCoin:
+func spawn_coin(at: Vector2, value: int, diamond: bool = false, grade: int = -1) -> TankCoin:
 	if get_tree().get_nodes_in_group("coins").size() >= 150:
 		var existing = get_tree().get_nodes_in_group("coins")[0]
 		existing.value += value
@@ -433,6 +434,7 @@ func spawn_coin(at: Vector2, value: int, diamond: bool = false) -> TankCoin:
 	coin.position = at
 	coin.value = value
 	coin.diamond = diamond
+	coin.grade = grade
 	coin.lifetime = assets.coin_lifetime()
 	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
 	coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
@@ -696,6 +698,7 @@ func activate_shop_item() -> void:
 		"stock": restock()
 		"feed": purchase_feed_upgrade()
 		"coin_lifetime": purchase_upgrade("coin_lifetime")
+		"coin_value": purchase_upgrade("coin_value")
 		"idle_duration": purchase_upgrade("idle_duration")
 		"bubbles": purchase_upgrade("bubble_capacity")
 	refresh_shop()
@@ -733,6 +736,7 @@ func refresh_shop() -> void:
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coin_lifetime": "Lv. %d · %ds" % [int(assets.levels.coin_lifetime) + 1, int(assets.coin_lifetime())],
+		"coin_value": "Lv. %d · ×%d" % [int(assets.levels.coin_value) + 1, assets.coin_multiplier()],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
 		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
 	for key in shop_cards:
@@ -833,6 +837,13 @@ func refresh_shop() -> void:
 			var next_text: String = "Maximum preservation reached" if unavailable else "%d → %d simulation seconds" % [int(assets.coin_lifetime()), int(IdleAssets.COIN_LIFETIMES[level + 1])]
 			shop_detail_state.text = "Level %d / 5\n%s\nExisting rewards gain the added time." % [level + 1, next_text]
 			shop_action_button.text = "Fully upgraded" if unavailable else "Preserve longer  $%d" % action_price
+		"coin_value":
+			var value_level: int = int(assets.levels.coin_value)
+			action_price = assets.upgrade_price("coin_value")
+			unavailable = action_price == 0
+			var next_value: String = "Maximum value reached" if unavailable else "×%d → ×%d for future fish coins" % [assets.coin_multiplier(), IdleAssets.COIN_MULTIPLIERS[value_level + 1]]
+			shop_detail_state.text = "Level %d / 5\n%s\nCoin color still follows the fish's life stage." % [value_level + 1, next_value]
+			shop_action_button.text = "Fully upgraded" if unavailable else "Raise coin value  $%d" % action_price
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
 			action_price = assets.upgrade_price("idle_duration")
@@ -945,8 +956,8 @@ func build_hud() -> void:
 		for fish in get_tree().get_nodes_in_group("fish"):
 			fish.hunger = 1.0)
 	debug.coins_requested.connect(func() -> void:
-		for i in range(4):
-			spawn_coin(Vector2(480 + i * 80, 320), 10 if i == 3 else i + 1, i == 3))
+		for i in range(1, 5):
+			spawn_coin(Vector2(400 + i * 90, 320), 10 if i == 4 else i, i == 4, i))
 	debug.invasion_requested.connect(func() -> void:
 		if challenges:
 			invasions.begin_warning())
@@ -1161,7 +1172,7 @@ func snapshot() -> Dictionary:
 	var rewards: Array = []
 	for coin in get_tree().get_nodes_in_group("coins"):
 		if not coin.claimed and not coin.is_queued_for_deletion():
-			rewards.append({"x": coin.position.x, "y": coin.position.y, "value": coin.value, "diamond": coin.diamond, "life": coin.lifetime, "grounded": coin.grounded})
+			rewards.append({"x": coin.position.x, "y": coin.position.y, "value": coin.value, "diamond": coin.diamond, "grade": coin.grade, "life": coin.lifetime, "grounded": coin.grounded})
 	var waste_data: Array = []
 	for waste in get_tree().get_nodes_in_group("waste"):
 		if not waste.is_queued_for_deletion():
@@ -1192,7 +1203,7 @@ func snapshot() -> Dictionary:
 			puffer_destination = pet.destination
 			puffer_wander = pet.wander_left
 			puffer_puff = pet.puff_left
-	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 2, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
+	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
 		"owned": assets.owned.duplicate(), "asset_levels": assets.levels.duplicate(), "reserve": assets.reserve.duplicate(),
@@ -1247,13 +1258,13 @@ func restore(data: Dictionary) -> void:
 		fish.survival.starving_for = clampf(saved_starvation, 0, fish.profile.starvation_grace)
 		fish.growth.meals = maxi(0, int(item.get("meals", 0)))
 		fish.growth.growth_credit = maxf(0.0, float(item.get("credit", 0)))
-		fish.growth.stage = clampi(int(item.get("stage", 0)), 0, 3)
+		fish.growth.stage = clampi(int(item.get("stage", 0)), 0, 4)
 		fish.mutation.variant = clampi(int(item.get("mutation", 0)), 0, 3)
 		fish.visual_size = fish.profile.growth_sizes[fish.growth.stage]
 		fish.scale = Vector2.ONE * fish.visual_size
 		fish.coin_left = clampf(float(item.get("coin_left", 20)), 0, fish.genome.output_interval(fish.profile.coin_interval))
 	for item in data.get("coins", []).slice(0, 150):
-		var coin := spawn_coin(Vector2(item.get("x", 500), item.get("y", 650)), maxi(1, int(item.get("value", 1))), bool(item.get("diamond", false)))
+		var coin := spawn_coin(Vector2(item.get("x", 500), item.get("y", 650)), maxi(1, int(item.get("value", 1))), bool(item.get("diamond", false)), int(item.get("grade", -1)))
 		coin.lifetime = clampf(float(item.get("life", assets.coin_lifetime())), 0.01, TankCoin.MAX_LIFETIME)
 		coin.grounded = bool(item.get("grounded", coin.position.y >= coin.floor_y))
 	for item in data.get("waste", []).slice(0, 100):

@@ -26,7 +26,7 @@ func run() -> void:
 	father.sex = AquariumFish.Sex.MALE
 	mother.sex = AquariumFish.Sex.FEMALE
 	for fish in [father, mother]:
-		fish.growth.stage = 1
+		fish.growth.stage = 2
 		fish.hunger = 0.0
 	tank.breeding.chance = 1.0
 	tank.breeding.advance(30, parents)
@@ -45,8 +45,8 @@ func run() -> void:
 	mother.die("Test")
 	check(child.life.parent_ids == parent_ids, "ancestry survives parent sale and death")
 	var data: Dictionary = tank.snapshot()
-	check(data.version == 2 and data.next_fish_id > get_nodes_in_group("fish").size(), "save persists non-reusable ID sequence")
-	check(LocalSave.write(data, "/tmp/insanarium-life-test.json"), "version two writes successfully")
+	check(data.version == 3 and data.next_fish_id > get_nodes_in_group("fish").size(), "save persists non-reusable ID sequence")
+	check(LocalSave.write(data, "/tmp/insanarium-life-test.json"), "version three writes successfully")
 	var child_id: String = child.life.id
 	var age: float = child.life.age_seconds
 	var genome_data: Dictionary = child.genome.to_data()
@@ -77,7 +77,7 @@ func run() -> void:
 	check(not seen.has(purchased.life.id) and purchased.life.id != child_id, "new purchases never reuse dead or sold IDs")
 	var legacy := {"version": 1, "money": 77, "fish": [{"stage": 2, "meals": 9}]}
 	var migrated: Dictionary = SaveMigration.upgrade(legacy)
-	check(migrated.version == 2 and migrated.money == 77 and migrated.fish[0].stage == 2, "legacy migration preserves economy and growth")
+	check(migrated.version == 3 and migrated.money == 77 and migrated.fish[0].stage == 3, "legacy migration preserves equivalent economy and maturity")
 	check(not migrated.fish[0].life.age_known and migrated.fish[0].life.parents.is_empty(), "legacy ages and parents stay explicitly unknown")
 	var repeated: Dictionary = SaveMigration.upgrade(migrated)
 	check(repeated.fish[0].life.id == migrated.fish[0].life.id, "migration is idempotent")

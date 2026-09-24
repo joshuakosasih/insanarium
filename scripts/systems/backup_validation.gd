@@ -8,7 +8,7 @@ static func parse(text: String) -> Dictionary:
 	var data = JSON.parse_string(text)
 	if not data is Dictionary:
 		return {}
-	if not number(data.get("version"), 1, 2) or float(data.version) != floorf(float(data.version)):
+	if not number(data.get("version"), 1, 3) or float(data.version) != floorf(float(data.version)):
 		return {}
 	for key in ["money", "tier"]:
 		if not number(data.get(key), 0, 1000000000000):
@@ -45,7 +45,7 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(data.asset_levels.snail, 0, 3) or bool(data.owned.snail) != (int(data.asset_levels.snail) > 0):
 				return {}
 		else:
-			for track in ["snail_speed", "snail_stamina", "snail_sleep", "puffer_speed", "puffer_curiosity", "coin_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
+			for track in ["snail_speed", "snail_stamina", "snail_sleep", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "idle_duration", "bubble_capacity", "bubble_value"]:
 				if not integer_in_range(data.asset_levels.get(track, 0), 0, 4):
 					return {}
 			if not data.owned.snail and (int(data.asset_levels.get("snail_speed", 0)) > 0 or int(data.asset_levels.get("snail_stamina", 0)) > 0 or int(data.asset_levels.get("snail_sleep", 0)) > 0):
@@ -61,7 +61,8 @@ static func parse(text: String) -> Dictionary:
 		for key in ["x", "y", "hunger", "stage", "meals", "credit", "mutation", "starving", "coin_left", "sex", "breeding_left"]:
 			if not number(fish.get(key, 0), 0, 1000000000000):
 				return {}
-		if fish.get("stage", 0) > 3 or fish.get("mutation", 0) > 3 or fish.get("sex", 0) > 2 or fish.get("hunger", 0) > 1:
+		var max_stage: int = 4 if int(data.version) >= 3 else 3
+		if fish.get("stage", 0) > max_stage or fish.get("mutation", 0) > 3 or fish.get("sex", 0) > 2 or fish.get("hunger", 0) > 1:
 			return {}
 		if not number(fish.get("health", 100), 0, FishHealth.MAX_POSSIBLE_HEALTH):
 			return {}

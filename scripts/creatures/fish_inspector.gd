@@ -18,7 +18,7 @@ static func describe(fish: AquariumFish) -> String:
 	var readiness: String = "Ready for an eligible mate"
 	if fish.sex == AquariumFish.Sex.ASEXUAL:
 		readiness = "Asexual — does not breed"
-	elif fish.growth.stage < 1:
+	elif fish.growth.stage < 2:
 		readiness = "Needs adult growth stage"
 	elif fish.hunger >= fish.profile.hungry_threshold:
 		readiness = "Needs feeding"

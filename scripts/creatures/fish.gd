@@ -1,7 +1,7 @@
 class_name AquariumFish
 extends Node2D
 const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
-signal coin_produced(at: Vector2, value: int, diamond: bool)
+signal coin_produced(at: Vector2, value: int, diamond: bool, grade: int)
 signal waste_produced(at: Vector2)
 signal grew(at: Vector2, stage_name: String)
 signal died(at: Vector2, reason: String)
@@ -58,11 +58,13 @@ func _process(delta: float) -> void:
 	coin_left -= delta
 	if coin_left <= 0.0:
 		coin_left += genome.output_interval(profile.coin_interval)
-		var output_at := position + Vector2(-12 * facing, 16)
-		if randf() > genome.coin_chance():
-			waste_produced.emit(output_at)
-		else:
-			coin_produced.emit(output_at, current_coin_value(), growth.stage >= profile.diamond_stage)
+		# Newborns have a short protected stage before they begin producing output.
+		if growth.stage > 0:
+			var output_at := position + Vector2(-12 * facing, 16)
+			if randf() > genome.coin_chance():
+				waste_produced.emit(output_at)
+			else:
+				coin_produced.emit(output_at, current_coin_value(), growth.stage >= profile.diamond_stage, growth.stage)
 	if not is_instance_valid(food_target) or food_target.is_queued_for_deletion():
 		food_target = null
 	if hunger >= profile.hungry_threshold and food_target == null:

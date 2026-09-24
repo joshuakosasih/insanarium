@@ -22,7 +22,7 @@ func advance(delta: float, fish_list: Array) -> void:
 	var males: Array = []
 	var females: Array = []
 	for fish in fish_list:
-		if fish.dead or fish.is_queued_for_deletion() or fish.growth.stage < 1 or fish.hunger >= fish.profile.hungry_threshold or fish.breeding_left > 0.0:
+		if fish.dead or fish.is_queued_for_deletion() or fish.growth.stage < 2 or fish.hunger >= fish.profile.hungry_threshold or fish.breeding_left > 0.0:
 			continue
 		if fish.sex == AquariumFish.Sex.MALE:
 			males.append(fish)

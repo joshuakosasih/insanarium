@@ -12,12 +12,12 @@ extends Resource
 @export var body_color: Color = Color("f6be73")
 
 # Parallel stage arrays: cumulative growth credits, visual size, and reward multiplier.
-@export var growth_meals: PackedInt32Array = PackedInt32Array([0, 10, 30, 75])
-@export var growth_sizes: PackedFloat32Array = PackedFloat32Array([0.75, 1.0, 1.2, 1.35])
-@export var growth_rewards: PackedInt32Array = PackedInt32Array([1, 2, 3, 10])
-@export var growth_names: PackedStringArray = PackedStringArray(["Baby", "Adult", "Royal", "Diamond"])
+@export var growth_meals: PackedInt32Array = PackedInt32Array([0, 2, 10, 30, 75])
+@export var growth_sizes: PackedFloat32Array = PackedFloat32Array([0.45, 0.70, 1.0, 1.2, 1.35])
+@export var growth_rewards: PackedInt32Array = PackedInt32Array([0, 1, 2, 3, 10])
+@export var growth_names: PackedStringArray = PackedStringArray(["Baby", "Teen", "Adult", "Royal", "Diamond"])
 
-@export var minimum_meals: PackedInt32Array = PackedInt32Array([0, 0, 0, 75])
-@export var diamond_stage: int = 3
+@export var minimum_meals: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 75])
+@export var diamond_stage: int = 4
 
 @export var starvation_grace: float = 45.0

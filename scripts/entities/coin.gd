@@ -7,6 +7,7 @@ const MAX_LIFETIME: float = 75.0
 const FADE_DURATION: float = 2.0
 var value: int = 1
 var diamond: bool = false
+var grade: int = -1
 var floor_y: float = 650.0
 var claimed: bool = false
 var lifetime: float = BASE_LIFETIME
@@ -48,11 +49,11 @@ func collect() -> void:
 func coin_color() -> Color:
 	if diamond:
 		return Color("67ccff")
-	if value >= 3:
+	if grade >= 3 or (grade < 0 and value >= 3):
 		return Color("ffdb80")
-	if value >= 2:
+	if grade >= 2 or (grade < 0 and value >= 2):
 		return Color("d4e3ed")
 	return Color("d79b69")
 
 func _draw() -> void:
-	VectorArt.draw_coin(self, Vector2.ZERO, 1.0, value, diamond)
+	VectorArt.draw_coin(self, Vector2.ZERO, 1.0, value, diamond, grade)

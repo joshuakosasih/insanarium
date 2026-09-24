@@ -1,9 +1,9 @@
 class_name AquariumAudio
 extends Node
-## Original synthesized effects; no external recordings or backend.
+## Synthesized effects with local, freely licensed music files; no backend.
 const SETTINGS := "user://audio.cfg"
-const CALM_MUSIC: AudioStreamWAV = preload("res://assets/audio/calm_theme.wav")
-const ALIEN_MUSIC: AudioStreamWAV = preload("res://assets/audio/alien_theme.wav")
+const CALM_MUSIC: AudioStream = preload("res://assets/audio/underwater_theme_ii.ogg")
+const ALIEN_MUSIC: AudioStream = preload("res://assets/audio/space_battle.ogg")
 const CALM_DB := -14.0
 const ALIEN_DB := -10.0
 const SILENT_DB := -60.0
@@ -80,18 +80,21 @@ func start_music() -> void:
 	if not alien_music.playing:
 		alien_music.play()
 
-func make_music_player(stream: AudioStreamWAV, volume: float) -> AudioStreamPlayer:
+func make_music_player(stream: AudioStream, volume: float) -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
 	player.stream = stream
 	player.volume_db = volume
 	add_child(player)
 	return player
 
-func looping_copy(source: AudioStreamWAV) -> AudioStreamWAV:
-	var stream: AudioStreamWAV = source.duplicate()
-	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	stream.loop_begin = 0
-	stream.loop_end = stream.data.size() / 2
+func looping_copy(source: AudioStream) -> AudioStream:
+	var stream: AudioStream = source.duplicate()
+	if stream is AudioStreamOggVorbis:
+		stream.loop = true
+	elif stream is AudioStreamWAV:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = stream.data.size() / 2
 	return stream
 
 func play(kind: String) -> void:

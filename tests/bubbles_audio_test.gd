@@ -16,19 +16,21 @@ func run() -> void:
 	var fish = get_nodes_in_group("fish")[0]
 	check(fish.hunger == 0.0 and is_equal_approx(fish.profile.hunger_rate * 120, 1.0) and fish.profile.starvation_grace == 45, "fed opening and relaxed hunger timings")
 	var growth := FishGrowth.new()
-	for i in range(9):
-		growth.record_meal(fish.profile)
-	check(growth.stage == 0, "nine basic meals remain baby")
 	growth.record_meal(fish.profile)
-	check(growth.stage == 1, "ten basic meals become adult")
+	check(growth.stage == 0, "one basic meal remains baby")
+	growth.record_meal(fish.profile)
+	check(growth.stage == 1, "two basic meals become a coin-producing teen")
+	for i in range(8):
+		growth.record_meal(fish.profile)
+	check(growth.stage == 2, "ten basic meals become adult")
 	for i in range(20):
 		growth.record_meal(fish.profile)
-	check(growth.stage == 2, "thirty basic meals become royal")
+	check(growth.stage == 3, "thirty basic meals become royal")
 	for i in range(44):
 		growth.record_meal(fish.profile, 3)
-	check(growth.stage == 2, "upgraded feed cannot bypass diamond meal minimum")
+	check(growth.stage == 3, "upgraded feed cannot bypass diamond meal minimum")
 	growth.record_meal(fish.profile)
-	check(growth.stage == 3, "seventy-five meals become diamond")
+	check(growth.stage == 4, "seventy-five meals become diamond")
 	growth.stage = 2
 	growth.meals = 7
 	growth.growth_credit = 7
@@ -82,13 +84,17 @@ func run() -> void:
 	for i in range(10):
 		tank.spawn_income_bubble()
 	check(get_nodes_in_group("income_bubbles").size() == 8, "bubble capacity upgrades to eight")
-	check(IdleAssets.BUBBLE_UPGRADE_PRICES == [75, 190, 475, 1190] and IdleAssets.BUBBLE_MULTIPLIERS[4] == 5.0, "bubble count and value use separate exponential upgrades")
+	check(IdleAssets.BUBBLE_UPGRADE_PRICES == [30, 90, 270, 810] and IdleAssets.BUBBLE_MULTIPLIERS[4] == 5.0, "bubble count and value use separate exponential upgrades")
+	var snail_rates: Array[float] = []
+	for i in range(5):
+		snail_rates.append(IdleAssets.SNAIL_SPEEDS[i] * IdleAssets.SNAIL_STAMINAS[i] / (IdleAssets.SNAIL_STAMINAS[i] + IdleAssets.SNAIL_SLEEPS[i]))
+	check(snail_rates[1] - snail_rates[0] > snail_rates[2] - snail_rates[1] and snail_rates[2] - snail_rates[1] > snail_rates[3] - snail_rates[2] and snail_rates[3] - snail_rates[2] > snail_rates[4] - snail_rates[3], "snail's combined collection gains taper at later levels")
 	var expired = get_nodes_in_group("income_bubbles")[0]
 	expired._process(31.0)
 	expired.pop()
 	check(tank.economy.money == value, "expired bubbles cannot pay")
 	check(not tank.snapshot().has("bubbles"), "bubbles generate no saved or offline income")
-	check(tank.audio.calm_music.playing and tank.audio.alien_music.playing and tank.audio.calm_music.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "original calm and alien music loops are running")
+	check(tank.audio.calm_music.playing and tank.audio.alien_music.playing and tank.audio.calm_music.stream is AudioStreamOggVorbis and tank.audio.calm_music.stream.loop, "CC0 calm and alien music loops are running")
 	var calm_before: float = tank.audio.calm_music.volume_db
 	var alien_before: float = tank.audio.alien_music.volume_db
 	tank.audio.set_danger_music(true)

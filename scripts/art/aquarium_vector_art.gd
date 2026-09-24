@@ -114,7 +114,7 @@ static func draw_pellet(canvas: CanvasItem, at: Vector2, growth_credit: int = 1,
 	canvas.draw_circle(at, 7.0 * size, Color("513c31"))
 	canvas.draw_circle(at + Vector2(-1, -2) * size, (4.5 + growth_credit - 1) * size, color)
 
-static func draw_coin(canvas: CanvasItem, at: Vector2, size: float, value: int = 1, diamond: bool = false) -> void:
+static func draw_coin(canvas: CanvasItem, at: Vector2, size: float, value: int = 1, diamond: bool = false, grade: int = -1) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	if diamond:
 		var outline := PackedVector2Array([Vector2(-19, -7), Vector2(-10, -19), Vector2(10, -19), Vector2(19, -7), Vector2(0, 20)])
@@ -125,17 +125,17 @@ static func draw_coin(canvas: CanvasItem, at: Vector2, size: float, value: int =
 		canvas.draw_polyline(outline, Color("bceeff"), 1.5, true)
 		canvas.draw_string(ThemeDB.fallback_font, Vector2(-13, 4), str(value), HORIZONTAL_ALIGNMENT_CENTER, 26, 11, Color("143e66"))
 	else:
-		var color := coin_color(value)
+		var color := coin_color(value, grade)
 		canvas.draw_circle(Vector2.ZERO, 16, color.darkened(0.4))
 		canvas.draw_circle(Vector2(0, -2), 14, color)
 		canvas.draw_arc(Vector2(0, -2), 10, 0, TAU, 32, color.darkened(0.3), 1.5, true)
 		canvas.draw_string(ThemeDB.fallback_font, Vector2(-9, 3), str(value), HORIZONTAL_ALIGNMENT_CENTER, 18, 12, Color("493d35"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func coin_color(value: int) -> Color:
-	if value >= 3:
+static func coin_color(value: int, grade: int = -1) -> Color:
+	if grade >= 3 or (grade < 0 and value >= 3):
 		return Color("ffdb80")
-	if value >= 2:
+	if grade >= 2 or (grade < 0 and value >= 2):
 		return Color("d4e3ed")
 	return Color("d79b69")
 

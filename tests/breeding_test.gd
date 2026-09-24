@@ -18,7 +18,7 @@ func run() -> void:
 	for fish in fish_list:
 		fish.set_process(false)
 		fish.sex = AquariumFish.Sex.ASEXUAL
-		fish.growth.stage = 1
+		fish.growth.stage = 2
 		fish.hunger = 0.0
 	tank.breeding.chance = 1.0
 	tank.breeding.advance(30, fish_list)
@@ -42,7 +42,7 @@ func run() -> void:
 	female.growth.stage = 0
 	tank.breeding.advance(30, fish_list)
 	check(get_nodes_in_group("fish").size() == 5, "baby cannot breed")
-	female.growth.stage = 1
+	female.growth.stage = 2
 	tank.breeding.enabled = false
 	tank.breeding.advance(30, fish_list)
 	check(get_nodes_in_group("fish").size() == 5, "breeding toggle prevents births")

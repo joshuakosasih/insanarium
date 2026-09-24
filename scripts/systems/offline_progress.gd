@@ -18,6 +18,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var owned: Dictionary = data.get("owned", {})
 	var asset_levels: Dictionary = data.get("asset_levels", {})
 	var coin_lifetime: float = IdleAssets.coin_lifetime_for(int(asset_levels.get("coin_lifetime", 0)))
+	var coin_multiplier: int = IdleAssets.COIN_MULTIPLIERS[clampi(int(asset_levels.get("coin_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var reserve: Array = data.get("reserve", []).duplicate()
 	var fish_list: Array = data.get("fish", []).duplicate(true)
 	var food: Array = data.get("food", []).duplicate(true)
@@ -156,16 +157,19 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			fish.coin_left = float(fish.get("coin_left", profile.coin_interval)) - dt
 			if fish.coin_left <= 0.0:
 				fish.coin_left += FishGenome.output_interval_for(profile.coin_interval, metabolism)
-				if rng.randf() > FishGenome.coin_chance_for(allocation):
+				var output_stage: int = int(fish.get("stage", 0))
+				if output_stage <= 0:
+					pass
+				elif rng.randf() > FishGenome.coin_chance_for(allocation):
 					cleanliness = maxf(0.0, cleanliness - TankEnvironment.WASTE_OUTPUT_POLLUTION)
 					report.waste += 1
 					if waste.size() < 100:
 						waste.append({"x": fish.get("x", 550), "y": 642, "settled": true, "life": FishWaste.FLOOR_LIFETIME})
 				else:
-					var value: int = profile.coin_value * profile.growth_rewards[int(fish.get("stage", 0))]
+					var value: int = profile.coin_value * profile.growth_rewards[output_stage] * coin_multiplier
 					report.earned += value
 					if rewards.size() < 150:
-						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": int(fish.get("stage", 0)) == 3, "life": coin_lifetime, "grounded": true})
+						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": output_stage == profile.diamond_stage, "grade": output_stage, "life": coin_lifetime, "grounded": true})
 					else:
 						rewards[0].value = int(rewards[0].value) + value
 			survivors.append(fish)
