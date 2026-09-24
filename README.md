@@ -41,7 +41,7 @@ Ordinary waste sinks to the substrate. Its fixed, non-upgradable 12-second count
 
 ## Sound
 
-Original synthesized effects accompany bubble pops, feeding, coin collection, purchases, growth, fish loss, and alien warnings/hits. **Sound: on/off** in the Controls panel toggles all effects; the preference is stored locally, separately from aquarium backups. Playback uses a bounded six-voice pool with gentle volume and repeated-effect throttling. Browsers may require an initial click before playing audio. Away calculations remain silent. No music or external audio assets are included.
+Original synthesized effects accompany bubble pops, feeding, coin collection, purchases, growth, fish loss, and alien warnings/hits. A gentle procedural aquarium theme loops during normal play, then smoothly crossfades to a faster danger theme from the alien warning until the invader is defeated or challenges are disabled. Both tracks are generated locally from simple notes and waveforms, with no copied recordings or external music license. **Sound: on/off** in the Controls panel toggles music and effects together; the preference is stored locally, separately from aquarium backups. Effects use a bounded six-voice pool with gentle volume and repeated-effect throttling. Browsers may require an initial click before starting audio. Away calculations remain silent.
 
 ## Individual lifecycle and inspector
 
@@ -127,6 +127,7 @@ Visit `http://localhost:8000`. The server only serves static files; it is not a 
 - `scripts/systems/save_migration.gd`: legacy identity migration.
 - `scripts/entities/`: food, visible waste, feed profiles, collectible rewards, and income bubbles.
 - `scripts/audio/aquarium_audio.gd`: original procedural effects and local mute preference.
+- `assets/audio/`: generated original calm and alien music loops; `tools/generate_music.gd` is their reproducible source.
 - `scripts/art/aquarium_vector_art.gd`: shared procedural silhouettes used by live entities and shop cards.
 - `scripts/ui/`: reusable shop item definitions and illustrated card controls.
 - `scripts/pets/`: independent snail, seahorse, and Bubble Puffer behaviors.

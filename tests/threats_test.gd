@@ -18,7 +18,7 @@ func run() -> void:
 	assert(fish.scale.y < 0)
 	tank.invasions.running = true
 	tank.invasions.begin_warning()
-	assert(tank.invasions.warning_left > 0)
+	assert(tank.invasions.warning_left > 0 and tank.audio.danger_music)
 	tank.invasions._process(5.1)
 	var alien = tank.invasions.active
 	assert(is_instance_valid(alien))
@@ -29,5 +29,6 @@ func run() -> void:
 		alien.hit(alien.position)
 	assert(get_nodes_in_group("coins").size() == coins + 1)
 	assert(get_nodes_in_group("coins")[-1].value == 10)
-	print("PASS: active starvation, belly-up death, opt-in warning, knockback and reduced alien diamond reward")
+	assert(not tank.audio.danger_music)
+	print("PASS: starvation, opt-in warning music, knockback, alien reward and calm music restoration")
 	quit()

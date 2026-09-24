@@ -88,13 +88,20 @@ func run() -> void:
 	expired.pop()
 	check(tank.economy.money == value, "expired bubbles cannot pay")
 	check(not tank.snapshot().has("bubbles"), "bubbles generate no saved or offline income")
+	check(tank.audio.calm_music.playing and tank.audio.alien_music.playing and tank.audio.calm_music.stream.loop_mode == AudioStreamWAV.LOOP_FORWARD, "original calm and alien music loops are running")
+	var calm_before: float = tank.audio.calm_music.volume_db
+	var alien_before: float = tank.audio.alien_music.volume_db
+	tank.audio.set_danger_music(true)
+	tank.audio._process(0.5)
+	check(tank.audio.calm_music.volume_db < calm_before and tank.audio.alien_music.volume_db > alien_before, "alien encounter crossfades from calm music to the danger theme")
 	tank.audio.set_muted(true)
 	tank.audio.play("bubble")
-	check(tank.audio.voices.all(func(v: AudioStreamPlayer) -> bool: return not v.playing), "mute stops all voices and prevents new sound")
+	check(tank.audio.voices.all(func(v: AudioStreamPlayer) -> bool: return not v.playing) and not tank.audio.calm_music.playing and not tank.audio.alien_music.playing, "mute stops effects and both music tracks")
 	tank.audio.set_muted(false)
+	tank.audio.set_danger_music(false)
 	tank.audio.last_played.clear()
 	tank.audio.play("bubble")
-	check(tank.audio.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing), "unmuting allows effect playback")
+	check(tank.audio.voices.any(func(v: AudioStreamPlayer) -> bool: return v.playing) and tank.audio.calm_music.playing, "unmuting resumes music and allows effect playback")
 	check(tank.audio.effects.size() == 8 and tank.audio.effects.bubble.data.size() > 0, "all original effects contain PCM audio")
 	tank.audio.set_muted(true)
 	await create_timer(0.1).timeout

@@ -107,11 +107,15 @@ func _ready() -> void:
 	invasions = InvasionDirector.new()
 	invasions.presentation_scale = PET_PRESENTATION_SCALE
 	invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
-	invasions.alien_defeated.connect(func(at: Vector2) -> void: spawn_coin(at, 10, true))
+	invasions.alien_defeated.connect(func(at: Vector2) -> void:
+		spawn_coin(at, 10, true)
+		audio.set_danger_music(false))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
 	invasions.running = false
-	invasions.warning_started.connect(func() -> void: audio.play("alert"))
+	invasions.warning_started.connect(func() -> void:
+		audio.play("alert")
+		audio.set_danger_music(true))
 	var data: Dictionary = LocalSave.read() if persistence else {}
 	if data.is_empty():
 		for i in range(2):
@@ -210,6 +214,7 @@ func clear_tank() -> void:
 	invasions.active = null
 	invasions.warning_left = 0.0
 	invasions.schedule_next()
+	audio.set_danger_music(false)
 	assets = IdleAssets.new()
 	environment = TankEnvironment.new()
 	update_inspection()
@@ -982,6 +987,7 @@ func build_hud() -> void:
 		challenges = enabled
 		invasions.running = enabled
 		if not enabled:
+			audio.set_danger_music(false)
 			invasions.stop()
 			if is_instance_valid(invasions.active):
 				invasions.active.queue_free()

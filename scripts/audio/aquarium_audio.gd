@@ -2,10 +2,19 @@ class_name AquariumAudio
 extends Node
 ## Original synthesized effects; no external recordings or backend.
 const SETTINGS := "user://audio.cfg"
+const CALM_MUSIC: AudioStreamWAV = preload("res://assets/audio/calm_theme.wav")
+const ALIEN_MUSIC: AudioStreamWAV = preload("res://assets/audio/alien_theme.wav")
+const CALM_DB := -14.0
+const ALIEN_DB := -10.0
+const SILENT_DB := -60.0
+const MUSIC_FADE_DB_PER_SECOND := 28.0
 var muted: bool = false
 var voices: Array[AudioStreamPlayer] = []
 var effects: Dictionary = {}
 var last_played: Dictionary = {}
+var calm_music: AudioStreamPlayer
+var alien_music: AudioStreamPlayer
+var danger_music: bool = false
 
 func _ready() -> void:
 	if not "--test" in OS.get_cmdline_user_args():
@@ -19,11 +28,27 @@ func _ready() -> void:
 		voice.volume_db = -12.0
 		add_child(voice)
 		voices.append(voice)
+	calm_music = make_music_player(looping_copy(CALM_MUSIC), CALM_DB)
+	alien_music = make_music_player(looping_copy(ALIEN_MUSIC), SILENT_DB)
+	if not muted:
+		start_music()
+
+func _process(delta: float) -> void:
+	if muted:
+		return
+	var calm_target: float = SILENT_DB if danger_music else CALM_DB
+	var alien_target: float = ALIEN_DB if danger_music else SILENT_DB
+	calm_music.volume_db = move_toward(calm_music.volume_db, calm_target, MUSIC_FADE_DB_PER_SECOND * delta)
+	alien_music.volume_db = move_toward(alien_music.volume_db, alien_target, MUSIC_FADE_DB_PER_SECOND * delta)
 
 func _exit_tree() -> void:
 	for voice in voices:
 		voice.stop()
 		voice.stream = null
+	for player in [calm_music, alien_music]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
 	effects.clear()
 
 func set_muted(value: bool) -> void:
@@ -31,10 +56,43 @@ func set_muted(value: bool) -> void:
 	if muted:
 		for voice in voices:
 			voice.stop()
+		calm_music.stop()
+		alien_music.stop()
+	else:
+		start_music()
 	if not "--test" in OS.get_cmdline_user_args():
 		var config := ConfigFile.new()
 		config.set_value("audio", "muted", muted)
 		config.save(SETTINGS)
+
+func set_danger_music(enabled: bool) -> void:
+	danger_music = enabled
+	if muted:
+		return
+	if not calm_music.playing or not alien_music.playing:
+		start_music()
+
+func start_music() -> void:
+	calm_music.volume_db = SILENT_DB if danger_music else CALM_DB
+	alien_music.volume_db = ALIEN_DB if danger_music else SILENT_DB
+	if not calm_music.playing:
+		calm_music.play()
+	if not alien_music.playing:
+		alien_music.play()
+
+func make_music_player(stream: AudioStreamWAV, volume: float) -> AudioStreamPlayer:
+	var player := AudioStreamPlayer.new()
+	player.stream = stream
+	player.volume_db = volume
+	add_child(player)
+	return player
+
+func looping_copy(source: AudioStreamWAV) -> AudioStreamWAV:
+	var stream: AudioStreamWAV = source.duplicate()
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	stream.loop_begin = 0
+	stream.loop_end = stream.data.size() / 2
+	return stream
 
 func play(kind: String) -> void:
 	if muted or ActivityPace.multiplier < 1.0 or not effects.has(kind):
