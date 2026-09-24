@@ -8,6 +8,7 @@ var category: String
 var icon_kind: String
 var status: String = ""
 var selected: bool = false
+var discovered: bool = true
 var pellet_color: Color = Color("ffa86b")
 var pellet_growth: int = 1
 
@@ -36,6 +37,10 @@ func set_selected(value: bool) -> void:
 	selected = value
 	queue_redraw()
 
+func set_discovered(value: bool) -> void:
+	discovered = value
+	queue_redraw()
+
 func set_pellet_preview(color: Color, growth_credit: int) -> void:
 	pellet_color = color
 	pellet_growth = growth_credit
@@ -45,7 +50,10 @@ func _draw() -> void:
 	if selected:
 		draw_style_box(selection_style(), Rect2(Vector2(2, 2), size - Vector2(4, 4)))
 	var center := Vector2(size.x * 0.5, 56)
-	draw_icon(center)
+	if discovered:
+		draw_icon(center)
+	else:
+		draw_shadow_icon(center)
 	var font := ThemeDB.fallback_font
 	draw_string(font, Vector2(12, 20), category, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 11, Color("8edfe9"))
 	draw_string(font, Vector2(12, size.y - 34), display_title, HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, 15, Color("e8f2ed"))
@@ -93,6 +101,43 @@ func draw_icon(at: Vector2) -> void:
 			for bubble in [Vector3(-22, 10, 14), Vector3(8, -8, 20), Vector3(28, 18, 10)]:
 				draw_circle(at + Vector2(bubble.x, bubble.y), bubble.z, Color(0.55, 0.88, 0.95, 0.12))
 				draw_arc(at + Vector2(bubble.x, bubble.y), bubble.z, 0, TAU, 24, Color("a9edf2"), 3, true)
+
+func draw_shadow_icon(at: Vector2) -> void:
+	var shadow := Color("182830")
+	var rim := Color("31505b")
+	match icon_kind:
+		"fish", "puffer":
+			draw_colored_polygon(PackedVector2Array([at + Vector2(-16, 0), at + Vector2(-42, -20), at + Vector2(-39, 20)]), shadow)
+			draw_circle(at, 27 if icon_kind == "puffer" else 23, shadow)
+			draw_arc(at, 27 if icon_kind == "puffer" else 23, 0, TAU, 28, rim, 2.0, true)
+		"snail":
+			draw_rect(Rect2(at + Vector2(-42, 15), Vector2(82, 15)), shadow)
+			draw_circle(at + Vector2(-8, 3), 29, shadow)
+			draw_arc(at + Vector2(-8, 3), 29, 0, TAU, 28, rim, 2.0, true)
+		"seahorse":
+			draw_circle(at + Vector2(5, -21), 18, shadow)
+			draw_line(at + Vector2(0, -10), at + Vector2(-3, 30), shadow, 20, true)
+			draw_arc(at + Vector2(7, 29), 18, 0.2, 5.5, 24, shadow, 9, true)
+		"feeder", "stock":
+			draw_style_box(shadow_box(), Rect2(at + Vector2(-48, -28), Vector2(96, 62)))
+		"feed":
+			for i in range(6):
+				draw_circle(at + Vector2.from_angle(i * TAU / 6.0) * 26.0, 9, shadow)
+		"coin", "clock":
+			draw_circle(at, 31, shadow)
+			draw_arc(at, 31, 0, TAU, 32, rim, 2.0, true)
+		"bubble":
+			for bubble in [Vector3(-22, 10, 14), Vector3(8, -8, 20), Vector3(28, 18, 10)]:
+				draw_circle(at + Vector2(bubble.x, bubble.y), bubble.z, shadow)
+	draw_string(ThemeDB.fallback_font, at + Vector2(-10, 7), "?", HORIZONTAL_ALIGNMENT_CENTER, 20, 22, Color("5f7680"))
+
+func shadow_box() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("182830")
+	style.border_color = Color("31505b")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	return style
 
 func machine_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

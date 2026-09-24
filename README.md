@@ -48,7 +48,7 @@ Original synthesized effects accompany bubble pops, feeding, coin collection, pu
 
 Click a fish to open its inspector; the × closes it. It displays stable ID, species, sex, mutation, growth stage, age, origin, born/introduced tank time, parents, current and maximum health, hunger, meals, growth credits, output interval, breeding readiness, exact sale price, and the six direct phenotype bars. Hidden genetic axis names and allele values never appear in this player-facing panel. The inspector refreshes four times a second.
 
-Buying a fish closes the shop and opens a reusable fish reveal card with the same original vector fish and six direct trait bars. Welcoming an offspring opens the same card. Newborn cards name both parents and mark each outcome as above, below, or similar to their average. Multiple births or purchases queue their cards in order. The aquarium keeps running behind the card; dismiss it or jump directly to that fish's full inspector.
+Buying a fish or welcoming an offspring first shows a short acquisition celebration: the animal scales into the center of a field of rotating rays and sparkles. The reusable fish reveal card then opens with the same original vector fish and six direct trait bars. Newborn cards name both parents and mark each outcome as above, below, or similar to their average. Purchased pets use the same celebration before returning to the aquarium. Multiple acquisitions queue in order so each animal receives its own reveal. The aquarium keeps running behind the sequence; dismiss a fish card or jump directly to that fish's full inspector.
 
 IDs are monotonic within the saved tank and never reused after sale/death. Offspring store both selected parents' IDs; those references persist even when parents leave the tank. We do not retain full dead/sold animal simulation objects or an unbounded animal archive. Parent identity references alone are kept for now.
 
@@ -87,7 +87,7 @@ The snail begins at 16 pixels per second with 10 seconds of movement stamina. Ex
 
 The Bubble Puffer has separate Speed and Curiosity tracks. Speed progresses through 45, 60, 78, 100, and 125 pixels per second. Curiosity gives each available bubble a 30%, 45%, 60%, 80%, then 100% chance to become its chase target. Rejected bubbles remain for manual clicking. Puffer and Coin Preservation tracks cost $40, $100, $250, then $625. Existing sea-urchin purchases automatically migrate to a base-level Bubble Puffer; existing three-level snail saves map to compensating speed and stamina levels, with the new sleep track starting at level one.
 
-No pets or machine are granted free. Each can be purchased once. Pet positions and upgrade tracks persist in local saves. After buying the feeder, use **Stock +20** to buy pellets at the current feed price, up to a 200-pellet reserve. Partial refills charge only for available space. Stocked pellets preserve the tier paid for, even after upgrading manual feed. Dispensing stock never charges a second time. The machine pauses when no fish are hungry or the reserve is empty; it cannot feed without stock. The seahorse's free food remains Basic.
+No pets or machine are granted free. Each can be purchased once. Unowned helpers and equipment appear as silhouettes in the shop. Upgrade artwork is also hidden until the first level is purchased, turning the initial purchase into a small discovery; restored ownership and levels reveal the correct artwork immediately. Pet positions and upgrade tracks persist in local saves. After buying the feeder, use **Stock +20** to buy pellets at the current feed price, up to a 200-pellet reserve. Partial refills charge only for available space. Stocked pellets preserve the tier paid for, even after upgrading manual feed. Dispensing stock never charges a second time. The machine pauses when no fish are hungry or the reserve is empty; it cannot feed without stock. The seahorse's free food remains Basic.
 
 ## Alien challenges
 
@@ -131,6 +131,7 @@ Visit `http://localhost:8000`. The server only serves static files; it is not a 
 - `assets/audio/`: bundled CC0 calm and alien music with source/license records.
 - `scripts/art/aquarium_vector_art.gd`: shared procedural silhouettes used by live entities and shop cards.
 - `scripts/ui/`: reusable shop item definitions and illustrated card controls.
+- `scripts/ui/acquisition_celebration.gd`: queued fish and pet discovery animation shared by purchases and births.
 - `scripts/pets/`: independent snail, seahorse, and Bubble Puffer behaviors.
 - `scripts/systems/activity_pace.gd`: shared focus-driven simulation clock.
 - `scripts/systems/breeding.gd`: mating eligibility, cooldowns, and population limits.

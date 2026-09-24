@@ -6,6 +6,7 @@ const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
 const BubblePufferScript = preload("res://scripts/pets/bubble_puffer.gd")
 const FishTraitBarScript = preload("res://scripts/ui/fish_trait_bar.gd")
 const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
+const AcquisitionCelebrationScript = preload("res://scripts/ui/acquisition_celebration.gd")
 const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation_gate.gd")
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
@@ -38,7 +39,9 @@ var inspector_panel: Panel
 var inspector_detail: Label
 var inspector_trait_bars: Array[FishTraitBar] = []
 var reveal_panel: FishRevealPanel
-var reveal_queue: Array[Dictionary] = []
+var acquisition_celebration: AcquisitionCelebration
+var acquisition_queue: Array[Dictionary] = []
+var active_acquisition: Dictionary = {}
 var inspect_left: float = 0.0
 var breeding := FishBreeding.new()
 var breeding_status: Label
@@ -204,7 +207,10 @@ func apply_catchup(data: Dictionary) -> void:
 
 func clear_tank() -> void:
 	selected_fish = null
-	reveal_queue.clear()
+	acquisition_queue.clear()
+	active_acquisition.clear()
+	if is_instance_valid(acquisition_celebration):
+		acquisition_celebration.hide()
 	if is_instance_valid(reveal_panel):
 		reveal_panel.hide()
 	for child in get_children():
@@ -260,6 +266,12 @@ func purchase_asset(kind: String) -> void:
 		audio.play("buy")
 		show_shop_message("%s added to the tank." % kind.capitalize())
 		update_money(economy.money)
+		if kind in ["snail", "seahorse", "puffer"]:
+			shop_panel.hide()
+			queue_acquisition({"icon": kind, "title": "NEW PET!", "subtitle": "%s joined your aquarium." % pet_display_name(kind)})
+
+func pet_display_name(kind: String) -> String:
+	return {"snail": "Snail", "seahorse": "Seahorse", "puffer": "Bubble Puffer"}.get(kind, kind.capitalize())
 
 func spawn_asset(kind: String) -> void:
 	if kind == "snail":
@@ -623,20 +635,40 @@ func purchase_fish() -> void:
 
 func show_fish_reveal(fish: AquariumFish, heading: String, parents: Array = []) -> void:
 	var data: Dictionary = FishRevealPanelScript.capture(fish, heading, parents)
-	if reveal_panel.visible:
-		reveal_queue.append(data)
-		reveal_panel.set_pending_count(reveal_queue.size())
-	else:
-		reveal_panel.present(data)
-		reveal_panel.set_pending_count(0)
+	queue_acquisition({"icon": "fish", "color": FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown(),
+		"title": "NEW OFFSPRING!" if heading == "NEW OFFSPRING" else "NEW FISH!",
+		"subtitle": "%s joined your aquarium." % fish.life.id, "reveal": data})
+
+func queue_acquisition(data: Dictionary) -> void:
+	acquisition_queue.append(data)
+	update_acquisition_pending_count()
+	start_next_acquisition()
+
+func start_next_acquisition() -> void:
+	if not active_acquisition.is_empty() or acquisition_queue.is_empty() or reveal_panel.visible or acquisition_celebration.visible:
+		return
+	active_acquisition = acquisition_queue.pop_front()
+	update_acquisition_pending_count()
+	audio.play("grow")
+	acquisition_celebration.present(active_acquisition)
+
+func finish_acquisition_celebration() -> void:
+	var completed: Dictionary = active_acquisition
+	active_acquisition = {}
+	if completed.has("reveal"):
+		reveal_panel.present(completed.reveal)
+		reveal_panel.set_pending_count(acquisition_queue.size())
 		reveal_panel.move_to_front()
+	else:
+		start_next_acquisition()
+
+func update_acquisition_pending_count() -> void:
+	if is_instance_valid(reveal_panel) and reveal_panel.visible:
+		reveal_panel.set_pending_count(acquisition_queue.size())
 
 func advance_fish_reveal() -> void:
-	if reveal_queue.is_empty():
-		reveal_panel.hide()
-		return
-	reveal_panel.present(reveal_queue.pop_front())
-	reveal_panel.set_pending_count(reveal_queue.size())
+	reveal_panel.hide()
+	start_next_acquisition()
 
 func inspect_revealed_fish(fish_id: String) -> void:
 	for fish in get_tree().get_nodes_in_group("fish"):
@@ -753,8 +785,21 @@ func refresh_shop() -> void:
 		"coin_value": "Lv. %d · ×%d" % [int(assets.levels.coin_value) + 1, assets.coin_multiplier()],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
 		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
+	var discoveries := {
+		"fish": true,
+		"snail": assets.owned.snail,
+		"seahorse": assets.owned.seahorse,
+		"puffer": assets.owned.puffer,
+		"feeder": assets.owned.feeder,
+		"stock": assets.owned.feeder,
+		"feed": feed_upgrades.unlocked_tier > 0,
+		"coin_lifetime": int(assets.levels.coin_lifetime) > 0,
+		"coin_value": int(assets.levels.coin_value) > 0,
+		"idle_duration": int(assets.levels.idle_duration) > 0,
+		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
 	for key in shop_cards:
 		shop_cards[key].set_status(statuses[key])
+		shop_cards[key].set_discovered(bool(discoveries[key]))
 	var item = shop_items[shop_selected_id]
 	shop_detail_title.text = item.title
 	shop_detail_description.text = item.description
@@ -1048,6 +1093,10 @@ func build_hud() -> void:
 	hud.add_child(reveal_panel)
 	reveal_panel.dismissed.connect(advance_fish_reveal)
 	reveal_panel.inspect_requested.connect(inspect_revealed_fish)
+	acquisition_celebration = AcquisitionCelebrationScript.new()
+	acquisition_celebration.position = Vector2(300, 5)
+	hud.add_child(acquisition_celebration)
+	acquisition_celebration.finished.connect(finish_acquisition_celebration)
 	var orientation_gate: MobileOrientationGate = MobileOrientationGateScript.new()
 	hud.add_child(orientation_gate)
 

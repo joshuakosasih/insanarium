@@ -63,6 +63,7 @@ func run() -> void:
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
 	check(not tank.shop_panel.visible and tank.shop_cards.size() == 11, "shop starts closed with reusable product cards")
+	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible, "shop button opens its connected panel")
 	tank.toggle_shop()
@@ -110,11 +111,15 @@ func run() -> void:
 		tank.handle_tank_click(bubble.position)
 	tank.purchase_fish()
 	check(tank.economy.money == 0 and get_nodes_in_group("fish").size() == 2 and "fish added" in tank.shop_status.text.to_lower(), "click income buys a replacement fish from zero")
-	check(not tank.shop_panel.visible and tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW FISH PURCHASED" and tank.reveal_panel.trait_bars.size() == 6, "fish purchase closes the shop and opens reusable six-trait reveal card")
+	check(not tank.shop_panel.visible and tank.acquisition_celebration.visible and not tank.reveal_panel.visible and tank.acquisition_celebration.icon_kind == "fish", "fish purchase starts with a centered acquisition celebration")
+	tank.acquisition_celebration.finish_now()
+	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW FISH PURCHASED" and tank.reveal_panel.trait_bars.size() == 6, "celebration hands off to the reusable six-trait reveal card")
 	check(tank.reveal_panel.trait_bars[0].title == "Maximum health" and tank.reveal_panel.trait_bars[5].title == "Water resistance", "reveal card shows direct outcomes rather than hidden genes")
 	tank.show_fish_reveal(get_nodes_in_group("fish")[0], "QUEUED FISH")
-	check(tank.reveal_queue.size() == 1 and "1 waiting" in tank.reveal_panel.dismiss_button.text, "additional fish reveals queue without replacing the current card")
+	check(tank.acquisition_queue.size() == 1 and "1 waiting" in tank.reveal_panel.dismiss_button.text, "additional acquisitions queue without replacing the current card")
 	tank.advance_fish_reveal()
+	check(tank.acquisition_celebration.visible and not tank.reveal_panel.visible, "queued fish receives its own celebration before details")
+	tank.acquisition_celebration.finish_now()
 	check(tank.reveal_panel.heading_label.text == "QUEUED FISH", "dismissing advances to the next queued fish")
 	tank.advance_fish_reveal()
 	check(not tank.reveal_panel.visible, "final reveal dismisses cleanly")
@@ -124,6 +129,10 @@ func run() -> void:
 		tank.purchase_asset(kind)
 		tank.purchase_asset(kind)
 		check(tank.assets.owned[kind] and tank.economy.money == balance - tank.assets.PRICES[kind], "automation purchase charges only once: " + kind)
+	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.icon_kind == "snail" and tank.acquisition_queue.size() == 2, "pet purchases use the reusable celebration and queue in order")
+	while tank.acquisition_celebration.visible:
+		tank.acquisition_celebration.finish_now()
+	check(tank.shop_cards.snail.discovered and tank.shop_cards.seahorse.discovered and tank.shop_cards.puffer.discovered and tank.shop_cards.feeder.discovered, "purchased helpers reveal their normal shop artwork")
 	for pet in get_nodes_in_group("pets"):
 		pet.set_process(false)
 	check(get_nodes_in_group("pets").size() == 3, "purchased pets are spawned")
@@ -196,6 +205,7 @@ func run() -> void:
 	balance = tank.economy.money
 	tank.activate_shop_item()
 	check(tank.assets.coin_multiplier() == 2 and tank.economy.money == balance - 25, "cheap coin-value upgrade doubles future fish rewards")
+	check(tank.shop_cards.coin_value.discovered, "first upgrade reveals its shop artwork")
 	var teen := get_nodes_in_group("fish")[0] as AquariumFish
 	teen.growth.stage = 1
 	teen.coin_produced.emit(teen.position, 1, false, 1)

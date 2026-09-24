@@ -54,7 +54,9 @@ func run() -> void:
 	check(child.growth.stage == 0 and child.growth.meals == 0 and child.mutation.variant == 0 and child.sex >= 0 and child.sex <= 2, "offspring starts normal baby with valid sex")
 	check(absf(child.genome.metabolism[0] - 0.2) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.metabolism[1] - 0.8) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[0] - 0.3) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[1] - 0.7) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[0] - 0.25) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[1] - 0.75) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[0] - 0.35) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[1] - 0.65) <= FishGenome.MUTATION_RANGE + 0.001, "offspring inherits one hidden allele per trait from each parent")
 	check(is_equal_approx(child.health.maximum, child.genome.max_health()) and child.health.current == child.health.maximum, "new offspring applies inherited vitality at full health")
-	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW OFFSPRING" and "Parents:" in tank.reveal_panel.comparison_label.text, "birth opens a reveal card naming both parents")
+	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.title_label.text == "NEW OFFSPRING!", "birth starts with a celebratory offspring reveal")
+	tank.acquisition_celebration.finish_now()
+	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW OFFSPRING" and "Parents:" in tank.reveal_panel.comparison_label.text, "celebration opens a reveal card naming both parents")
 	var has_comparison: bool = false
 	for bar in tank.reveal_panel.trait_bars:
 		has_comparison = has_comparison or bar.comparison in ["↑", "↓", "≈"]
