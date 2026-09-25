@@ -24,7 +24,7 @@ Start with two fully fed amber fish and $100. Click water to feed, click rewards
 | Royal | 30 growth credits | $3 gold | $350 | $700 |
 | Diamond | 75 actual meals | $10 blue diamond | $1,200 | $2,400 |
 
-Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Every normal fish is amber. Diamond fish wear a tiny blue crown attached to the head in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. A separate Coin Value upgrade multiplies all future fish rewards by 1×, 2×, 3×, 5×, and 8× for $200, $800, $3,200, and $12,800. Diamond Value then multiplies blue diamonds by a further 1×, 2×, 4×, 7×, and 12× for $150, $450, $1,350, and $4,050. The two multipliers stack; coin color continues to show the producing fish's stage. The assumptions, milestone estimates, and upgrade payback math are recorded in [`docs/BALANCE_MODEL.md`](docs/BALANCE_MODEL.md).
+Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Every normal fish is amber. Diamond fish wear a tiny blue crown attached to the head in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. A separate Coin Value upgrade multiplies all future fish rewards by 1×, 2×, 3×, 5×, and 8× for $200, $800, $3,200, and $12,800. Diamond Value then multiplies blue diamonds by a further 1×, 2×, 4×, 7×, and 12× for $150, $450, $1,350, and $4,050. The two multipliers stack; coin color continues to show the producing fish's stage. The assumptions, milestone estimates, and upgrade payback math are recorded in [`docs/BALANCE_MODEL.md`](docs/BALANCE_MODEL.md); multi-seed player simulations and findings are in [`docs/BALANCE_SIMULATION.md`](docs/BALANCE_SIMULATION.md).
 
 ## Feed and survival
 
@@ -172,6 +172,7 @@ godot --headless --path . --script tests/genetics_test.gd -- --test
 godot --headless --path . --script tests/population_benchmark.gd -- --test
 godot --headless --path . --script tests/autoplay_balance_test.gd -- --test
 godot --headless --path . --script tests/economy_estimate.gd -- --test
+godot --headless --path . --script tests/balance_monte_carlo.gd -- --test
 godot --path . --script tests/render_preview.gd -- --test --idle
 ```
 
