@@ -38,6 +38,8 @@ static func parse(text: String) -> Dictionary:
 	for optional_pet in ["urchin", "puffer", "shrimp"]:
 		if data.owned.has(optional_pet) and not data.owned[optional_pet] is bool:
 			return {}
+	if data.has("population_goal_complete") and not data.population_goal_complete is bool:
+		return {}
 	if data.has("asset_levels"):
 		if not data.asset_levels is Dictionary:
 			return {}
@@ -81,7 +83,7 @@ static func parse(text: String) -> Dictionary:
 				for allele in fish.genome[trait_name]:
 					if not number(allele, 0, 1):
 						return {}
-			for trait_name in ["vitality", "speed"]:
+			for trait_name in ["vitality", "speed", "fertility"]:
 				if fish.genome.has(trait_name):
 					if not fish.genome[trait_name] is Array or fish.genome[trait_name].size() != 2:
 						return {}

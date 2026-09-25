@@ -7,12 +7,13 @@ var metabolism: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var allocation: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var vitality: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var speed: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
+var fertility: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 const MIN_MAX_HEALTH: float = 60.0
 const MAX_MAX_HEALTH: float = 160.0
 const MIN_SPEED_MULTIPLIER: float = 0.65
 const MAX_SPEED_MULTIPLIER: float = 1.40
-const MIN_BREEDING_COOLDOWN: float = 210.0
-const MAX_BREEDING_COOLDOWN: float = 390.0
+const MIN_BREEDING_COOLDOWN: float = 180.0
+const MAX_BREEDING_COOLDOWN: float = 420.0
 
 func randomize_traits(balanced: bool = false) -> void:
 	var range_limits := Vector2(0.44, 0.56) if balanced else Vector2(0.12, 0.88)
@@ -21,6 +22,7 @@ func randomize_traits(balanced: bool = false) -> void:
 	allocation = randomized_pair(range_limits, allele_spread)
 	vitality = randomized_pair(range_limits, allele_spread)
 	speed = randomized_pair(range_limits, allele_spread)
+	fertility = randomized_pair(range_limits, allele_spread)
 
 static func randomized_pair(range_limits: Vector2, spread: float) -> PackedFloat32Array:
 	# Choose the visible phenotype first. Independent allele rolls would average
@@ -35,6 +37,7 @@ static func inherit(father: FishGenome, mother: FishGenome) -> FishGenome:
 	child.allocation = PackedFloat32Array([mutate(father.allocation[randi_range(0, 1)]), mutate(mother.allocation[randi_range(0, 1)])])
 	child.vitality = PackedFloat32Array([mutate(father.vitality[randi_range(0, 1)]), mutate(mother.vitality[randi_range(0, 1)])])
 	child.speed = PackedFloat32Array([mutate(father.speed[randi_range(0, 1)]), mutate(mother.speed[randi_range(0, 1)])])
+	child.fertility = PackedFloat32Array([mutate(father.fertility[randi_range(0, 1)]), mutate(mother.fertility[randi_range(0, 1)])])
 	return child
 
 static func mutate(value: float) -> float:
@@ -53,6 +56,9 @@ func vitality_value() -> float:
 
 func speed_value() -> float:
 	return (speed[0] + speed[1]) * 0.5
+
+func fertility_value() -> float:
+	return (fertility[0] + fertility[1]) * 0.5
 
 func max_health() -> float:
 	return max_health_for(vitality_value())
@@ -76,7 +82,7 @@ func constitution() -> float:
 	return constitution_for(vitality_value())
 
 func breeding_cooldown() -> float:
-	return breeding_cooldown_for(metabolism_value())
+	return breeding_cooldown_for(fertility_value())
 
 static func speed_multiplier_for(value: float) -> float:
 	return lerpf(MIN_SPEED_MULTIPLIER, MAX_SPEED_MULTIPLIER, clampf(value, 0.0, 1.0))
@@ -112,13 +118,14 @@ func allocation_label() -> String:
 
 func to_data() -> Dictionary:
 	return {"metabolism": Array(metabolism), "allocation": Array(allocation),
-		"vitality": Array(vitality), "speed": Array(speed)}
+		"vitality": Array(vitality), "speed": Array(speed), "fertility": Array(fertility)}
 
 func from_data(data: Dictionary) -> void:
 	metabolism = read_pair(data.get("metabolism", [0.5, 0.5]))
 	allocation = read_pair(data.get("allocation", [0.5, 0.5]))
 	vitality = read_pair(data.get("vitality", [0.5, 0.5]))
 	speed = read_pair(data.get("speed", [0.5, 0.5]))
+	fertility = read_pair(data.get("fertility", [0.5, 0.5]))
 
 static func phenotype_from_data(data: Dictionary, trait_name: String) -> float:
 	var pair: Array = data.get(trait_name, [0.5, 0.5])

@@ -32,6 +32,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	data["next_fish_id"] = registry.next_id
 	data["simulation_elapsed"] = maxf(0.0, float(data.get("simulation_elapsed", 0)))
 	data["cleanliness"] = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
+	data["population_goal_complete"] = bool(data.get("population_goal_complete", false))
 	if not data.has("waste") or not data.waste is Array:
 		data["waste"] = []
 	var owned: Dictionary = data.get("owned", {}).duplicate(true)

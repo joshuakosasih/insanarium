@@ -77,6 +77,6 @@ static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float =
 		messages.append("Feeder empty" if stock == 0 else "Low stock: %d pellets" % stock)
 	if fish.size() >= FishBreeding.CAPACITY:
 		messages.append("Tank full: purchases blocked")
-	elif fish.size() >= FishBreeding.BREEDING_LIMIT:
-		messages.append("Population high: breeding paused")
+	elif fish.size() >= FishBreeding.COMFORT_WARNING:
+		messages.append("Population high: tank nearing capacity")
 	return " · ".join(messages) if not messages.is_empty() else "No immediate care warnings."

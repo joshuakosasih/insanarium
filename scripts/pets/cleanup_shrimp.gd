@@ -96,7 +96,8 @@ func consume_target() -> void:
 	digestion_left = digestion_duration
 
 func _draw() -> void:
-	VectorArt.draw_shrimp(self, Vector2.ZERO, 0.85, phase)
+	# Deliberately much smaller than the snail: this helper is a shrimp, not a lobster.
+	VectorArt.draw_shrimp(self, Vector2.ZERO, 0.58, phase)
 	if digestion_left > 0.0:
-		draw_circle(Vector2(1, -32), 2.0, Color("d5ebef"))
-		draw_circle(Vector2(10, -39), 1.3, Color("83a9b7"))
+		draw_circle(Vector2(1, -23), 2.0, Color("d5ebef"))
+		draw_circle(Vector2(9, -29), 1.3, Color("83a9b7"))

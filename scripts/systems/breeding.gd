@@ -3,7 +3,8 @@ extends RefCounted
 ## One offspring maximum per check; both parents share a cooldown.
 signal offspring_requested(at: Vector2, father_id: String, mother_id: String)
 const CAPACITY: int = 20
-const BREEDING_LIMIT: int = 16
+const BREEDING_LIMIT: int = CAPACITY
+const COMFORT_WARNING: int = 16
 const INTERVAL: float = 30.0
 const COOLDOWN: float = 300.0 # Neutral reference; genomes set the actual cooldown.
 var enabled: bool = true

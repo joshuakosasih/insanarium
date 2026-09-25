@@ -36,8 +36,10 @@ static func trait_rows(fish: AquariumFish) -> Array[Dictionary]:
 	var actual_speed: float = fish.swim_speed()
 	var coin_chance: float = fish.genome.coin_chance()
 	var lifespan: float = FishAging.lifespan_for(fish.genome)
+	var breed_seconds: int = roundi(fish.genome.breeding_cooldown())
 	return [
 		{"title": "Vitality", "value": "%d HP · %.1fh" % [roundi(fish.health.maximum), lifespan / 3600.0], "progress": fish.genome.vitality_value()},
 		{"title": "Metabolism", "value": "%ds food · ×%.2f" % [roundi(food_endurance), fish.genome.growth_multiplier()], "progress": fish.genome.metabolism_value()},
 		{"title": "Agility", "value": "%d px/s" % roundi(actual_speed), "progress": fish.genome.speed_value()},
-		{"title": "Productivity", "value": "%d%% coin" % roundi(coin_chance * 100.0), "progress": fish.genome.allocation_value()}]
+		{"title": "Productivity", "value": "%d%% coin" % roundi(coin_chance * 100.0), "progress": fish.genome.allocation_value()},
+		{"title": "Fertility", "value": "%dm %02ds" % [breed_seconds / 60, breed_seconds % 60], "progress": fish.genome.fertility_value()}]

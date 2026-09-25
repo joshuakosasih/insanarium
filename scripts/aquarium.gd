@@ -99,6 +99,7 @@ var environment := TankEnvironment.new()
 var last_pointer_position := Vector2(-10000, -10000)
 var last_pointer_msec: int = -1000
 var menu_paused: bool = false
+var population_goal_complete: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -380,7 +381,13 @@ func sell_selected() -> void:
 	update_inspection()
 
 func update_count() -> void:
-	count_label.text = "%02d FISH / %d" % [get_tree().get_nodes_in_group("fish").size(), breeding.CAPACITY]
+	var count: int = get_tree().get_nodes_in_group("fish").size()
+	if count >= breeding.CAPACITY and not population_goal_complete:
+		population_goal_complete = true
+		if offline_ready:
+			audio.play("growth")
+			show_feedback(tank_rect.get_center(), "Population goal complete!")
+	count_label.text = "%02d FISH · GOAL COMPLETE" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.CAPACITY]
 	update_money(economy.money)
 
 func update_cleanliness() -> void:
@@ -699,6 +706,7 @@ func reset_test_tank() -> void:
 	food_cooldown = 0.0
 	snail_collection_progress = 0.0
 	shrimp_cleanup_progress = 0.0
+	population_goal_complete = false
 	for i in range(2):
 		spawn_fish(false, "Starter").hunger = 0.0
 	set_challenges_enabled(true)
@@ -1308,9 +1316,9 @@ func build_hud() -> void:
 	inspector_detail = label_at(inspector_panel, "", Vector2(16, 14), 13, Color("d2e6df"))
 	inspector_detail.size = Vector2(316, 276)
 	inspector_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	for index in range(4):
+	for index in range(5):
 		var trait_bar: FishTraitBar = FishTraitBarScript.new()
-		trait_bar.position = Vector2(16, 306 + index * 34)
+		trait_bar.position = Vector2(16, 300 + index * 32)
 		inspector_panel.add_child(trait_bar)
 		inspector_trait_bars.append(trait_bar)
 	make_button(inspector_panel, "×", Vector2(308, 5), Vector2(30, 28), func() -> void:
@@ -1558,7 +1566,7 @@ func snapshot() -> Dictionary:
 		elif pet is CleanupShrimpScript:
 			shrimp_x = pet.position.x
 			shrimp_digestion = pet.digestion_left
-	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
+	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
 		"shrimp_x": shrimp_x, "shrimp_digestion": shrimp_digestion, "shrimp_cleanup_progress": shrimp_cleanup_progress,
@@ -1572,6 +1580,7 @@ func restore(data: Dictionary) -> void:
 	life_registry.elapsed = float(data.simulation_elapsed)
 	breeding.enabled = bool(data.get("breeding_enabled", true))
 	breeding.check_left = clampf(float(data.get("breeding_check", 30)), 0, 30)
+	population_goal_complete = bool(data.get("population_goal_complete", false))
 	breeding_toggle.set_pressed_no_signal(breeding.enabled)
 	economy.money = maxf(0.0, float(data.get("money", 100)))
 	environment.cleanliness = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)

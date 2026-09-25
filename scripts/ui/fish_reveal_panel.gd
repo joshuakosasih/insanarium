@@ -28,9 +28,9 @@ func _ready() -> void:
 	identity_label = make_label("", Vector2(24, 45), 20, Color("e8f2ed"))
 	identity_label.size = Vector2(504, 52)
 	identity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for index in range(4):
+	for index in range(5):
 		var bar: FishTraitBar = TraitBarScript.new()
-		bar.position = Vector2(118, 205 + index * 38)
+		bar.position = Vector2(118, 205 + index * 32)
 		add_child(bar)
 		trait_bars.append(bar)
 	details_label = make_label("", Vector2(38, 370), 14, Color("c7dfdb"))
@@ -86,7 +86,7 @@ static func capture(fish: AquariumFish, heading: String, parents: Array = []) ->
 		comparison = "Parents: %s\n↑ above parents · ↓ below parents · ≈ similar" % " + ".join(parent_ids)
 	return {"heading": heading, "id": fish.life.id,
 		"identity": "%s · %s\n%s · %s · %s" % [fish.life.id, fish.profile.species_name, AquariumFish.SEX_NAMES[fish.sex], fish.profile.growth_names[fish.growth.stage], FishMutation.NAMES[fish.mutation.variant]],
-		"details": "Output %.1fs · Breed cycle %s" % [fish.genome.output_interval(fish.profile.coin_interval), FishInspector.duration(fish.genome.breeding_cooldown())],
+		"details": "Output %.1fs · Water resilience ×%.2f" % [fish.genome.output_interval(fish.profile.coin_interval), fish.genome.constitution()],
 		"comparison": comparison, "rows": rows, "color": FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown()}
 
 func _draw() -> void:

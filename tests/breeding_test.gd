@@ -31,10 +31,12 @@ func run() -> void:
 	male.genome.allocation = PackedFloat32Array([0.3, 0.3])
 	male.genome.vitality = PackedFloat32Array([0.25, 0.25])
 	male.genome.speed = PackedFloat32Array([0.35, 0.35])
+	male.genome.fertility = PackedFloat32Array([0.2, 0.2])
 	female.genome.metabolism = PackedFloat32Array([0.8, 0.8])
 	female.genome.allocation = PackedFloat32Array([0.7, 0.7])
 	female.genome.vitality = PackedFloat32Array([0.75, 0.75])
 	female.genome.speed = PackedFloat32Array([0.65, 0.65])
+	female.genome.fertility = PackedFloat32Array([0.8, 0.8])
 	female.hunger = 1.0
 	tank.breeding.advance(30, fish_list)
 	check(get_nodes_in_group("fish").size() == 5, "hungry parent cannot breed")
@@ -52,7 +54,7 @@ func run() -> void:
 	check(get_nodes_in_group("fish").size() == 6 and tank.economy.money == balance, "eligible pair produces one free offspring")
 	var child = get_nodes_in_group("fish")[-1]
 	check(child.growth.stage == 0 and child.growth.meals == 0 and child.mutation.variant == 0 and child.sex >= 0 and child.sex <= 2, "offspring starts normal baby with valid sex")
-	check(absf(child.genome.metabolism[0] - 0.2) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.metabolism[1] - 0.8) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[0] - 0.3) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[1] - 0.7) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[0] - 0.25) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[1] - 0.75) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[0] - 0.35) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[1] - 0.65) <= FishGenome.MUTATION_RANGE + 0.001, "offspring inherits one hidden allele per trait from each parent")
+	check(absf(child.genome.metabolism[0] - 0.2) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.metabolism[1] - 0.8) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[0] - 0.3) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.allocation[1] - 0.7) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[0] - 0.25) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.vitality[1] - 0.75) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[0] - 0.35) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.speed[1] - 0.65) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.fertility[0] - 0.2) <= FishGenome.MUTATION_RANGE + 0.001 and absf(child.genome.fertility[1] - 0.8) <= FishGenome.MUTATION_RANGE + 0.001, "offspring inherits one hidden allele per trait from each parent")
 	check(is_equal_approx(child.health.maximum, child.genome.max_health()) and child.health.current == child.health.maximum, "new offspring applies inherited vitality at full health")
 	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.title_label.text == "NEW OFFSPRING!", "birth starts with a celebratory offspring reveal")
 	tank.acquisition_celebration.finish_now()
@@ -62,22 +64,21 @@ func run() -> void:
 		has_comparison = has_comparison or bar.comparison in ["↑", "↓", "≈"]
 	check(has_comparison, "offspring reveal compares every direct trait with its parents")
 	tank.advance_fish_reveal()
-	check(is_equal_approx(male.breeding_left, male.genome.breeding_cooldown()) and is_equal_approx(female.breeding_left, female.genome.breeding_cooldown()) and male.breeding_left > female.breeding_left, "each parent receives its metabolism-based breeding cooldown")
+	check(is_equal_approx(male.breeding_left, male.genome.breeding_cooldown()) and is_equal_approx(female.breeding_left, female.genome.breeding_cooldown()) and male.breeding_left > female.breeding_left, "each parent receives its Fertility-based breeding cooldown")
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
 	check(get_nodes_in_group("fish").size() == 6, "cooldown prevents repeated births")
-	while get_nodes_in_group("fish").size() < 15:
+	while get_nodes_in_group("fish").size() < 19:
 		tank.spawn_fish()
 	male.breeding_left = 0
 	female.breeding_left = 0
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
-	check(get_nodes_in_group("fish").size() == 16, "last breeding slot allows one offspring")
+	check(get_nodes_in_group("fish").size() == 20, "last breeding slot completes the population goal")
+	check(tank.population_goal_complete and "GOAL COMPLETE" in tank.count_label.text, "twenty fish permanently completes the first tank goal")
 	male.breeding_left = 0
 	female.breeding_left = 0
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
-	check(get_nodes_in_group("fish").size() == 16, "breeding stops at soft capacity")
+	check(get_nodes_in_group("fish").size() == 20, "breeding stops at tank capacity")
 	tank.economy.credit(1000000)
-	for i in range(4):
-		tank.purchase_fish()
 	balance = tank.economy.money
 	tank.purchase_fish()
 	check(get_nodes_in_group("fish").size() == 20 and tank.economy.money == balance and tank.buy_button.disabled, "hard capacity rejects purchases without charging")
@@ -86,7 +87,7 @@ func run() -> void:
 	tank.sell_selected()
 	check(not tank.buy_button.disabled, "selling reopens a purchase slot")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish[0].sex == male.sex and data.has("breeding_enabled") and data.fish[0].has("breeding_left"), "save contains sex and breeding state")
+	check(data.fish[0].sex == male.sex and data.has("breeding_enabled") and data.fish[0].has("breeding_left") and data.population_goal_complete, "save contains sex, breeding state, and completed population goal")
 	tank.queue_free()
 	await process_frame
 	var restored = load("res://scenes/aquarium.tscn").instantiate()
@@ -94,6 +95,6 @@ func run() -> void:
 	for fish in get_nodes_in_group("fish"):
 		fish.free()
 	restored.restore(data)
-	check(get_nodes_in_group("fish")[0].sex == data.fish[0].sex and restored.breeding.enabled == data.breeding_enabled, "saved breeding state restores")
+	check(get_nodes_in_group("fish")[0].sex == data.fish[0].sex and restored.breeding.enabled == data.breeding_enabled and restored.population_goal_complete, "saved breeding state and population goal restore")
 	print("Breeding failures: ", failures)
 	quit(1 if failures else 0)

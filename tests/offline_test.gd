@@ -121,9 +121,10 @@ func run() -> void:
 	for fish in earlier_genetics.fish:
 		fish.genome.erase("vitality")
 		fish.genome.erase("speed")
+		fish.genome.erase("fertility")
 	var parsed_earlier: Dictionary = BackupValidation.parse(JSON.stringify(earlier_genetics))
 	var migrated_earlier: Dictionary = SaveMigration.upgrade(parsed_earlier)
-	check(not parsed_earlier.is_empty() and migrated_earlier.fish[0].genome.vitality == [0.5, 0.5] and migrated_earlier.fish[0].genome.speed == [0.5, 0.5], "earlier backups gain neutral vitality and speed")
+	check(not parsed_earlier.is_empty() and migrated_earlier.fish[0].genome.vitality == [0.5, 0.5] and migrated_earlier.fish[0].genome.speed == [0.5, 0.5] and migrated_earlier.fish[0].genome.fertility == [0.5, 0.5], "earlier backups gain neutral newer traits")
 	var old_save: Dictionary = data.duplicate(true)
 	old_save.asset_levels = {"snail": 3}
 	var migrated_old: Dictionary = SaveMigration.upgrade(old_save)
