@@ -1,6 +1,6 @@
 # Multi-seed balance simulation
 
-Run September 25, 2026 against the real Godot gameplay systems. This is a diagnostic model, not a substitute for human playtesting.
+Run September 25, 2026 against the real Godot gameplay systems. This is a diagnostic model, not a substitute for human playtesting. Subsequent hands-on play showed that this version materially overestimates alien danger: its one-second movement step and probabilistic action scan do not represent a warned player tracking the spawn point and tapping continuously. Treat its alien death and extinction figures as a stress case, not expected player outcomes.
 
 ## Method
 
@@ -45,7 +45,7 @@ The peaceful loop is financially stable, but population growth is fast: the medi
 
 ## Findings
 
-1. **Alien pressure dominates every other survival system.** A Typical player who checks every two seconds and performs all eight taps after reacting still loses fish in every run and suffers total extinction in 25%. A Relaxed player goes extinct in every run. The same Typical profile has zero deaths when invasions are disabled.
+1. **This driver exaggerates alien pressure.** A Typical profile that checks only every two seconds loses fish in every run and suffers total extinction in 25%, while the no-alien control has no deaths. Human testing does not reproduce that result because the warning and music cause earlier attention and real input is continuous rather than quantized into one-second movement steps.
 2. **The biological growth curve is consistent.** Without alien disruption, stage timing has narrow variation and matches the analytical estimate: Teen around 1.6 minutes, Adult around 8, Royal around 23, and Diamond around 60.
 3. **Optimized income still has a runaway tail.** The optimizer's final wallet is $431.75 at the 10th percentile, $1,906.58 at the median, and $92,152.10 at the 90th percentile. Population, Diamond output, breeding, and Coin Value multiply each other. Raising upgrade prices delayed the first purchase to a median 42.5 minutes but did not remove the later compounding.
 4. **Active attention is high.** Typical peaceful play takes a median 12.8 clicks per minute. Most are bubble collection before the puffer is purchased; automation-aware feeding is already modeled. This may suit an active clicker session but is high for a relaxed idle session.
@@ -53,7 +53,7 @@ The peaceful loop is financially stable, but population growth is fast: the medi
 
 ## Recommended next tuning experiment
 
-Keep the current hunger, water, and stage timings for now. Test alien changes independently: increase the first-attack grace period or reduce encounter frequency while preserving its fast chase after that grace. Target fewer than 10% extinctions for the Typical profile over 90 minutes and meaningful losses, but not guaranteed extinction, for the Relaxed profile.
+Keep the current hunger, water, stage timing, and live alien tuning for now. Before using combat results for balance, change the driver to substep alien movement and model a warning reaction delay followed by rapid taps. Compare that revised profile with hands-on sessions before making the invader harder.
 
 After combat is stable, address the optimizer tail with a separate experiment. Candidate controls are slower breeding near capacity, diminishing Coin Value multipliers, or making high-value output require increasing upkeep. Changing all three together would hide which mechanism fixed the curve.
 

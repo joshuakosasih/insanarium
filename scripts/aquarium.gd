@@ -97,6 +97,7 @@ var shrimp_cleanup_progress: float = 0.0
 var environment := TankEnvironment.new()
 var last_pointer_position := Vector2(-10000, -10000)
 var last_pointer_msec: int = -1000
+var menu_paused: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -151,11 +152,16 @@ func set_idle(idle: bool) -> void:
 	if idle and away_data.is_empty():
 		away_data = snapshot()
 		LocalSave.write(away_data)
-		get_tree().paused = true
 	elif not idle and not away_data.is_empty():
 		var data: Dictionary = away_data
 		away_data = {}
 		apply_catchup(data)
+	update_pause_state()
+
+func update_pause_state() -> void:
+	menu_paused = (is_instance_valid(shop_panel) and shop_panel.visible) or (is_instance_valid(care_panel) and care_panel.visible)
+	if is_inside_tree():
+		get_tree().paused = menu_paused or not away_data.is_empty() or applying_offline
 
 func update_viewport_layout() -> void:
 	# The starter habitat has one fixed world size on every device. Center it in
@@ -210,11 +216,12 @@ func viewport_to_tank(viewport_position: Vector2) -> Vector2:
 
 func apply_catchup(data: Dictionary) -> void:
 	applying_offline = true
+	update_pause_state()
 	var result := OfflineProgress.advance(data, Time.get_unix_time_from_system())
 	clear_tank()
 	restore(result.data)
-	get_tree().paused = false
 	applying_offline = false
+	update_pause_state()
 	save_now()
 	show_return(result.report)
 
@@ -560,6 +567,8 @@ func _process(delta: float) -> void:
 			set_idle(bool(JavaScriptBridge.eval("document.hidden || !document.hasFocus()", true)))
 		if not away_data.is_empty():
 			return
+	if menu_paused:
+		return
 	if ActivityPace.multiplier >= 1.0:
 		bubble_left -= delta
 		if bubble_left <= 0.0:
@@ -700,6 +709,8 @@ func reset_test_tank() -> void:
 	show_feedback(tank_rect.get_center(), "Fresh test tank")
 
 func _unhandled_input(event: InputEvent) -> void:
+	if menu_paused:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		handle_pointer_press(event.position)
 
@@ -861,6 +872,14 @@ func toggle_shop() -> void:
 		update_inspection()
 		shop_status.text = "Choose something for your aquarium."
 		select_shop_item(shop_selected_id)
+	update_pause_state()
+
+func toggle_controls() -> void:
+	care_panel.visible = not care_panel.visible
+	if care_panel.visible:
+		shop_panel.hide()
+		refresh_care()
+	update_pause_state()
 
 func select_shop_item(item_id: String) -> void:
 	if not shop_items.has(item_id):
@@ -1211,10 +1230,7 @@ func build_hud() -> void:
 	shop_button.add_theme_stylebox_override("normal", style)
 	hud.add_child(shop_button)
 	shop_button.pressed.connect(toggle_shop)
-	controls_button = make_button(hud, "CONTROLS", Vector2(600, 7), Vector2(150, 46), func() -> void:
-		care_panel.visible = not care_panel.visible
-		if care_panel.visible:
-			refresh_care())
+	controls_button = make_button(hud, "CONTROLS", Vector2(600, 7), Vector2(150, 46), toggle_controls)
 	care_panel = Panel.new()
 	care_panel.position = Vector2(251, 10)
 	care_panel.size = Vector2(650, 580)
@@ -1233,7 +1249,7 @@ func build_hud() -> void:
 	care_details = label_at(care_panel, "", Vector2(18, 107), 15, Color("c7dfdb"))
 	care_details.size = Vector2(612, 230)
 	care_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	make_button(care_panel, "Close", Vector2(550, 10), Vector2(82, 30), care_panel.hide)
+	make_button(care_panel, "Close", Vector2(550, 10), Vector2(82, 30), toggle_controls)
 	care_panel.hide()
 	count_label = label_at(hud, "", Vector2(300, 31), 12, Color("83a9b7"))
 	cleanliness_label = label_at(hud, "", Vector2(450, 4), 12, Color("8edfe9"))

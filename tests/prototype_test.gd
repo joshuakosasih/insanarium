@@ -66,11 +66,13 @@ func run() -> void:
 	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
 	tank.shop_button.pressed.emit()
-	check(tank.shop_panel.visible, "shop button opens its connected panel")
+	check(tank.shop_panel.visible and tank.menu_paused and paused, "shop button opens its panel and pauses the tank")
 	tank.toggle_shop()
+	check(not tank.menu_paused and not paused, "closing the shop resumes the tank")
 	tank.controls_button.pressed.emit()
-	check(tank.care_panel.visible, "controls button opens its connected panel")
-	tank.care_panel.hide()
+	check(tank.care_panel.visible and tank.menu_paused and paused, "controls button opens its panel and pauses the tank")
+	tank.toggle_controls()
+	check(not tank.menu_paused and not paused, "closing controls resumes the tank")
 	check(tank.invasions.running and tank.challenges, "alien encounters are enabled during active play by default")
 	check(Economy.fish_price(2) == 50 and Economy.fish_price(10) == 2745 and Economy.fish_price(19) == 249000, "fish purchase price climbs steeply with population")
 	var fish = get_nodes_in_group("fish")[0]
@@ -155,6 +157,18 @@ func run() -> void:
 	check(shrimp != null and shrimp.move_speed == 30.0 and shrimp.digestion_duration == 12.0, "new cleanup shrimp begins with modest speed and a long digestion pause")
 	check(puffer != null and puffer.move_speed == 45.0 and puffer.curiosity == 0.30, "new bubble puffer starts slow and selectively curious")
 	check(seahorse != null and seahorse.feed_interval == 18.0 and seahorse.feed_tier == 0, "new seahorse starts with deliberate Basic-feed production")
+	for specimen in get_nodes_in_group("fish"):
+		specimen.hunger = 0.0
+	seahorse.feed_left = 0.0
+	var food_before_ready: int = get_nodes_in_group("food").size()
+	seahorse._process(0.1)
+	check(seahorse.feed_left == 0.0 and get_nodes_in_group("food").size() == food_before_ready, "ready seahorse holds its pellet while no fish needs food")
+	var hungry_specimen = get_nodes_in_group("fish")[0]
+	hungry_specimen.hunger = hungry_specimen.profile.hungry_threshold
+	seahorse._process(0.1)
+	check(seahorse.feed_left == seahorse.feed_interval and get_nodes_in_group("food").size() == food_before_ready + 1, "ready seahorse feeds immediately when hunger appears")
+	get_nodes_in_group("food")[-1].free()
+	hungry_specimen.hunger = 0.0
 	tank.select_shop_item("seahorse")
 	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible, "owned seahorse exposes rate, pellet quality, and sale controls")
 	balance = tank.economy.money

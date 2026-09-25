@@ -123,7 +123,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
 			hungry = hungry or fish.hunger >= profile.hungry_threshold
 		feeder -= dt
-		seahorse -= dt
+		seahorse = maxf(0.0, seahorse - dt)
 		if feeder <= 0.0:
 			feeder = 2.0
 			if owned.get("feeder", false) and hungry and not reserve.is_empty() and food.size() < 80:
@@ -132,9 +132,9 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				if reserve.is_empty():
 					report.stock_empty_at = elapsed - remaining
 		if seahorse <= 0.0:
-			seahorse = seahorse_interval
 			if owned.get("seahorse", false) and hungry and food.size() < 80:
 				food.append({"tier": seahorse_tier, "life": 14.0, "x": 200, "y": 320})
+				seahorse = seahorse_interval
 		# Abstract availability: hungry fish can reach pellets; prioritize greatest need.
 		fish_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.hunger > b.hunger)
 		var survivors: Array = []

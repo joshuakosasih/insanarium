@@ -70,7 +70,7 @@ Catch-up covers hunger, starvation, food expiry, stocked feeding, seahorse food,
 
 ## Tank Care panel
 
-Open **Controls** above the aquarium for live hunger/stock/population warnings and an away forecast matching the current Away Time level. Before the first upgrade, the panel explains that offline simulation is locked. It shows reserve exhaustion, first starvation risk, and estimated feeding demand versus available automation. Predictions use the same offline care model without changing the tank, money, or random growth outcomes. They refresh every ten seconds while open and after economy changes; immediate care warnings refresh four times per second.
+Open **Controls** above the aquarium for live hunger/stock/population warnings and an away forecast matching the current Away Time level. Before the first upgrade, the panel explains that offline simulation is locked. It shows reserve exhaustion, first starvation risk, and estimated feeding demand versus available automation. Predictions use the same offline care model without changing the tank, money, or random growth outcomes. Shop and Controls pause the aquarium while open, so aliens, hunger, movement, and other simulation clocks cannot advance while the player reads or purchases. The care forecast refreshes whenever Controls opens.
 
 Capacity assumes current Amberfin hunger and eating thresholds, accounting for nutrition wasted by early meals. A sufficient feeding rate does not mean unlimited food: the separate reserve forecast shows when stocked supply stops. Coverage is approximate, assumes a fixed population, and excludes away breeding and alien attacks. Active swimming and competition may produce different outcomes. Premium and Deluxe improve growth, not hunger relief.
 
@@ -80,7 +80,7 @@ Capacity assumes current Amberfin hunger and eating thresholds, accounting for n
 | --- | --- | --- |
 | Snail | $50 | Crawls to settled rewards and collects them, including diamonds |
 | Cleanup Shrimp | $75 | Forages for settled waste and pellets that are close to spoiling |
-| Seahorse | $125 | Supplies one free Basic pellet every 8 seconds when fish are hungry |
+| Seahorse | $125 | Holds a free Basic pellet after an 18-second cooldown until a fish becomes hungry |
 | Bubble Puffer | $175 | Wanders freely and may chase and pop bubbles during active play |
 | Auto-feeder | $100 | Uses stocked pellets to feed the hungriest fish, at most once every 2 seconds |
 
@@ -92,7 +92,7 @@ The Cleanup Shrimp is a single utility pet rather than breeding livestock. It wa
 
 No pets or machine are granted free. Each can be purchased once. Unowned helpers and equipment use the exact same procedural artwork as their discovered versions, rendered as a single solid dark silhouette with internal colors and lines hidden. Upgrade artwork is also hidden until the first level is purchased, turning the initial purchase into a small discovery; restored ownership and levels reveal the correct colors immediately. Pet positions and upgrade tracks persist in local saves. Any pet can be sold from its shop detail card for half of its purchase and upgrade investment; selling removes the pet and resets its upgrade tracks. After buying the feeder, use **Stock +20** to buy pellets at the current feed price, up to a 200-pellet reserve. Partial refills charge only for available space. Stocked pellets preserve the tier paid for, even after upgrading manual feed. Dispensing stock never charges a second time. The machine pauses when no fish are hungry or the reserve is empty; it cannot feed without stock.
 
-The seahorse begins by producing a free Basic pellet every 18 simulation seconds when at least one fish is hungry. Production interval upgrades shorten this through 14, 11, 8, and 6 seconds for $60, $150, $375, and $940. A separate pellet track upgrades its output to Premium for $150 and Deluxe for $500. The seahorse stays awake; sleeping remains the snail's distinct behavior.
+The seahorse begins with an 18-second production cooldown. Once ready, it holds the free Basic pellet until at least one fish is hungry, then releases it immediately and starts the next cooldown. Production interval upgrades shorten this through 14, 11, 8, and 6 seconds for $60, $150, $375, and $940. A separate pellet track upgrades its output to Premium for $150 and Deluxe for $500. The seahorse stays awake; sleeping remains the snail's distinct behavior.
 
 ## Alien challenges
 
