@@ -1,7 +1,7 @@
 class_name IdleAssets
 extends RefCounted
 ## Owned automation and stocked pellet tiers. Purchases are once per tank.
-const PRICES := {"snail": 60, "seahorse": 125, "puffer": 175, "feeder": 100}
+const PRICES := {"snail": 60, "shrimp": 75, "seahorse": 125, "puffer": 175, "feeder": 100}
 const UPGRADE_PRICES := [40, 100, 250, 625]
 const SNAIL_UPGRADE_PRICES := [15, 45, 135, 405]
 # The snail's largest gains arrive first, then taper toward its practical cap.
@@ -10,6 +10,9 @@ const SNAIL_STAMINAS := [10.0, 28.0, 43.0, 53.0, 60.0]
 const SNAIL_SLEEPS := [20.0, 11.0, 7.0, 5.0, 4.0]
 const PUFFER_SPEEDS := [45.0, 60.0, 78.0, 100.0, 125.0]
 const PUFFER_CURIOSITIES := [0.30, 0.45, 0.60, 0.80, 1.0]
+const SHRIMP_SPEEDS := [30.0, 45.0, 62.0, 82.0, 108.0]
+const SHRIMP_DIGESTION := [12.0, 8.0, 5.0, 3.5, 2.0]
+const SHRIMP_UPGRADE_PRICES := [20, 60, 180, 540]
 const COIN_LIFETIMES := [8.0, 15.0, 25.0, 45.0, 75.0]
 const IDLE_LIMITS := [0.0, 300.0, 1800.0, 7200.0, 28800.0]
 const BUBBLE_CAPACITIES := [1, 2, 3, 5, 8]
@@ -21,8 +24,8 @@ const DIAMOND_VALUE_PRICES := [150, 450, 1350, 4050]
 const IDLE_UPGRADE_PRICES := [50, 150, 450, 1350]
 const BUBBLE_UPGRADE_PRICES := [30, 90, 270, 810]
 const MAX_UPGRADE_LEVEL: int = 4
-var owned: Dictionary = {"snail": false, "seahorse": false, "puffer": false, "feeder": false}
-var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
+var owned: Dictionary = {"snail": false, "shrimp": false, "seahorse": false, "puffer": false, "feeder": false}
+var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "shrimp_speed": 0, "shrimp_digestion": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
 var reserve: Array[int] = []
 var feeder_left: float = 2.0
 const CAPACITY: int = 200
@@ -40,6 +43,8 @@ func upgrade_price(track: String) -> int:
 		return 0
 	if track.begins_with("puffer_") and not owned.puffer:
 		return 0
+	if track.begins_with("shrimp_") and not owned.shrimp:
+		return 0
 	var level: int = int(levels[track])
 	if level >= MAX_UPGRADE_LEVEL:
 		return 0
@@ -47,6 +52,8 @@ func upgrade_price(track: String) -> int:
 		return IDLE_UPGRADE_PRICES[level]
 	if track.begins_with("snail_"):
 		return SNAIL_UPGRADE_PRICES[level]
+	if track.begins_with("shrimp_"):
+		return SHRIMP_UPGRADE_PRICES[level]
 	if track.begins_with("bubble_"):
 		return BUBBLE_UPGRADE_PRICES[level]
 	if track == "coin_value":
@@ -76,6 +83,12 @@ func puffer_speed() -> float:
 
 func puffer_curiosity() -> float:
 	return PUFFER_CURIOSITIES[clampi(int(levels.puffer_curiosity), 0, MAX_UPGRADE_LEVEL)]
+
+func shrimp_speed() -> float:
+	return SHRIMP_SPEEDS[clampi(int(levels.shrimp_speed), 0, MAX_UPGRADE_LEVEL)]
+
+func shrimp_digestion() -> float:
+	return SHRIMP_DIGESTION[clampi(int(levels.shrimp_digestion), 0, MAX_UPGRADE_LEVEL)]
 
 func coin_lifetime() -> float:
 	return coin_lifetime_for(int(levels.coin_lifetime))

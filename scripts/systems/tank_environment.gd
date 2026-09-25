@@ -7,6 +7,7 @@ const WASTE_PER_SECOND: float = 0.0005
 const WASTE_OUTPUT_POLLUTION: float = 0.35
 const SPOILED_PELLET_POLLUTION: float = 1.5
 const CLEANED_WASTE_RECOVERY: float = 0.75
+const SHRIMP_WASTE_RECOVERY: float = 0.35
 const FULL_CLEAN_COST: float = 25.0
 const FULL_CLEAN_THRESHOLD: float = 99.0
 var cleanliness: float = MAX_CLEANLINESS

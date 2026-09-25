@@ -25,6 +25,8 @@ func _draw() -> void:
 			VectorArt.draw_fish(self, Vector2.ZERO, 1.25, Color("f6be73"))
 		"snail":
 			VectorArt.draw_snail(self, Vector2(0, 12), 1.25)
+		"shrimp":
+			VectorArt.draw_shrimp(self, Vector2(0, 5), 1.25)
 		"seahorse":
 			VectorArt.draw_seahorse(self, Vector2(0, -3), 1.05)
 		"puffer":

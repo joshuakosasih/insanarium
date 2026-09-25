@@ -9,7 +9,7 @@ func capture() -> void:
 	root.add_child(tank)
 	if "--idle" in OS.get_cmdline_user_args():
 		tank.economy.credit(1500)
-		for kind in ["snail", "seahorse", "puffer", "feeder"]:
+		for kind in ["snail", "shrimp", "seahorse", "puffer", "feeder"]:
 			tank.purchase_asset(kind)
 		tank.restock()
 		var specimen = get_nodes_in_group("fish")[0]
@@ -53,6 +53,8 @@ func capture() -> void:
 		tank.select_shop_item("snail")
 	if "--puffer-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("puffer")
+	if "--shrimp-shop" in OS.get_cmdline_user_args():
+		tank.select_shop_item("shrimp")
 	if "--puffed" in OS.get_cmdline_user_args():
 		for pet in get_nodes_in_group("pets"):
 			if pet is BubblePufferScript:
@@ -79,6 +81,15 @@ func capture() -> void:
 	if "--reveal" in OS.get_cmdline_user_args():
 		var revealed_fish = get_nodes_in_group("fish")[0]
 		tank.show_fish_reveal(revealed_fish, "NEW FISH PURCHASED")
+	if "--tank" in OS.get_cmdline_user_args():
+		tank.acquisition_queue.clear()
+		tank.active_acquisition.clear()
+		tank.acquisition_celebration.hide()
+		tank.reveal_panel.hide()
+		if is_instance_valid(tank.selected_fish):
+			tank.selected_fish.selected = false
+		tank.selected_fish = null
+		tank.inspector_panel.hide()
 	await process_frame
 	await process_frame
 	RenderingServer.force_draw()

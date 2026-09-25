@@ -11,6 +11,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var elapsed: float = minf(away, away_limit) * ActivityPace.IDLE_RATE
 	var report := {"away": away, "simulated": elapsed, "capped": away > away_limit, "away_limit": away_limit,
 		"first_loss_at": -1.0, "first_water_loss_at": -1.0, "first_old_age_loss_at": -1.0, "stock_empty_at": -1.0, "earned": 0, "collected": 0, "fed": 0, "stock_used": 0, "growth": 0, "mutations": 0, "lost": 0, "water_lost": 0, "old_age_lost": 0, "waste": 0, "spoiled": 0}
+	report["shrimp_cleaned"] = 0
+	report["pellets_rescued"] = 0
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(JSON.stringify(source))
 	var profile := FishProfile.new()
@@ -34,6 +36,10 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var snail_sleep: float = IdleAssets.SNAIL_SLEEPS[clampi(int(asset_levels.get("snail_sleep", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var snail_average_speed: float = snail_speed * snail_stamina / (snail_stamina + snail_sleep)
 	var snail_collection_rate: float = snail_average_speed / 180.0
+	var shrimp_progress: float = clampf(float(data.get("shrimp_cleanup_progress", 0.0)), 0.0, 0.999)
+	var shrimp_speed: float = IdleAssets.SHRIMP_SPEEDS[clampi(int(asset_levels.get("shrimp_speed", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
+	var shrimp_digestion: float = IdleAssets.SHRIMP_DIGESTION[clampi(int(asset_levels.get("shrimp_digestion", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
+	var shrimp_cleanup_rate: float = 1.0 / (shrimp_digestion + 240.0 / shrimp_speed)
 	# Old starvation clocks were real idle seconds, before shared pace was introduced.
 	if int(data.get("pace_version", 1)) < 2:
 		for fish in fish_list:
@@ -43,7 +49,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	while remaining > 0.000001:
 		var dt: float = minf(1.0, remaining)
 		remaining -= dt
-		var pet_count: int = int(bool(owned.get("snail", false))) + int(bool(owned.get("seahorse", false))) + int(bool(owned.get("puffer", false)))
+		var pet_count: int = int(bool(owned.get("snail", false))) + int(bool(owned.get("shrimp", false))) + int(bool(owned.get("seahorse", false))) + int(bool(owned.get("puffer", false)))
 		cleanliness = maxf(0.0, cleanliness - dt * ((fish_list.size() + pet_count) * TankEnvironment.BIOLOAD_PER_CREATURE + waste.size() * TankEnvironment.WASTE_PER_SECOND))
 		for waste_item in waste:
 			if bool(waste_item.get("settled", float(waste_item.get("y", 642)) >= 642.0)):
@@ -80,10 +86,30 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				snail_progress -= 1.0
 		else:
 			snail_progress = minf(snail_progress, 0.999)
-		for pellet_index in range(food.size() - 1, -1, -1):
-			var pellet: Dictionary = food[pellet_index]
+		for pellet in food:
 			pellet.life = float(pellet.get("life", 14.0)) - dt
-			if pellet.life <= 0.0:
+		var settled_waste: Array = waste.filter(func(item: Dictionary) -> bool: return bool(item.get("settled", false)))
+		var endangered_food: Array = food.filter(func(pellet: Dictionary) -> bool:
+			return float(pellet.get("life", 14.0)) > 0.0 and float(pellet.get("life", 14.0)) <= CleanupShrimpPet.PELLET_RESCUE_TIME)
+		if owned.get("shrimp", false) and (not settled_waste.is_empty() or not endangered_food.is_empty()):
+			shrimp_progress += shrimp_cleanup_rate * dt
+			settled_waste.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.get("life", FishWaste.FLOOR_LIFETIME)) < float(b.get("life", FishWaste.FLOOR_LIFETIME)))
+			endangered_food.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.get("life", 14.0)) < float(b.get("life", 14.0)))
+			while shrimp_progress >= 1.0 and (not settled_waste.is_empty() or not endangered_food.is_empty()):
+				if not settled_waste.is_empty():
+					var cleaned_waste: Dictionary = settled_waste.pop_front()
+					waste.erase(cleaned_waste)
+					cleanliness = minf(TankEnvironment.MAX_CLEANLINESS, cleanliness + TankEnvironment.SHRIMP_WASTE_RECOVERY)
+					report.shrimp_cleaned += 1
+				else:
+					var rescued: Dictionary = endangered_food.pop_front()
+					food.erase(rescued)
+					report.pellets_rescued += 1
+				shrimp_progress -= 1.0
+		else:
+			shrimp_progress = minf(shrimp_progress, 0.999)
+		for pellet_index in range(food.size() - 1, -1, -1):
+			if float(food[pellet_index].get("life", 14.0)) <= 0.0:
 				food.remove_at(pellet_index)
 				cleanliness = maxf(0.0, cleanliness - TankEnvironment.SPOILED_PELLET_POLLUTION)
 				report.spoiled += 1
@@ -185,6 +211,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	data.feeder_left = feeder
 	data.seahorse_left = seahorse
 	data.snail_collection_progress = snail_progress
+	data.shrimp_cleanup_progress = shrimp_progress
 	data.money = snappedf(float(data.get("money", 0)) + report.collected, 0.01)
 	data.simulation_elapsed = float(data.get("simulation_elapsed", 0)) + elapsed
 	data.saved_at = maxf(now, float(source.get("saved_at", now))) # Consume the entire interval, including any capped portion.

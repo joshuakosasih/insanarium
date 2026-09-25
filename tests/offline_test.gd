@@ -86,6 +86,22 @@ func run() -> void:
 	var base_collection: int = OfflineProgress.advance(base_snail, 1750).report.collected
 	var fast_collection: int = OfflineProgress.advance(fast_snail, 1750).report.collected
 	check(base_collection > 0 and fast_collection > base_collection, "offline estimate uses snail speed stamina and sleep capacity")
+	var shrimp_case: Dictionary = base_snail.duplicate(true)
+	shrimp_case.saved_at = 1000.0
+	shrimp_case.owned.shrimp = true
+	shrimp_case.asset_levels.shrimp_speed = 4
+	shrimp_case.asset_levels.shrimp_digestion = 4
+	shrimp_case.waste = []
+	for i in range(5):
+		shrimp_case.waste.append({"x": 300 + i * 30, "y": 642, "settled": true, "life": 12.0})
+	shrimp_case.food = []
+	var shrimp_result := OfflineProgress.advance(shrimp_case, 1100.0)
+	check(shrimp_result.report.shrimp_cleaned > 0 and shrimp_result.data.waste.size() < shrimp_case.waste.size(), "offline cleanup estimate removes waste according to shrimp upgrades")
+	var shrimp_pellet_case: Dictionary = shrimp_case.duplicate(true)
+	shrimp_pellet_case.waste = []
+	shrimp_pellet_case.food = [{"x": 500, "y": 640, "tier": 0, "life": 8.0}]
+	var shrimp_pellet_result := OfflineProgress.advance(shrimp_pellet_case, 1100.0)
+	check(shrimp_pellet_result.report.pellets_rescued > 0 and shrimp_pellet_result.report.spoiled == 0, "offline cleanup shrimp can intercept a pellet before spoilage")
 	check(result.report.fed > 0 and result.report.growth > 0, "offline feeding advances growth")
 	check(result.data.fish.size() == 5, "offline breeding produces no extra fish")
 	check(JSON.stringify(result) == JSON.stringify(OfflineProgress.advance(data, 8200)), "same checkpoint produces deterministic results")

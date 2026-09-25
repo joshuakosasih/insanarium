@@ -108,6 +108,27 @@ static func draw_puffer(canvas: CanvasItem, at: Vector2, size: float = 1.0, infl
 	canvas.draw_circle(Vector2(5, 9), 1.8, color.darkened(0.25))
 	canvas.draw_set_transform(Vector2.ZERO)
 
+static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
+	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+	var shell := Color("ef8f72")
+	var shell_dark := Color("a95558")
+	# Fan tail and a curved, segmented body facing right.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, 2), Vector2(-43, -12), Vector2(-39, 4), Vector2(-46, 16), Vector2(-24, 11)]), shell_dark)
+	for i in range(5):
+		var center := Vector2(-18 + i * 8, -2 - sin(i * 0.48) * 7)
+		canvas.draw_circle(center, 9.5 - i * 0.45, shell.lightened(i * 0.025))
+		canvas.draw_arc(center, 9.0 - i * 0.45, -1.2, 1.5, 10, shell_dark, 1.4, true)
+	canvas.draw_circle(Vector2(22, -12), 11, shell)
+	canvas.draw_circle(Vector2(28, -16), 3.2, Color("f7f4e8"))
+	canvas.draw_circle(Vector2(29, -16), 1.7, Color("182934"))
+	for i in range(4):
+		var root := Vector2(-8 + i * 9, 5 - sin(i * 0.5) * 4)
+		var foot := root + Vector2(5 + i, 12 + sin(phase * 7.0 + i) * 2.0)
+		canvas.draw_line(root, foot, shell_dark, 2.0, true)
+	canvas.draw_polyline(PackedVector2Array([Vector2(27, -18), Vector2(39, -30), Vector2(53, -35 + sin(phase * 2.0))]), Color("f4b29a"), 1.5, true)
+	canvas.draw_polyline(PackedVector2Array([Vector2(26, -15), Vector2(41, -23), Vector2(57, -24 + sin(phase * 2.0 + 1.0))]), Color("d6796d"), 1.2, true)
+	canvas.draw_set_transform(Vector2.ZERO)
+
 static func draw_feeder(canvas: CanvasItem, at: Vector2, size: float = 1.0, label: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	canvas.draw_rect(Rect2(0, 0, 110, 34), Color("779caa"))

@@ -62,8 +62,8 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 12, "shop starts closed with reusable product cards")
-	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 13, "shop starts closed with reusable product cards")
+	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible, "shop button opens its connected panel")
@@ -125,27 +125,31 @@ func run() -> void:
 	tank.advance_fish_reveal()
 	check(not tank.reveal_panel.visible, "final reveal dismisses cleanly")
 	tank.economy.credit(2500)
-	for kind in ["snail", "seahorse", "puffer", "feeder"]:
+	for kind in ["snail", "shrimp", "seahorse", "puffer", "feeder"]:
 		balance = tank.economy.money
 		tank.purchase_asset(kind)
 		tank.purchase_asset(kind)
 		check(tank.assets.owned[kind] and tank.economy.money == balance - tank.assets.PRICES[kind], "automation purchase charges only once: " + kind)
-	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.icon_kind == "snail" and tank.acquisition_queue.size() == 2, "pet purchases use the reusable celebration and queue in order")
+	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.icon_kind == "snail" and tank.acquisition_queue.size() == 3, "pet purchases use the reusable celebration and queue in order")
 	while tank.acquisition_celebration.visible:
 		tank.acquisition_celebration.finish_now()
-	check(tank.shop_cards.snail.discovered and tank.shop_cards.seahorse.discovered and tank.shop_cards.puffer.discovered and tank.shop_cards.feeder.discovered, "purchased helpers reveal their normal shop artwork")
+	check(tank.shop_cards.snail.discovered and tank.shop_cards.shrimp.discovered and tank.shop_cards.seahorse.discovered and tank.shop_cards.puffer.discovered and tank.shop_cards.feeder.discovered, "purchased helpers reveal their normal shop artwork")
 	check(tank.shop_cards.snail.icon_preview.material == null, "discovery removes the grayscale material and reveals the original colors")
 	for pet in get_nodes_in_group("pets"):
 		pet.set_process(false)
-	check(get_nodes_in_group("pets").size() == 3, "purchased pets are spawned")
+	check(get_nodes_in_group("pets").size() == 4, "purchased pets are spawned")
 	var snail: SnailPet
 	var puffer
+	var shrimp: CleanupShrimpPet
 	for pet in get_nodes_in_group("pets"):
 		if pet is SnailPet:
 			snail = pet
 		elif pet is BubblePufferScript:
 			puffer = pet
+		elif pet is CleanupShrimpPet:
+			shrimp = pet
 	check(snail != null and snail.crawl_speed == 16.0 and snail.max_stamina == 10.0 and snail.sleep_duration == 20.0, "new snail starts slow, tires quickly, and sleeps for a long time")
+	check(shrimp != null and shrimp.move_speed == 30.0 and shrimp.digestion_duration == 12.0, "new cleanup shrimp begins with modest speed and a long digestion pause")
 	check(puffer != null and puffer.move_speed == 45.0 and puffer.curiosity == 0.30, "new bubble puffer starts slow and selectively curious")
 	tank.select_shop_item("puffer")
 	check(tank.shop_detail_title.text == "Bubble puffer" and tank.shop_secondary_button.visible, "puffer card exposes speed and curiosity upgrades")
@@ -174,6 +178,25 @@ func run() -> void:
 	ActivityPace.set_idle(false)
 	puffer._process(0.0)
 	check(missed_bubble.claimed and tank.economy.money == bubble_balance + 2.0 and puffer.puff_left == puffer.PUFF_DURATION, "puffer pops on contact and briefly inflates")
+	var shrimp_waste = tank.spawn_waste(Vector2(shrimp.position.x, shrimp.floor_y))
+	shrimp_waste.settled = true
+	var dirty_before_shrimp: float = tank.environment.cleanliness
+	shrimp._process(0.01)
+	check(shrimp_waste.is_queued_for_deletion() and is_equal_approx(tank.environment.cleanliness, dirty_before_shrimp + TankEnvironment.SHRIMP_WASTE_RECOVERY) and shrimp.digestion_left == shrimp.digestion_duration, "cleanup shrimp eats settled waste and restores partial cleanliness before digesting")
+	shrimp.digestion_left = 0.0
+	var doomed_pellet = tank.spawn_food(Vector2(shrimp.position.x, shrimp.floor_y), tank.feeds[0])
+	doomed_pellet.position.y = doomed_pellet.floor_y
+	doomed_pellet.lifetime = 3.0
+	shrimp._process(0.01)
+	check(doomed_pellet.consumed and doomed_pellet.is_queued_for_deletion(), "cleanup shrimp rescues a floor pellet shortly before it would pollute the tank")
+	tank.select_shop_item("shrimp")
+	check(tank.shop_secondary_button.visible, "cleanup shrimp exposes speed and digestion upgrades")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.levels.shrimp_speed == 1 and shrimp.move_speed == 45.0 and tank.economy.money == balance - 20, "first shrimp speed upgrade has a strong low-cost effect")
+	balance = tank.economy.money
+	tank.activate_shop_secondary()
+	check(tank.assets.levels.shrimp_digestion == 1 and shrimp.digestion_duration == 8.0 and tank.economy.money == balance - 20, "first shrimp digestion upgrade sharply shortens its pause")
 	tank.select_shop_item("snail")
 	check(tank.shop_detail_title.text == "Snail" and tank.shop_secondary_button.visible and tank.shop_tertiary_button.visible, "snail card exposes speed, stamina, and sleep upgrades")
 	balance = tank.economy.money
@@ -256,7 +279,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.owned.shrimp and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.shrimp_speed == 1 and data.asset_levels.shrimp_digestion == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()
@@ -269,14 +292,18 @@ func run() -> void:
 	restored.restore(LocalSave.read("/tmp/insanarium-test-save.json"))
 	var restored_snail: SnailPet
 	var restored_puffer
+	var restored_shrimp: CleanupShrimpPet
 	for pet in get_nodes_in_group("pets"):
 		if pet is SnailPet:
 			restored_snail = pet
 		elif pet is BubblePufferScript:
 			restored_puffer = pet
+		elif pet is CleanupShrimpPet:
+			restored_shrimp = pet
 	check(get_nodes_in_group("fish").size() == 2 and restored.assets.reserve.size() == 19 and restored.feed_upgrades.unlocked_tier == 2 and restored.economy.money == int(data.money), "JSON round-trip restores wallet fish upgrades and stock")
 	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored.assets.levels.diamond_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
 	check(restored.assets.owned.puffer and restored_puffer != null and restored_puffer.position == Vector2(data.puffer_x, data.puffer_y) and restored_puffer.move_speed == 60.0 and restored_puffer.curiosity == 0.45, "JSON round-trip restores the bubble puffer and its upgrades")
+	check(restored.assets.owned.shrimp and restored_shrimp != null and restored_shrimp.move_speed == 45.0 and restored_shrimp.digestion_duration == 8.0 and is_equal_approx(restored_shrimp.position.x, float(data.shrimp_x)), "JSON round-trip restores cleanup shrimp state and upgrades")
 	for living in get_nodes_in_group("fish"):
 		living.die("Test")
 	restored.economy.money = 0

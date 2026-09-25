@@ -76,6 +76,7 @@ func _draw() -> void:
 	var icon_scale: float = (0.25 + entrance * 1.75) * pulse
 	match icon_kind:
 		"snail": VectorArt.draw_snail(self, center + Vector2(0, 20), icon_scale, false)
+		"shrimp": VectorArt.draw_shrimp(self, center + Vector2(0, 10), icon_scale, elapsed)
 		"seahorse": VectorArt.draw_seahorse(self, center + Vector2(0, 12), icon_scale, elapsed)
 		"puffer": VectorArt.draw_puffer(self, center, icon_scale, elapsed < 0.55, elapsed)
 		_: VectorArt.draw_fish(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned)

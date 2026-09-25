@@ -37,6 +37,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	var owned: Dictionary = data.get("owned", {}).duplicate(true)
 	# The early bubble collector was a sea urchin. Preserve that purchase as the replacement puffer.
 	owned["puffer"] = bool(owned.get("puffer", false)) or bool(owned.get("urchin", false))
+	owned["shrimp"] = bool(owned.get("shrimp", false))
 	owned.erase("urchin")
 	data["owned"] = owned
 	if not data.has("puffer_x") and data.has("urchin_x"):
@@ -53,6 +54,8 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	levels["snail_sleep"] = clampi(int(levels.get("snail_sleep", 0)), 0, 4)
 	levels["puffer_speed"] = clampi(int(levels.get("puffer_speed", 0)), 0, 4)
 	levels["puffer_curiosity"] = clampi(int(levels.get("puffer_curiosity", 0)), 0, 4)
+	levels["shrimp_speed"] = clampi(int(levels.get("shrimp_speed", 0)), 0, 4)
+	levels["shrimp_digestion"] = clampi(int(levels.get("shrimp_digestion", 0)), 0, 4)
 	levels["coin_lifetime"] = clampi(int(levels.get("coin_lifetime", 0)), 0, 4)
 	levels["coin_value"] = clampi(int(levels.get("coin_value", 0)), 0, 4)
 	levels["diamond_value"] = clampi(int(levels.get("diamond_value", 0)), 0, 4)
@@ -66,6 +69,9 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	if not owned.get("puffer", false):
 		levels.puffer_speed = 0
 		levels.puffer_curiosity = 0
+	if not owned.get("shrimp", false):
+		levels.shrimp_speed = 0
+		levels.shrimp_digestion = 0
 	data["asset_levels"] = levels
 	data["version"] = 3
 	return data

@@ -4,6 +4,7 @@ const ShopItemScript = preload("res://scripts/ui/shop_item.gd")
 const ShopCardScript = preload("res://scripts/ui/shop_card.gd")
 const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
 const BubblePufferScript = preload("res://scripts/pets/bubble_puffer.gd")
+const CleanupShrimpScript = preload("res://scripts/pets/cleanup_shrimp.gd")
 const FishTraitBarScript = preload("res://scripts/ui/fish_trait_bar.gd")
 const FishRevealPanelScript = preload("res://scripts/ui/fish_reveal_panel.gd")
 const AcquisitionCelebrationScript = preload("res://scripts/ui/acquisition_celebration.gd")
@@ -91,6 +92,7 @@ var bubble_rewards := BubbleRewards.new()
 var bubble_rng := RandomNumberGenerator.new()
 var food_cooldown: float = 0.0
 var snail_collection_progress: float = 0.0
+var shrimp_cleanup_progress: float = 0.0
 var environment := TankEnvironment.new()
 var last_pointer_position := Vector2(-10000, -10000)
 var last_pointer_msec: int = -1000
@@ -186,6 +188,11 @@ func update_viewport_layout() -> void:
 		elif pet is BubblePufferScript:
 			pet.bounds = Rect2(swim_bounds.position + Vector2(25, 23), swim_bounds.size - Vector2(50, 73))
 			pet.position = pet.position.clamp(pet.bounds.position, pet.bounds.end)
+		elif pet is CleanupShrimpScript:
+			pet.horizontal_bounds = Vector2(swim_bounds.position.x, swim_bounds.end.x)
+			pet.floor_y = swim_bounds.end.y - 2.0
+			pet.position.x = clampf(pet.position.x, pet.horizontal_bounds.x, pet.horizontal_bounds.y)
+			pet.position.y = pet.floor_y
 	for coin in get_tree().get_nodes_in_group("coins"):
 		coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
 	if is_instance_valid(invasions):
@@ -242,12 +249,13 @@ Collected by snail: $%d
 Meals eaten: %d · Stock used: %d
 Growth events: %d · Mutations: %d
 Waste produced: %d · Pellets spoiled: %d
+Shrimp cleanup: %d waste · %d pellets rescued
 Fish lost: %d · Water-quality: %d · Old age: %d
 
 Estimated care; no offline breeding or alien attacks." % [
 		FishInspector.duration(report.away), FishInspector.duration(report.simulated), " (%s cap)" % FishInspector.duration(float(report.away_limit)) if report.capped else "",
-		report.earned, report.collected, report.fed, report.stock_used, report.growth, report.mutations, report.waste, report.spoiled, report.lost, report.water_lost, report.old_age_lost]
-	return_dialog.popup_centered(Vector2i(550, 360))
+		report.earned, report.collected, report.fed, report.stock_used, report.growth, report.mutations, report.waste, report.spoiled, report.shrimp_cleaned, report.pellets_rescued, report.lost, report.water_lost, report.old_age_lost]
+	return_dialog.popup_centered(Vector2i(550, 390))
 
 func confirm_import(data: Dictionary) -> void:
 	pending_import = data
@@ -271,12 +279,12 @@ func purchase_asset(kind: String) -> void:
 		audio.play("buy")
 		show_shop_message("%s added to the tank." % kind.capitalize())
 		update_money(economy.money)
-		if kind in ["snail", "seahorse", "puffer"]:
+		if kind in ["snail", "shrimp", "seahorse", "puffer"]:
 			shop_panel.hide()
 			queue_acquisition({"icon": kind, "title": "NEW PET!", "subtitle": "%s joined your aquarium." % pet_display_name(kind)})
 
 func pet_display_name(kind: String) -> String:
-	return {"snail": "Snail", "seahorse": "Seahorse", "puffer": "Bubble Puffer"}.get(kind, kind.capitalize())
+	return {"snail": "Snail", "shrimp": "Cleanup Shrimp", "seahorse": "Seahorse", "puffer": "Bubble Puffer"}.get(kind, kind.capitalize())
 
 func spawn_asset(kind: String) -> void:
 	if kind == "snail":
@@ -287,6 +295,17 @@ func spawn_asset(kind: String) -> void:
 		add_child(snail)
 		snail.horizontal_bounds = Vector2(swim_bounds.position.x, swim_bounds.end.x)
 		snail.apply_upgrades(int(assets.levels.snail_speed), int(assets.levels.snail_stamina), int(assets.levels.snail_sleep))
+	elif kind == "shrimp":
+		var shrimp = CleanupShrimpScript.new()
+		shrimp.presentation_scale = PET_PRESENTATION_SCALE
+		shrimp.position = Vector2(700, swim_bounds.end.y - 2.0)
+		shrimp.horizontal_bounds = Vector2(swim_bounds.position.x, swim_bounds.end.x)
+		shrimp.floor_y = swim_bounds.end.y - 2.0
+		shrimp.waste_eaten.connect(shrimp_eat_waste)
+		shrimp.pellet_eaten.connect(func(at: Vector2) -> void: show_feedback(at, "Pellet rescued"))
+		shrimp.process_mode = Node.PROCESS_MODE_PAUSABLE
+		add_child(shrimp)
+		shrimp.apply_upgrades(int(assets.levels.shrimp_speed), int(assets.levels.shrimp_digestion))
 	elif kind == "seahorse":
 		var seahorse := SeahorsePet.new()
 		seahorse.presentation_scale = PET_PRESENTATION_SCALE
@@ -302,6 +321,16 @@ func spawn_asset(kind: String) -> void:
 		puffer.bounds = Rect2(swim_bounds.position + Vector2(25, 23), swim_bounds.size - Vector2(50, 73))
 		puffer.apply_upgrades(int(assets.levels.puffer_speed), int(assets.levels.puffer_curiosity))
 	queue_redraw()
+
+func shrimp_eat_waste(waste: FishWaste) -> void:
+	if not is_instance_valid(waste) or waste.is_queued_for_deletion():
+		return
+	var at := waste.position
+	waste.remove_from_group("waste")
+	waste.queue_free()
+	environment.clean(TankEnvironment.SHRIMP_WASTE_RECOVERY)
+	update_cleanliness()
+	show_feedback(at, "Shrimp cleaned +%s%%" % Economy.format_money(TankEnvironment.SHRIMP_WASTE_RECOVERY))
 
 func restock() -> void:
 	var before: int = assets.reserve.size()
@@ -615,7 +644,7 @@ func debug_autoplay_purchase() -> void:
 		if stock_cost > 0 and economy.money >= stock_cost + reserve_cash:
 			assets.restock(feed_upgrades.unlocked_tier, feeds, economy)
 			return
-	for kind in ["snail", "feeder", "seahorse", "puffer"]:
+	for kind in ["snail", "shrimp", "feeder", "seahorse", "puffer"]:
 		if not assets.owned[kind] and economy.money >= int(assets.PRICES[kind]) + reserve_cash:
 			if assets.purchase(kind, economy):
 				spawn_asset(kind)
@@ -657,6 +686,7 @@ func reset_test_tank() -> void:
 	bubble_left = 3.0
 	food_cooldown = 0.0
 	snail_collection_progress = 0.0
+	shrimp_cleanup_progress = 0.0
 	for i in range(2):
 		spawn_fish(false, "Starter").hunger = 0.0
 	set_challenges_enabled(true)
@@ -794,6 +824,8 @@ func purchase_upgrade(track: String) -> void:
 				pet.apply_upgrades(int(assets.levels.snail_speed), int(assets.levels.snail_stamina), int(assets.levels.snail_sleep))
 			elif pet is BubblePufferScript:
 				pet.apply_upgrades(int(assets.levels.puffer_speed), int(assets.levels.puffer_curiosity))
+			elif pet is CleanupShrimpScript:
+				pet.apply_upgrades(int(assets.levels.shrimp_speed), int(assets.levels.shrimp_digestion))
 		if track == "coin_lifetime":
 			var added: float = assets.coin_lifetime() - old_coin_lifetime
 			for coin in get_tree().get_nodes_in_group("coins"):
@@ -834,6 +866,11 @@ func activate_shop_item() -> void:
 				purchase_upgrade("snail_speed")
 			else:
 				purchase_asset("snail")
+		"shrimp":
+			if assets.owned.shrimp:
+				purchase_upgrade("shrimp_speed")
+			else:
+				purchase_asset("shrimp")
 		"seahorse": purchase_asset("seahorse")
 		"puffer":
 			if assets.owned.puffer:
@@ -855,6 +892,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("snail_stamina")
 	elif shop_selected_id == "puffer" and assets.owned.puffer:
 		purchase_upgrade("puffer_curiosity")
+	elif shop_selected_id == "shrimp" and assets.owned.shrimp:
+		purchase_upgrade("shrimp_digestion")
 	elif shop_selected_id == "bubbles":
 		purchase_upgrade("bubble_value")
 	refresh_shop()
@@ -877,6 +916,7 @@ func refresh_shop() -> void:
 	var statuses := {
 		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, breeding.CAPACITY],
 		"snail": "$%d" % assets.PRICES.snail if not assets.owned.snail else "SPD %d · STA %d · SLP %d" % [int(assets.levels.snail_speed) + 1, int(assets.levels.snail_stamina) + 1, int(assets.levels.snail_sleep) + 1],
+		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
 		"seahorse": "Owned" if assets.owned.seahorse else "$%d" % assets.PRICES.seahorse,
 		"puffer": "$%d" % assets.PRICES.puffer if not assets.owned.puffer else "Speed %d · Curiosity %d" % [int(assets.levels.puffer_speed) + 1, int(assets.levels.puffer_curiosity) + 1],
 		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
@@ -890,6 +930,7 @@ func refresh_shop() -> void:
 	var discoveries := {
 		"fish": true,
 		"snail": assets.owned.snail,
+		"shrimp": assets.owned.shrimp,
 		"seahorse": assets.owned.seahorse,
 		"puffer": assets.owned.puffer,
 		"feeder": assets.owned.feeder,
@@ -952,6 +993,26 @@ func refresh_shop() -> void:
 				shop_tertiary_button.text = "Sleep\nMAX" if sleep_price == 0 else "Sleep -%ds\n$%d" % [sleep_reduction, sleep_price]
 				shop_tertiary_button.disabled = sleep_price == 0 or sleep_price > economy.money
 				shop_tertiary_button.show()
+		"shrimp":
+			if not assets.owned.shrimp:
+				action_price = assets.PRICES.shrimp
+				shop_detail_state.text = "Not owned\nSpeed: %d px/s · Digestion: %ds\nRestores %.2f cleanliness per waste." % [int(assets.shrimp_speed()), int(assets.shrimp_digestion()), TankEnvironment.SHRIMP_WASTE_RECOVERY]
+				shop_action_button.text = "Buy cleanup shrimp  $%d" % action_price
+			else:
+				var shrimp_speed_level: int = int(assets.levels.shrimp_speed)
+				var shrimp_digestion_level: int = int(assets.levels.shrimp_digestion)
+				action_price = assets.upgrade_price("shrimp_speed")
+				shop_detail_state.text = "Speed Lv. %d: %d px/s\nDigestion Lv. %d: %.1fs\nTargets settled waste and pellets with <6s remaining." % [shrimp_speed_level + 1, int(assets.shrimp_speed()), shrimp_digestion_level + 1, assets.shrimp_digestion()]
+				shop_action_button.position = Vector2(24, 350)
+				shop_action_button.size = Vector2(160, 58)
+				shop_action_button.text = "Speed MAX" if action_price == 0 else "Speed +1  $%d" % action_price
+				unavailable = action_price == 0
+				var digestion_price: int = assets.upgrade_price("shrimp_digestion")
+				shop_secondary_button.position = Vector2(222, 350)
+				shop_secondary_button.size = Vector2(160, 58)
+				shop_secondary_button.text = "Digestion MAX" if digestion_price == 0 else "Digest +1  $%d" % digestion_price
+				shop_secondary_button.disabled = digestion_price == 0 or digestion_price > economy.money
+				shop_secondary_button.show()
 		"seahorse":
 			action_price = assets.PRICES.seahorse
 			unavailable = assets.owned.seahorse
@@ -1238,13 +1299,17 @@ func build_shop(hud: CanvasLayer) -> void:
 	label_at(shop_panel, "Tap a card to see details, purchase it, or upgrade it.", Vector2(31, 49), 14, Color("83a9b7"))
 	make_button(shop_panel, "Close", Vector2(960, 14), Vector2(96, 42), toggle_shop)
 
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(30, 72)
+	scroll.size = Vector2(620, 430)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	shop_panel.add_child(scroll)
 	var grid := GridContainer.new()
-	grid.position = Vector2(30, 72)
-	grid.size = Vector2(600, 430)
+	grid.custom_minimum_size = Vector2(600, 0)
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
-	shop_panel.add_child(grid)
+	scroll.add_child(grid)
 	for item in ShopItemScript.catalog():
 		shop_items[item.id] = item
 		var card = ShopCardScript.new()
@@ -1254,8 +1319,8 @@ func build_shop(hud: CanvasLayer) -> void:
 		shop_cards[item.id] = card
 
 	var detail := Panel.new()
-	detail.position = Vector2(650, 72)
-	detail.size = Vector2(440, 430)
+	detail.position = Vector2(660, 72)
+	detail.size = Vector2(430, 430)
 	var detail_style := StyleBoxFlat.new()
 	detail_style.bg_color = Color("0e2b39")
 	detail_style.border_color = Color("315b68")
@@ -1369,6 +1434,8 @@ func snapshot() -> Dictionary:
 	var puffer_destination := Vector2(760, 440)
 	var puffer_wander: float = 0.0
 	var puffer_puff: float = 0.0
+	var shrimp_x: float = 700.0
+	var shrimp_digestion: float = 0.0
 	for pet in get_tree().get_nodes_in_group("pets"):
 		if pet is SeahorsePet:
 			seahorse_left = pet.feed_left
@@ -1382,9 +1449,13 @@ func snapshot() -> Dictionary:
 			puffer_destination = pet.destination
 			puffer_wander = pet.wander_left
 			puffer_puff = pet.puff_left
+		elif pet is CleanupShrimpScript:
+			shrimp_x = pet.position.x
+			shrimp_digestion = pet.digestion_left
 	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
+		"shrimp_x": shrimp_x, "shrimp_digestion": shrimp_digestion, "shrimp_cleanup_progress": shrimp_cleanup_progress,
 		"owned": assets.owned.duplicate(), "asset_levels": assets.levels.duplicate(), "reserve": assets.reserve.duplicate(),
 		"cleanliness": environment.cleanliness, "waste": waste_data,
 		"fish": fish_data, "coins": rewards, "food": pellets}
@@ -1400,6 +1471,7 @@ func restore(data: Dictionary) -> void:
 	environment.cleanliness = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	feed_upgrades.unlocked_tier = clampi(int(data.get("tier", 0)), 0, 2)
 	snail_collection_progress = clampf(float(data.get("snail_collection_progress", 0)), 0, 0.999)
+	shrimp_cleanup_progress = clampf(float(data.get("shrimp_cleanup_progress", 0)), 0, 0.999)
 	for track in assets.levels:
 		assets.levels[track] = clampi(int(data.get("asset_levels", {}).get(track, 0)), 0, assets.MAX_UPGRADE_LEVEL)
 	for kind in assets.owned:
@@ -1419,6 +1491,10 @@ func restore(data: Dictionary) -> void:
 			pet.destination = Vector2(float(data.get("puffer_destination_x", pet.position.x)), float(data.get("puffer_destination_y", pet.position.y))).clamp(pet.bounds.position, pet.bounds.end)
 			pet.wander_left = clampf(float(data.get("puffer_wander", 0)), 0, 4)
 			pet.puff_left = clampf(float(data.get("puffer_puff", 0)), 0, pet.PUFF_DURATION)
+		elif pet is CleanupShrimpScript:
+			pet.position.x = clampf(float(data.get("shrimp_x", 700)), pet.horizontal_bounds.x, pet.horizontal_bounds.y)
+			pet.position.y = pet.floor_y
+			pet.digestion_left = clampf(float(data.get("shrimp_digestion", 0)), 0, pet.digestion_duration)
 	for tier in data.get("reserve", []).slice(0, assets.CAPACITY):
 		assets.reserve.append(clampi(int(tier), 0, 2))
 	for item in data.get("fish", []).slice(0, 50):
