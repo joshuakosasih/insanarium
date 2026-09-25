@@ -68,6 +68,7 @@ func run() -> void:
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible and tank.menu_paused and paused, "shop button opens its panel and pauses the tank")
+	check(tank.shop_balance_label.text == "BALANCE  $%s" % Economy.format_money(tank.economy.money), "shop header keeps the current wallet balance visible")
 	var shop_drag := InputEventScreenDrag.new()
 	shop_drag.relative = Vector2(0, -120)
 	tank.shop_cards.fish._gui_input(shop_drag)
@@ -271,16 +272,17 @@ func run() -> void:
 	var upgraded_coin = get_nodes_in_group("coins")[-1]
 	check(upgraded_coin.value == 2 and upgraded_coin.grade == 1 and upgraded_coin.coin_color() == Color("d79b69"), "coin-value upgrade pays more while the Teen coin stays bronze")
 	tank.select_shop_item("diamond_value")
-	balance = tank.economy.money
-	tank.activate_shop_item()
-	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "diamond value upgrades independently from ordinary coin value")
-	teen.coin_produced.emit(teen.position, 10, true, 4)
-	var fish_diamond = get_nodes_in_group("coins")[-1]
-	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == 8.0 and tank.shop_secondary_button.visible, "fish diamonds use only Diamond Value and expose a separate lifetime upgrade")
+	check(tank.shop_action_button.disabled and "Need Life" in tank.shop_action_button.text, "diamond value clearly requires its matching lifetime upgrade first")
 	var ordinary_life: float = upgraded_coin.lifetime
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
-	check(tank.assets.diamond_lifetime() == 15.0 and fish_diamond.lifetime == 15.0 and upgraded_coin.lifetime == ordinary_life and tank.economy.money == balance - 50, "diamond lifetime upgrades existing diamonds without changing ordinary coins")
+	check(tank.assets.diamond_lifetime() == 15.0 and tank.economy.money == balance - 50, "diamond lifetime unlocks the first diamond-value upgrade")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "unlocked diamond value upgrades independently from ordinary coin value")
+	teen.coin_produced.emit(teen.position, 10, true, 4)
+	var fish_diamond = get_nodes_in_group("coins")[-1]
+	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == 15.0 and upgraded_coin.lifetime == ordinary_life, "fish diamonds use Diamond Value and Diamond Lifetime without changing ordinary coins")
 	tank.invasions.alien_defeated.emit(Vector2(620, 320))
 	var alien_diamond = get_nodes_in_group("coins")[-1]
 	check(alien_diamond.value == fish_diamond.value * 2 and alien_diamond.diamond and alien_diamond.lifetime == tank.assets.diamond_lifetime(), "alien diamonds are worth twice a normal fish diamond and share Diamond Lifetime")
@@ -290,11 +292,25 @@ func run() -> void:
 	tank.activate_shop_item()
 	check(tank.assets.levels.idle_duration == 1 and tank.assets.idle_limit() == 300.0 and tank.economy.money == balance - 50, "first away-time upgrade unlocks five minutes")
 	check(tank.assets.upgrade_price("idle_duration") == 150, "away-time price rises geometrically")
+	tank.assets.owned.feeder = false
+	tank.refresh_shop()
+	check(tank.shop_action_button.disabled and "Auto-feeder" in tank.shop_action_button.text, "thirty-minute away time requires the auto-feeder")
+	tank.assets.owned.feeder = true
+	tank.assets.levels.idle_duration = 2
+	tank.assets.owned.seahorse = false
+	tank.refresh_shop()
+	check(tank.shop_action_button.disabled and "Seahorse" in tank.shop_action_button.text, "two-hour away time requires the seahorse")
+	tank.assets.owned.seahorse = true
+	tank.assets.levels.idle_duration = 3
+	tank.refresh_shop()
+	check(tank.shop_action_button.disabled and ("%d-fish" % tank.breeding.POPULATION_GOAL) in tank.shop_action_button.text, "eight-hour away time requires the population goal")
+	tank.assets.levels.idle_duration = 1
+	tank.refresh_shop()
 	tank.select_shop_item("bubbles")
-	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$30") and tank.shop_secondary_button.text.contains("$30"), "bubble card exposes separate capacity and value tracks")
+	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$30") and tank.shop_secondary_button.disabled and "Need Capacity" in tank.shop_secondary_button.text, "bubble value clearly requires its matching capacity upgrade first")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 30, "bubble capacity upgrade raises the simultaneous limit")
+	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 30 and not tank.shop_secondary_button.disabled and tank.shop_secondary_button.text.contains("$30"), "bubble capacity upgrade raises the limit and unlocks matching value")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
 	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 30, "bubble value upgrade raises every pop multiplier")

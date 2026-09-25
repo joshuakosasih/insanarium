@@ -67,6 +67,7 @@ var controls_button: Button
 var shop_panel: Panel
 var shop_scroll: ScrollContainer
 var shop_status: Label
+var shop_balance_label: Label
 var shop_cards: Dictionary = {}
 var shop_items: Dictionary = {}
 var shop_selected_id: String = "fish"
@@ -382,12 +383,12 @@ func sell_selected() -> void:
 
 func update_count() -> void:
 	var count: int = get_tree().get_nodes_in_group("fish").size()
-	if count >= breeding.CAPACITY and not population_goal_complete:
+	if count >= breeding.POPULATION_GOAL and not population_goal_complete:
 		population_goal_complete = true
 		if offline_ready:
 			audio.play("growth")
 			show_feedback(tank_rect.get_center(), "Population goal complete!")
-	count_label.text = "%02d FISH · GOAL COMPLETE" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.CAPACITY]
+	count_label.text = "%02d FISH · GOAL COMPLETE" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.POPULATION_GOAL]
 	update_money(economy.money)
 
 func update_cleanliness() -> void:
@@ -847,6 +848,10 @@ func purchase_feed_upgrade() -> void:
 		show_shop_message("Feed upgraded to %s." % feeds[feed_upgrades.unlocked_tier].title)
 
 func purchase_upgrade(track: String) -> void:
+	var requirement := upgrade_requirement(track)
+	if not requirement.is_empty():
+		show_shop_message(requirement + " first.")
+		return
 	var old_coin_lifetime: float = assets.coin_lifetime()
 	var old_diamond_lifetime: float = assets.diamond_lifetime()
 	if assets.upgrade(track, economy):
@@ -872,6 +877,29 @@ func purchase_upgrade(track: String) -> void:
 		audio.play("buy")
 		show_shop_message("%s upgraded to level %d." % [track.replace("_", " ").capitalize(), int(assets.levels[track]) + 1])
 		update_money(economy.money)
+
+func upgrade_requirement(track: String) -> String:
+	if assets.upgrade_price(track) == 0:
+		return ""
+	match track:
+		"coin_value":
+			if int(assets.levels.coin_lifetime) <= int(assets.levels.coin_value):
+				return "Requires Coin Lifetime Lv. %d" % (int(assets.levels.coin_value) + 2)
+		"diamond_value":
+			if int(assets.levels.diamond_lifetime) <= int(assets.levels.diamond_value):
+				return "Requires Diamond Lifetime Lv. %d" % (int(assets.levels.diamond_value) + 2)
+		"bubble_value":
+			if int(assets.levels.bubble_capacity) <= int(assets.levels.bubble_value):
+				return "Requires Bubble Capacity Lv. %d" % (int(assets.levels.bubble_value) + 2)
+		"idle_duration":
+			var level: int = int(assets.levels.idle_duration)
+			if level == 1 and not assets.owned.feeder:
+				return "Requires Auto-feeder"
+			if level == 2 and not assets.owned.seahorse:
+				return "Requires Seahorse"
+			if level == 3 and not population_goal_complete:
+				return "Requires the %d-fish goal" % breeding.POPULATION_GOAL
+	return ""
 
 func show_shop_message(message: String) -> void:
 	if is_instance_valid(shop_status):
@@ -1159,20 +1187,22 @@ func refresh_shop() -> void:
 			shop_action_button.size = Vector2(160, 58)
 			shop_action_button.text = "Lifetime MAX" if unavailable else "Lifetime +1  $%d" % action_price
 			var coin_value_price: int = assets.upgrade_price("coin_value")
+			var coin_value_requirement := upgrade_requirement("coin_value")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Value MAX" if coin_value_price == 0 else "Value +1  $%d" % coin_value_price
-			shop_secondary_button.disabled = coin_value_price == 0 or coin_value_price > economy.money
+			shop_secondary_button.text = "Value MAX" if coin_value_price == 0 else ("Need Life Lv. %d" % (value_level + 2) if not coin_value_requirement.is_empty() else "Value +1  $%d" % coin_value_price)
+			shop_secondary_button.disabled = coin_value_price == 0 or coin_value_price > economy.money or not coin_value_requirement.is_empty()
 			shop_secondary_button.show()
 		"diamond_value":
 			var diamond_level: int = int(assets.levels.diamond_value)
 			var diamond_lifetime_level: int = int(assets.levels.diamond_lifetime)
 			action_price = assets.upgrade_price("diamond_value")
-			unavailable = action_price == 0
+			var diamond_value_requirement := upgrade_requirement("diamond_value")
+			unavailable = action_price == 0 or not diamond_value_requirement.is_empty()
 			shop_detail_state.text = "Value Lv. %d: ×%d for diamonds\nLifetime Lv. %d: %ds on the floor\nAlien diamonds have twice the base value." % [diamond_level + 1, assets.diamond_multiplier(), diamond_lifetime_level + 1, int(assets.diamond_lifetime())]
 			shop_action_button.position = Vector2(24, 350)
 			shop_action_button.size = Vector2(160, 58)
-			shop_action_button.text = "Value MAX" if unavailable else "Value +1  $%d" % action_price
+			shop_action_button.text = "Value MAX" if action_price == 0 else ("Need Life Lv. %d" % (diamond_level + 2) if not diamond_value_requirement.is_empty() else "Value +1  $%d" % action_price)
 			var diamond_lifetime_price: int = assets.upgrade_price("diamond_lifetime")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
@@ -1182,11 +1212,14 @@ func refresh_shop() -> void:
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
 			action_price = assets.upgrade_price("idle_duration")
-			unavailable = action_price == 0
+			var idle_requirement := upgrade_requirement("idle_duration")
+			unavailable = action_price == 0 or not idle_requirement.is_empty()
 			var current_limit: String = "Locked: no offline simulation" if assets.idle_limit() <= 0.0 else "Current limit: %s real time" % FishInspector.duration(assets.idle_limit())
-			var next_limit: String = "Maximum away time reached" if unavailable else "Next: %s real time" % FishInspector.duration(IdleAssets.IDLE_LIMITS[idle_level + 1])
+			var next_limit: String = "Maximum away time reached" if action_price == 0 else "Next: %s real time" % FishInspector.duration(IdleAssets.IDLE_LIMITS[idle_level + 1])
+			if not idle_requirement.is_empty():
+				next_limit += " · " + idle_requirement
 			shop_detail_state.text = "%s\n%s\nAway care advances at 10%% speed." % [current_limit, next_limit]
-			shop_action_button.text = "Fully upgraded" if unavailable else "Extend away time  $%d" % action_price
+			shop_action_button.text = "Fully upgraded" if action_price == 0 else (idle_requirement if not idle_requirement.is_empty() else "Extend away time  $%d" % action_price)
 		"bubbles":
 			var capacity_level: int = int(assets.levels.bubble_capacity)
 			var value_level: int = int(assets.levels.bubble_value)
@@ -1197,10 +1230,11 @@ func refresh_shop() -> void:
 			shop_action_button.size = Vector2(160, 58)
 			shop_action_button.text = "Capacity MAX" if unavailable else "Capacity +1  $%d" % action_price
 			var value_price: int = assets.upgrade_price("bubble_value")
+			var bubble_value_requirement := upgrade_requirement("bubble_value")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Value MAX" if value_price == 0 else "Value +1  $%d" % value_price
-			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money
+			shop_secondary_button.text = "Value MAX" if value_price == 0 else ("Need Capacity Lv. %d" % (value_level + 2) if not bubble_value_requirement.is_empty() else "Value +1  $%d" % value_price)
+			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money or not bubble_value_requirement.is_empty()
 			shop_secondary_button.show()
 	shop_action_button.disabled = unavailable or action_price > economy.money
 	if shop_selected_id in ["snail", "shrimp", "seahorse", "puffer"] and bool(assets.owned.get(shop_selected_id, false)):
@@ -1211,6 +1245,8 @@ func refresh_shop() -> void:
 func update_money(amount: float) -> void:
 	care_refresh = 0.0
 	money_label.text = "$ " + Economy.format_money(amount)
+	if is_instance_valid(shop_balance_label):
+		shop_balance_label.text = "BALANCE  $%s" % Economy.format_money(amount)
 	var feed: FeedProfile = feeds[feed_upgrades.unlocked_tier]
 	feed_label.text = "%s feed  $%d  ·  %d growth" % [feed.title, feed.price, feed.growth_credit]
 	feed_status.text = "Click water to feed" if amount >= feeds[feed_upgrades.unlocked_tier].price else "Not enough money for this feed"
@@ -1402,6 +1438,9 @@ func build_shop(hud: CanvasLayer) -> void:
 	hud.add_child(shop_panel)
 	label_at(shop_panel, "AQUARIUM SHOP", Vector2(30, 14), 25, Color("e8f2ed"))
 	label_at(shop_panel, "Tap a card to see details, purchase it, or upgrade it.", Vector2(31, 49), 14, Color("83a9b7"))
+	shop_balance_label = label_at(shop_panel, "", Vector2(758, 24), 17, Color("ffdb80"))
+	shop_balance_label.size = Vector2(190, 30)
+	shop_balance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	make_button(shop_panel, "Close", Vector2(960, 14), Vector2(96, 42), toggle_shop)
 
 	var scroll := ScrollContainer.new()

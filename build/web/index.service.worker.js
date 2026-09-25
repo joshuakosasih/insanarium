@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1790355057|1551111';
+const CACHE_VERSION = '1790356054|1540807';
 /** @type {string} */
 const CACHE_PREFIX = 'Insanarium-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;

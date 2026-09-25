@@ -67,13 +67,18 @@ func run() -> void:
 	check(is_equal_approx(male.breeding_left, male.genome.breeding_cooldown()) and is_equal_approx(female.breeding_left, female.genome.breeding_cooldown()) and male.breeding_left > female.breeding_left, "each parent receives its Fertility-based breeding cooldown")
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
 	check(get_nodes_in_group("fish").size() == 6, "cooldown prevents repeated births")
+	while get_nodes_in_group("fish").size() < 14:
+		tank.spawn_fish()
+	male.breeding_left = 0
+	female.breeding_left = 0
+	tank.breeding.advance(30, get_nodes_in_group("fish"))
+	check(get_nodes_in_group("fish").size() == 15 and tank.population_goal_complete and "GOAL COMPLETE" in tank.count_label.text, "fifteen fish permanently completes the first tank goal")
 	while get_nodes_in_group("fish").size() < 19:
 		tank.spawn_fish()
 	male.breeding_left = 0
 	female.breeding_left = 0
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
-	check(get_nodes_in_group("fish").size() == 20, "last breeding slot completes the population goal")
-	check(tank.population_goal_complete and "GOAL COMPLETE" in tank.count_label.text, "twenty fish permanently completes the first tank goal")
+	check(get_nodes_in_group("fish").size() == 20, "breeding can continue after the goal until tank capacity")
 	male.breeding_left = 0
 	female.breeding_left = 0
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
