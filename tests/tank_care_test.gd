@@ -24,7 +24,13 @@ func run() -> void:
 	var care := TankCare.assess(data)
 	check(JSON.stringify(data) == original, "forecast cannot change the real tank")
 	check(not care.adequate and care.report.lost == 20, "unautomated tank warns about insufficient care")
-	check(care.report.first_loss_at >= 140 and care.report.first_loss_at <= 185, "first starvation forecast follows inherited metabolism timing")
+	var profile := FishProfile.new()
+	var expected_first_loss: float = INF
+	for fish in data.fish:
+		var metabolism: float = FishGenome.phenotype_from_data(fish.genome, "metabolism")
+		var hunger_time: float = 1.0 / (profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism))
+		expected_first_loss = minf(expected_first_loss, hunger_time + profile.starvation_grace)
+	check(absf(care.report.first_loss_at - expected_first_loss) <= 2.0, "first starvation forecast follows inherited metabolism timing")
 	data.owned = {"feeder": true, "seahorse": true, "snail": true}
 	data.reserve = []
 	for i in range(200):

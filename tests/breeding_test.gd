@@ -62,7 +62,7 @@ func run() -> void:
 		has_comparison = has_comparison or bar.comparison in ["↑", "↓", "≈"]
 	check(has_comparison, "offspring reveal compares every direct trait with its parents")
 	tank.advance_fish_reveal()
-	check(male.breeding_left == 300 and female.breeding_left == 300, "both parents get five-minute cooldown")
+	check(is_equal_approx(male.breeding_left, male.genome.breeding_cooldown()) and is_equal_approx(female.breeding_left, female.genome.breeding_cooldown()) and male.breeding_left > female.breeding_left, "each parent receives its metabolism-based breeding cooldown")
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
 	check(get_nodes_in_group("fish").size() == 6, "cooldown prevents repeated births")
 	while get_nodes_in_group("fish").size() < 15:

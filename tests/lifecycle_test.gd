@@ -67,8 +67,10 @@ func run() -> void:
 	var neutral_lifespan: float = FishAging.lifespan_for(neutral_genome)
 	var fast_genome := FishGenome.new()
 	fast_genome.metabolism = PackedFloat32Array([1.0, 1.0])
-	fast_genome.allocation = PackedFloat32Array([1.0, 1.0])
-	check(FishAging.lifespan_for(fast_genome) < neutral_lifespan and FishAging.phase(neutral_lifespan * 0.85, neutral_lifespan) == "Senior", "fast productive fish age sooner and late life is identified as senior")
+	fast_genome.vitality = PackedFloat32Array([0.5, 0.5])
+	var hardy_genome := FishGenome.new()
+	hardy_genome.vitality = PackedFloat32Array([1.0, 1.0])
+	check(FishAging.lifespan_for(fast_genome) < neutral_lifespan and FishAging.lifespan_for(hardy_genome) > neutral_lifespan and FishAging.phase(neutral_lifespan * 0.85, neutral_lifespan) == "Senior", "metabolism shortens life, vitality extends it, and late life is identified as senior")
 	var elder = restored.spawn_fish()
 	elder.life.age_seconds = FishAging.lifespan_for(elder.genome) - 0.1
 	elder._process(0.2)

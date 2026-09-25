@@ -5,7 +5,7 @@ signal offspring_requested(at: Vector2, father_id: String, mother_id: String)
 const CAPACITY: int = 20
 const BREEDING_LIMIT: int = 16
 const INTERVAL: float = 30.0
-const COOLDOWN: float = 300.0
+const COOLDOWN: float = 300.0 # Neutral reference; genomes set the actual cooldown.
 var enabled: bool = true
 var check_left: float = INTERVAL
 var chance: float = 0.25
@@ -32,6 +32,6 @@ func advance(delta: float, fish_list: Array) -> void:
 		return
 	var male = males.pick_random()
 	var female = females.pick_random()
-	male.breeding_left = COOLDOWN
-	female.breeding_left = COOLDOWN
+	male.breeding_left = male.genome.breeding_cooldown()
+	female.breeding_left = female.genome.breeding_cooldown()
 	offspring_requested.emit((male.position + female.position) * 0.5, male.life.id, female.life.id)

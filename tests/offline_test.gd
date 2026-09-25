@@ -47,9 +47,10 @@ func run() -> void:
 	diamond_timer.waste = []
 	diamond_timer.asset_levels.idle_duration = 4
 	diamond_timer.asset_levels.coin_lifetime = 4
+	diamond_timer.asset_levels.diamond_lifetime = 1
 	diamond_timer.coins = [{"x": 500, "y": 650, "value": 10, "diamond": true, "grounded": true}]
 	var diamond_timer_result := OfflineProgress.advance(diamond_timer, 1010.0)
-	check(diamond_timer_result.data.coins.size() == 1 and diamond_timer_result.data.coins[0].life == 7.0, "offline diamonds keep an independent eight-second floor lifetime")
+	check(diamond_timer_result.data.coins.size() == 1 and diamond_timer_result.data.coins[0].life == 14.0, "offline diamonds use their independent upgraded floor lifetime")
 	var again := OfflineProgress.advance(result.data, 1200.0)
 	check(again.report.earned == 0 and again.report.simulated == 0, "consumed timestamp prevents duplicate progress")
 	var backward := OfflineProgress.advance(data, 900.0)

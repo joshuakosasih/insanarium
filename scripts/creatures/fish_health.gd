@@ -2,7 +2,7 @@ class_name FishHealth
 extends RefCounted
 ## General condition pool. Water quality is its first damage source; combat and disease can reuse it later.
 const MAX_HEALTH: float = 100.0
-const MAX_POSSIBLE_HEALTH: float = 130.0
+const MAX_POSSIBLE_HEALTH: float = 160.0
 const CLEAR_RECOVERY_RATE: float = 0.05
 const PRISTINE_RECOVERY_RATE: float = 0.25
 const DAMAGE_THRESHOLD: float = 65.0

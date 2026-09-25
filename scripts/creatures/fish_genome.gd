@@ -7,16 +7,27 @@ var metabolism: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var allocation: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var vitality: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
 var speed: PackedFloat32Array = PackedFloat32Array([0.5, 0.5])
-const MIN_MAX_HEALTH: float = 70.0
-const MAX_MAX_HEALTH: float = 130.0
-const MIN_SPEED_MULTIPLIER: float = 0.75
-const MAX_SPEED_MULTIPLIER: float = 1.25
+const MIN_MAX_HEALTH: float = 60.0
+const MAX_MAX_HEALTH: float = 160.0
+const MIN_SPEED_MULTIPLIER: float = 0.65
+const MAX_SPEED_MULTIPLIER: float = 1.40
+const MIN_BREEDING_COOLDOWN: float = 210.0
+const MAX_BREEDING_COOLDOWN: float = 390.0
 
-func randomize_traits() -> void:
-	metabolism = PackedFloat32Array([randf_range(0.2, 0.8), randf_range(0.2, 0.8)])
-	allocation = PackedFloat32Array([randf_range(0.2, 0.8), randf_range(0.2, 0.8)])
-	vitality = PackedFloat32Array([randf_range(0.2, 0.8), randf_range(0.2, 0.8)])
-	speed = PackedFloat32Array([randf_range(0.2, 0.8), randf_range(0.2, 0.8)])
+func randomize_traits(balanced: bool = false) -> void:
+	var range_limits := Vector2(0.44, 0.56) if balanced else Vector2(0.12, 0.88)
+	var allele_spread: float = 0.035 if balanced else 0.12
+	metabolism = randomized_pair(range_limits, allele_spread)
+	allocation = randomized_pair(range_limits, allele_spread)
+	vitality = randomized_pair(range_limits, allele_spread)
+	speed = randomized_pair(range_limits, allele_spread)
+
+static func randomized_pair(range_limits: Vector2, spread: float) -> PackedFloat32Array:
+	# Choose the visible phenotype first. Independent allele rolls would average
+	# toward 0.5 and make most purchased fish feel nearly identical.
+	var phenotype := randf_range(range_limits.x, range_limits.y)
+	var offset := randf_range(-spread, spread)
+	return PackedFloat32Array([clampf(phenotype + offset, 0.0, 1.0), clampf(phenotype - offset, 0.0, 1.0)])
 
 static func inherit(father: FishGenome, mother: FishGenome) -> FishGenome:
 	var child := FishGenome.new()
@@ -62,7 +73,10 @@ func coin_chance() -> float:
 	return coin_chance_for(allocation_value())
 
 func constitution() -> float:
-	return constitution_for(allocation_value())
+	return constitution_for(vitality_value())
+
+func breeding_cooldown() -> float:
+	return breeding_cooldown_for(metabolism_value())
 
 static func speed_multiplier_for(value: float) -> float:
 	return lerpf(MIN_SPEED_MULTIPLIER, MAX_SPEED_MULTIPLIER, clampf(value, 0.0, 1.0))
@@ -71,19 +85,22 @@ static func max_health_for(value: float) -> float:
 	return lerpf(MIN_MAX_HEALTH, MAX_MAX_HEALTH, clampf(value, 0.0, 1.0))
 
 static func hunger_multiplier_for(value: float) -> float:
-	return lerpf(0.75, 1.35, clampf(value, 0.0, 1.0))
+	return lerpf(0.65, 1.50, clampf(value, 0.0, 1.0))
 
 static func growth_multiplier_for(value: float) -> float:
-	return lerpf(0.85, 1.20, clampf(value, 0.0, 1.0))
+	return lerpf(0.75, 1.35, clampf(value, 0.0, 1.0))
 
 static func output_interval_for(base_interval: float, value: float) -> float:
-	return base_interval * lerpf(1.25, 0.70, clampf(value, 0.0, 1.0))
+	return base_interval * lerpf(1.35, 0.60, clampf(value, 0.0, 1.0))
 
 static func coin_chance_for(value: float) -> float:
-	return lerpf(0.55, 0.90, clampf(value, 0.0, 1.0))
+	return lerpf(0.40, 0.95, clampf(value, 0.0, 1.0))
 
 static func constitution_for(value: float) -> float:
-	return lerpf(1.20, 0.80, clampf(value, 0.0, 1.0))
+	return lerpf(0.70, 1.35, clampf(value, 0.0, 1.0))
+
+static func breeding_cooldown_for(value: float) -> float:
+	return lerpf(MAX_BREEDING_COOLDOWN, MIN_BREEDING_COOLDOWN, clampf(value, 0.0, 1.0))
 
 func metabolism_label() -> String:
 	var value := metabolism_value()

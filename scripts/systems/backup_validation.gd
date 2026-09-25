@@ -45,7 +45,7 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(data.asset_levels.snail, 0, 3) or bool(data.owned.snail) != (int(data.asset_levels.snail) > 0):
 				return {}
 		else:
-			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "seahorse_interval", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "idle_duration", "bubble_capacity", "bubble_value"]:
+			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "seahorse_interval", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
 				if not integer_in_range(data.asset_levels.get(track, 0), 0, 4):
 					return {}
 			if not integer_in_range(data.asset_levels.get("seahorse_feed", 0), 0, 2):

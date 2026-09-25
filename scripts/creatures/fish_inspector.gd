@@ -25,26 +25,19 @@ static func describe(fish: AquariumFish) -> String:
 	elif fish.breeding_left > 0:
 		readiness = "Cooldown: " + duration(fish.breeding_left)
 	var birth: String = "Unknown" if life.birth_sim_time < 0 else duration(life.birth_sim_time) + " tank time"
-	return "%s · %s\n%s · %s · %s\nAge: %s\nOrigin: %s\nBorn/introduced: %s\nParents: %s\nHealth: %d/%d · Hunger: %d%%\nMeals: %d · Growth credits: %.1f\nOutput interval: %.1fs\nBreeding: %s\nSale value: $%d" % [life.id, fish.profile.species_name,
+	return "%s · %s\n%s · %s · %s\nAge: %s\nOrigin: %s\nBorn/introduced: %s\nParents: %s\nHealth: %d/%d · Hunger: %d%%\nMeals: %d · Growth credits: %.1f\nOutput: %.1fs · Natural breed cycle: %s\nBreeding: %s\nSale value: $%d" % [life.id, fish.profile.species_name,
 		fish.profile.growth_names[fish.growth.stage], AquariumFish.SEX_NAMES[fish.sex], FishMutation.NAMES[fish.mutation.variant],
 		age_summary, life.origin, birth, parents, roundi(fish.health.current), roundi(fish.health.maximum), roundi(fish.hunger * 100), fish.growth.meals, fish.growth.growth_credit,
-		fish.genome.output_interval(fish.profile.coin_interval), readiness, fish.sell_value()]
+		fish.genome.output_interval(fish.profile.coin_interval), duration(fish.genome.breeding_cooldown()), readiness, fish.sell_value()]
 
 static func trait_rows(fish: AquariumFish) -> Array[Dictionary]:
 	var profile := fish.profile
 	var food_endurance: float = profile.hungry_threshold / (profile.hunger_rate * fish.genome.hunger_multiplier())
-	var minimum_food_endurance: float = profile.hungry_threshold / (profile.hunger_rate * FishGenome.hunger_multiplier_for(1.0))
-	var maximum_food_endurance: float = profile.hungry_threshold / (profile.hunger_rate * FishGenome.hunger_multiplier_for(0.0))
 	var actual_speed: float = fish.swim_speed()
-	var minimum_speed: float = profile.swim_speed * FishGenome.MIN_SPEED_MULTIPLIER
-	var maximum_speed: float = profile.swim_speed * FishGenome.MAX_SPEED_MULTIPLIER
-	var growth_speed: float = fish.genome.growth_multiplier()
 	var coin_chance: float = fish.genome.coin_chance()
-	var resistance: float = fish.genome.constitution()
+	var lifespan: float = FishAging.lifespan_for(fish.genome)
 	return [
-		{"title": "Maximum health", "value": "%d HP" % roundi(fish.health.maximum), "progress": inverse_lerp(FishGenome.MIN_MAX_HEALTH, FishGenome.MAX_MAX_HEALTH, fish.health.maximum)},
-		{"title": "Swim speed", "value": "%d px/s" % roundi(actual_speed), "progress": inverse_lerp(minimum_speed, maximum_speed, actual_speed)},
-		{"title": "Food endurance", "value": "%ds" % roundi(food_endurance), "progress": inverse_lerp(minimum_food_endurance, maximum_food_endurance, food_endurance)},
-		{"title": "Growth speed", "value": "×%.2f" % growth_speed, "progress": inverse_lerp(FishGenome.growth_multiplier_for(0.0), FishGenome.growth_multiplier_for(1.0), growth_speed)},
-		{"title": "Coin probability", "value": "%d%%" % roundi(coin_chance * 100.0), "progress": inverse_lerp(FishGenome.coin_chance_for(0.0), FishGenome.coin_chance_for(1.0), coin_chance)},
-		{"title": "Water resistance", "value": "%d%%" % roundi(resistance * 100.0), "progress": inverse_lerp(FishGenome.constitution_for(1.0), FishGenome.constitution_for(0.0), resistance)}]
+		{"title": "Vitality", "value": "%d HP · %.1fh" % [roundi(fish.health.maximum), lifespan / 3600.0], "progress": fish.genome.vitality_value()},
+		{"title": "Metabolism", "value": "%ds food · ×%.2f" % [roundi(food_endurance), fish.genome.growth_multiplier()], "progress": fish.genome.metabolism_value()},
+		{"title": "Agility", "value": "%d px/s" % roundi(actual_speed), "progress": fish.genome.speed_value()},
+		{"title": "Productivity", "value": "%d%% coin" % roundi(coin_chance * 100.0), "progress": fish.genome.allocation_value()}]

@@ -20,7 +20,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var owned: Dictionary = data.get("owned", {})
 	var asset_levels: Dictionary = data.get("asset_levels", {})
 	var coin_lifetime: float = IdleAssets.coin_lifetime_for(int(asset_levels.get("coin_lifetime", 0)))
-	var diamond_lifetime: float = TankCoin.BASE_LIFETIME
+	var diamond_lifetime: float = IdleAssets.diamond_lifetime_for(int(asset_levels.get("diamond_lifetime", 0)))
 	var coin_multiplier: int = IdleAssets.COIN_MULTIPLIERS[clampi(int(asset_levels.get("coin_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var diamond_multiplier: int = IdleAssets.DIAMOND_MULTIPLIERS[clampi(int(asset_levels.get("diamond_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var reserve: Array = data.get("reserve", []).duplicate()

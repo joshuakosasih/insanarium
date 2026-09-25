@@ -457,7 +457,7 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased") -> Aquari
 	var fish := AquariumFish.new()
 	fish.presentation_scale = CREATURE_PRESENTATION_SCALE
 	if not from_save:
-		fish.genome.randomize_traits()
+		fish.genome.randomize_traits(origin == "Starter")
 	if not from_save:
 		life_registry.allocate(fish.life, origin)
 	fish.profile = FishProfile.new()
@@ -492,7 +492,7 @@ func spawn_coin(at: Vector2, value: int, diamond: bool = false, grade: int = -1)
 	coin.value = value
 	coin.diamond = diamond
 	coin.grade = grade
-	coin.lifetime = TankCoin.BASE_LIFETIME if diamond else assets.coin_lifetime()
+	coin.lifetime = assets.diamond_lifetime() if diamond else assets.coin_lifetime()
 	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
 	coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
 	coin.grounded = coin.position.y >= coin.floor_y
@@ -840,6 +840,7 @@ func purchase_feed_upgrade() -> void:
 
 func purchase_upgrade(track: String) -> void:
 	var old_coin_lifetime: float = assets.coin_lifetime()
+	var old_diamond_lifetime: float = assets.diamond_lifetime()
 	if assets.upgrade(track, economy):
 		for pet in get_tree().get_nodes_in_group("pets"):
 			if pet is SnailPet:
@@ -855,6 +856,11 @@ func purchase_upgrade(track: String) -> void:
 			for coin in get_tree().get_nodes_in_group("coins"):
 				if not coin.diamond:
 					coin.lifetime = minf(assets.coin_lifetime(), coin.lifetime + added)
+		elif track == "diamond_lifetime":
+			var added: float = assets.diamond_lifetime() - old_diamond_lifetime
+			for coin in get_tree().get_nodes_in_group("coins"):
+				if coin.diamond:
+					coin.lifetime = minf(assets.diamond_lifetime(), coin.lifetime + added)
 		audio.play("buy")
 		show_shop_message("%s upgraded to level %d." % [track.replace("_", " ").capitalize(), int(assets.levels[track]) + 1])
 		update_money(economy.money)
@@ -936,6 +942,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("bubble_value")
 	elif shop_selected_id == "coins":
 		purchase_upgrade("coin_value")
+	elif shop_selected_id == "diamond_value":
+		purchase_upgrade("diamond_lifetime")
 	refresh_shop()
 
 func activate_shop_tertiary() -> void:
@@ -989,7 +997,7 @@ func refresh_shop() -> void:
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coins": "Life %d · Value %d" % [int(assets.levels.coin_lifetime) + 1, int(assets.levels.coin_value) + 1],
-		"diamond_value": "Lv. %d · ×%d" % [int(assets.levels.diamond_value) + 1, assets.diamond_multiplier()],
+		"diamond_value": "Life %d · Value %d" % [int(assets.levels.diamond_lifetime) + 1, int(assets.levels.diamond_value) + 1],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
 		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
 	var discoveries := {
@@ -1002,7 +1010,7 @@ func refresh_shop() -> void:
 		"stock": assets.owned.feeder,
 		"feed": feed_upgrades.unlocked_tier > 0,
 		"coins": int(assets.levels.coin_lifetime) > 0 or int(assets.levels.coin_value) > 0,
-		"diamond_value": int(assets.levels.diamond_value) > 0,
+		"diamond_value": int(assets.levels.diamond_value) > 0 or int(assets.levels.diamond_lifetime) > 0,
 		"idle_duration": int(assets.levels.idle_duration) > 0,
 		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
 	for key in shop_cards:
@@ -1150,11 +1158,19 @@ func refresh_shop() -> void:
 			shop_secondary_button.show()
 		"diamond_value":
 			var diamond_level: int = int(assets.levels.diamond_value)
+			var diamond_lifetime_level: int = int(assets.levels.diamond_lifetime)
 			action_price = assets.upgrade_price("diamond_value")
 			unavailable = action_price == 0
-			var next_diamond: String = "Maximum diamond value reached" if unavailable else "×%d → ×%d for every blue diamond" % [assets.diamond_multiplier(), IdleAssets.DIAMOND_MULTIPLIERS[diamond_level + 1]]
-			shop_detail_state.text = "Level %d / 5\n%s\nIndependent from ordinary Coin Value. Alien diamonds have twice the base value." % [diamond_level + 1, next_diamond]
-			shop_action_button.text = "Fully upgraded" if unavailable else "Raise diamond value  $%d" % action_price
+			shop_detail_state.text = "Value Lv. %d: ×%d for diamonds\nLifetime Lv. %d: %ds on the floor\nAlien diamonds have twice the base value." % [diamond_level + 1, assets.diamond_multiplier(), diamond_lifetime_level + 1, int(assets.diamond_lifetime())]
+			shop_action_button.position = Vector2(24, 350)
+			shop_action_button.size = Vector2(160, 58)
+			shop_action_button.text = "Value MAX" if unavailable else "Value +1  $%d" % action_price
+			var diamond_lifetime_price: int = assets.upgrade_price("diamond_lifetime")
+			shop_secondary_button.position = Vector2(222, 350)
+			shop_secondary_button.size = Vector2(160, 58)
+			shop_secondary_button.text = "Lifetime MAX" if diamond_lifetime_price == 0 else "Lifetime +1  $%d" % diamond_lifetime_price
+			shop_secondary_button.disabled = diamond_lifetime_price == 0 or diamond_lifetime_price > economy.money
+			shop_secondary_button.show()
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
 			action_price = assets.upgrade_price("idle_duration")
@@ -1292,9 +1308,9 @@ func build_hud() -> void:
 	inspector_detail = label_at(inspector_panel, "", Vector2(16, 14), 13, Color("d2e6df"))
 	inspector_detail.size = Vector2(316, 276)
 	inspector_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	for index in range(6):
+	for index in range(4):
 		var trait_bar: FishTraitBar = FishTraitBarScript.new()
-		trait_bar.position = Vector2(16, 294 + index * 27)
+		trait_bar.position = Vector2(16, 306 + index * 34)
 		inspector_panel.add_child(trait_bar)
 		inspector_trait_bars.append(trait_bar)
 	make_button(inspector_panel, "×", Vector2(308, 5), Vector2(30, 28), func() -> void:
@@ -1593,7 +1609,7 @@ func restore(data: Dictionary) -> void:
 		fish.genome.from_data(item.get("genome", {}))
 		fish.apply_genome(false)
 		fish.sex = clampi(int(item.get("sex", fish.sex)), 0, 2) as AquariumFish.Sex
-		fish.breeding_left = clampf(float(item.get("breeding_left", 0)), 0, 300)
+		fish.breeding_left = clampf(float(item.get("breeding_left", 0)), 0, FishGenome.MAX_BREEDING_COOLDOWN)
 		fish.position = Vector2(item.get("x", 500), item.get("y", 350)).clamp(swim_bounds.position, swim_bounds.end)
 		fish.hunger = clampf(float(item.get("hunger", 0)), 0, 1)
 		fish.health.current = clampf(float(item.get("health", fish.health.maximum)), 0.01, fish.health.maximum)
@@ -1610,7 +1626,7 @@ func restore(data: Dictionary) -> void:
 		fish.coin_left = clampf(float(item.get("coin_left", 20)), 0, fish.genome.output_interval(fish.profile.coin_interval))
 	for item in data.get("coins", []).slice(0, 150):
 		var coin := spawn_coin(Vector2(item.get("x", 500), item.get("y", 650)), maxi(1, int(item.get("value", 1))), bool(item.get("diamond", false)), int(item.get("grade", -1)))
-		var default_lifetime: float = TankCoin.BASE_LIFETIME if bool(item.get("diamond", false)) else assets.coin_lifetime()
+		var default_lifetime: float = assets.diamond_lifetime() if bool(item.get("diamond", false)) else assets.coin_lifetime()
 		coin.lifetime = clampf(float(item.get("life", default_lifetime)), 0.01, TankCoin.MAX_LIFETIME)
 		coin.grounded = bool(item.get("grounded", coin.position.y >= coin.floor_y))
 	for item in data.get("waste", []).slice(0, 100):

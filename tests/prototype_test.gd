@@ -121,8 +121,8 @@ func run() -> void:
 	check(tank.economy.money == 0 and get_nodes_in_group("fish").size() == 2 and "fish added" in tank.shop_status.text.to_lower(), "click income buys a replacement fish from zero")
 	check(not tank.shop_panel.visible and tank.acquisition_celebration.visible and not tank.reveal_panel.visible and tank.acquisition_celebration.icon_kind == "fish", "fish purchase starts with a centered acquisition celebration")
 	tank.acquisition_celebration.finish_now()
-	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW FISH PURCHASED" and tank.reveal_panel.trait_bars.size() == 6, "celebration hands off to the reusable six-trait reveal card")
-	check(tank.reveal_panel.trait_bars[0].title == "Maximum health" and tank.reveal_panel.trait_bars[5].title == "Water resistance", "reveal card shows direct outcomes rather than hidden genes")
+	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW FISH PURCHASED" and tank.reveal_panel.trait_bars.size() == 4, "celebration hands off to the reusable four-trait reveal card")
+	check(tank.reveal_panel.trait_bars[0].title == "Vitality" and tank.reveal_panel.trait_bars[3].title == "Productivity", "reveal card shows four understandable inherited traits")
 	tank.show_fish_reveal(get_nodes_in_group("fish")[0], "QUEUED FISH")
 	check(tank.acquisition_queue.size() == 1 and "1 waiting" in tank.reveal_panel.dismiss_button.text, "additional acquisitions queue without replacing the current card")
 	tank.advance_fish_reveal()
@@ -276,10 +276,14 @@ func run() -> void:
 	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "diamond value upgrades independently from ordinary coin value")
 	teen.coin_produced.emit(teen.position, 10, true, 4)
 	var fish_diamond = get_nodes_in_group("coins")[-1]
-	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == TankCoin.BASE_LIFETIME, "fish diamonds use only Diamond Value and keep their fixed lifetime")
+	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == 8.0 and tank.shop_secondary_button.visible, "fish diamonds use only Diamond Value and expose a separate lifetime upgrade")
+	var ordinary_life: float = upgraded_coin.lifetime
+	balance = tank.economy.money
+	tank.activate_shop_secondary()
+	check(tank.assets.diamond_lifetime() == 15.0 and fish_diamond.lifetime == 15.0 and upgraded_coin.lifetime == ordinary_life and tank.economy.money == balance - 50, "diamond lifetime upgrades existing diamonds without changing ordinary coins")
 	tank.invasions.alien_defeated.emit(Vector2(620, 320))
 	var alien_diamond = get_nodes_in_group("coins")[-1]
-	check(alien_diamond.value == fish_diamond.value * 2 and alien_diamond.diamond and alien_diamond.lifetime == TankCoin.BASE_LIFETIME, "alien diamonds are worth twice a normal fish diamond")
+	check(alien_diamond.value == fish_diamond.value * 2 and alien_diamond.diamond and alien_diamond.lifetime == tank.assets.diamond_lifetime(), "alien diamonds are worth twice a normal fish diamond and share Diamond Lifetime")
 	tank.select_shop_item("idle_duration")
 	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$50"), "away-time card explains the initial lock and first price")
 	balance = tank.economy.money
@@ -313,7 +317,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.owned.shrimp and data.owned.seahorse and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.shrimp_speed == 1 and data.asset_levels.shrimp_digestion == 1 and data.asset_levels.seahorse_interval == 1 and data.asset_levels.seahorse_feed == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.owned.shrimp and data.owned.seahorse and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.shrimp_speed == 1 and data.asset_levels.shrimp_digestion == 1 and data.asset_levels.seahorse_interval == 1 and data.asset_levels.seahorse_feed == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.diamond_lifetime == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()
@@ -338,7 +342,7 @@ func run() -> void:
 		elif pet is SeahorsePet:
 			restored_seahorse = pet
 	check(get_nodes_in_group("fish").size() == 2 and restored.assets.reserve.size() == 19 and restored.feed_upgrades.unlocked_tier == 2 and restored.economy.money == int(data.money), "JSON round-trip restores wallet fish upgrades and stock")
-	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored.assets.levels.diamond_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
+	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored.assets.levels.diamond_value == 1 and restored.assets.levels.diamond_lifetime == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
 	check(restored.assets.owned.puffer and restored_puffer != null and restored_puffer.position == Vector2(data.puffer_x, data.puffer_y) and restored_puffer.move_speed == 60.0 and restored_puffer.curiosity == 0.45, "JSON round-trip restores the bubble puffer and its upgrades")
 	check(restored.assets.owned.shrimp and restored_shrimp != null and restored_shrimp.move_speed == 45.0 and restored_shrimp.digestion_duration == 8.0 and is_equal_approx(restored_shrimp.position.x, float(data.shrimp_x)), "JSON round-trip restores cleanup shrimp state and upgrades")
 	check(restored.assets.owned.seahorse and restored_seahorse != null and restored_seahorse.feed_interval == 14.0 and restored_seahorse.feed_tier == 1, "JSON round-trip restores seahorse rate and pellet quality")

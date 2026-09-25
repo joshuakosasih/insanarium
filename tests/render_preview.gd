@@ -57,6 +57,8 @@ func capture() -> void:
 		tank.select_shop_item("shrimp")
 	if "--coins-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("coins")
+	if "--diamond-shop" in OS.get_cmdline_user_args():
+		tank.select_shop_item("diamond_value")
 	if "--seahorse-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("seahorse")
 	if "--puffed" in OS.get_cmdline_user_args():
@@ -85,6 +87,7 @@ func capture() -> void:
 	if "--reveal" in OS.get_cmdline_user_args():
 		var revealed_fish = get_nodes_in_group("fish")[0]
 		tank.show_fish_reveal(revealed_fish, "NEW FISH PURCHASED")
+		tank.acquisition_celebration.finish_now()
 	if "--tank" in OS.get_cmdline_user_args():
 		tank.acquisition_queue.clear()
 		tank.active_acquisition.clear()

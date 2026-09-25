@@ -28,15 +28,15 @@ func _ready() -> void:
 	identity_label = make_label("", Vector2(24, 45), 20, Color("e8f2ed"))
 	identity_label.size = Vector2(504, 52)
 	identity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for index in range(6):
+	for index in range(4):
 		var bar: FishTraitBar = TraitBarScript.new()
-		bar.position = Vector2(118, 205 + index * 31)
+		bar.position = Vector2(118, 205 + index * 38)
 		add_child(bar)
 		trait_bars.append(bar)
-	details_label = make_label("", Vector2(38, 402), 14, Color("c7dfdb"))
+	details_label = make_label("", Vector2(38, 370), 14, Color("c7dfdb"))
 	details_label.size = Vector2(476, 48)
 	details_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	comparison_label = make_label("", Vector2(38, 455), 13, Color("ffdb80"))
+	comparison_label = make_label("", Vector2(38, 430), 13, Color("ffdb80"))
 	comparison_label.size = Vector2(476, 50)
 	comparison_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	comparison_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -84,10 +84,9 @@ static func capture(fish: AquariumFish, heading: String, parents: Array = []) ->
 	var comparison: String = "A new bloodline for your aquarium."
 	if not parent_ids.is_empty():
 		comparison = "Parents: %s\n↑ above parents · ↓ below parents · ≈ similar" % " + ".join(parent_ids)
-	var lifespan: float = FishAging.lifespan_for(fish.genome)
 	return {"heading": heading, "id": fish.life.id,
 		"identity": "%s · %s\n%s · %s · %s" % [fish.life.id, fish.profile.species_name, AquariumFish.SEX_NAMES[fish.sex], fish.profile.growth_names[fish.growth.stage], FishMutation.NAMES[fish.mutation.variant]],
-		"details": "Output interval %.1fs · Expected lifespan %s" % [fish.genome.output_interval(fish.profile.coin_interval), FishInspector.duration(lifespan)],
+		"details": "Output %.1fs · Breed cycle %s" % [fish.genome.output_interval(fish.profile.coin_interval), FishInspector.duration(fish.genome.breeding_cooldown())],
 		"comparison": comparison, "rows": rows, "color": FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown()}
 
 func _draw() -> void:
