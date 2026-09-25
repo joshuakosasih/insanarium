@@ -20,6 +20,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var owned: Dictionary = data.get("owned", {})
 	var asset_levels: Dictionary = data.get("asset_levels", {})
 	var coin_lifetime: float = IdleAssets.coin_lifetime_for(int(asset_levels.get("coin_lifetime", 0)))
+	var diamond_lifetime: float = TankCoin.BASE_LIFETIME
 	var coin_multiplier: int = IdleAssets.COIN_MULTIPLIERS[clampi(int(asset_levels.get("coin_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var diamond_multiplier: int = IdleAssets.DIAMOND_MULTIPLIERS[clampi(int(asset_levels.get("diamond_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var reserve: Array = data.get("reserve", []).duplicate()
@@ -63,6 +64,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 					waste_item.settled = true
 		waste = waste.filter(func(item: Dictionary) -> bool: return float(item.get("life", FishWaste.FLOOR_LIFETIME)) > 0.0)
 		for coin in rewards:
+			var default_reward_lifetime: float = diamond_lifetime if bool(coin.get("diamond", false)) else coin_lifetime
 			var grounded: bool = bool(coin.get("grounded", float(coin.get("y", 650)) >= 650.0))
 			if not grounded:
 				var fall_distance: float = 650.0 - float(coin.get("y", 650))
@@ -72,10 +74,10 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				else:
 					coin.y = 650.0
 					coin.grounded = true
-					coin.life = float(coin.get("life", coin_lifetime)) - (dt - fall_time)
+					coin.life = float(coin.get("life", default_reward_lifetime)) - (dt - fall_time)
 			else:
 				coin.grounded = true
-				coin.life = float(coin.get("life", coin_lifetime)) - dt
+				coin.life = float(coin.get("life", default_reward_lifetime)) - dt
 		rewards = rewards.filter(func(c: Dictionary) -> bool: return c.life > 0.0)
 		var grounded_rewards: Array = rewards.filter(func(c: Dictionary) -> bool: return bool(c.get("grounded", float(c.get("y", 650)) >= 650.0)))
 		if owned.get("snail", false) and not grounded_rewards.is_empty():
@@ -196,10 +198,10 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 						waste.append({"x": fish.get("x", 550), "y": 642, "settled": true, "life": FishWaste.FLOOR_LIFETIME})
 				else:
 					var is_diamond: bool = output_stage == profile.diamond_stage
-					var value: int = profile.coin_value * profile.growth_rewards[output_stage] * coin_multiplier * (diamond_multiplier if is_diamond else 1)
+					var value: int = profile.coin_value * profile.growth_rewards[output_stage] * (diamond_multiplier if is_diamond else coin_multiplier)
 					report.earned += value
 					if rewards.size() < 150:
-						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": is_diamond, "grade": output_stage, "life": coin_lifetime, "grounded": true})
+						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": is_diamond, "grade": output_stage, "life": diamond_lifetime if is_diamond else coin_lifetime, "grounded": true})
 					else:
 						rewards[0].value = int(rewards[0].value) + value
 			survivors.append(fish)

@@ -1,6 +1,7 @@
 class_name ShopCard
 extends Button
 ## Reusable visual selector for purchasable creatures, equipment, and upgrades.
+signal scroll_dragged(relative_y: float)
 const ShopIconScript = preload("res://scripts/ui/shop_icon.gd")
 var item_id: String
 var display_title: String
@@ -33,6 +34,14 @@ func configure(item) -> void:
 	icon_preview.icon_kind = icon_kind
 	add_child(icon_preview)
 	queue_redraw()
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenDrag:
+		scroll_dragged.emit(event.relative.y)
+		accept_event()
+	elif event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+		scroll_dragged.emit(event.relative.y)
+		accept_event()
 
 func set_status(value: String) -> void:
 	status = value

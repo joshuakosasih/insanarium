@@ -126,7 +126,7 @@ func play(kind: String) -> void:
 
 static func synthesize(kind: String) -> AudioStreamWAV:
 	var parameters: Dictionary = {
-		"bubble": [900.0, 220.0, 0.16], "feed": [380.0, 650.0, 0.10],
+		"bubble": [520.0, 130.0, 0.11], "feed": [380.0, 650.0, 0.10],
 		"coin": [1000.0, 1400.0, 0.23], "buy": [440.0, 880.0, 0.28],
 		"grow": [523.0, 1046.0, 0.48], "loss": [330.0, 165.0, 0.42],
 		"alert": [440.0, 440.0, 0.50], "hit": [180.0, 65.0, 0.12]}
@@ -135,17 +135,17 @@ static func synthesize(kind: String) -> AudioStreamWAV:
 	var bytes := PackedByteArray()
 	bytes.resize(samples * 2)
 	var phase: float = 0.0
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(kind)
 	for i in range(samples):
 		var t: float = float(i) / samples
 		var seconds: float = float(i) / 22050.0
 		var sample: float
 		if kind == "bubble":
-			# A short air-pressure snap followed by a small round water resonance.
-			var snap: float = rng.randf_range(-1.0, 1.0) * exp(-seconds * 55.0)
-			var body: float = sin(TAU * lerpf(210.0, 105.0, t) * seconds) * exp(-seconds * 22.0)
-			sample = snap * 0.62 + body * 0.48
+			# A compact, rounded pressure pop without the noisy snare-like burst.
+			phase += TAU * lerpf(520.0, 130.0, pow(t, 0.45)) / 22050.0
+			var attack: float = minf(seconds * 450.0, 1.0)
+			var body: float = sin(phase) * attack * exp(-seconds * 34.0)
+			var lip: float = sin(TAU * 1050.0 * seconds) * exp(-seconds * 115.0)
+			sample = body * 0.78 + lip * 0.10
 		elif kind == "coin":
 			# Two clean metallic notes make collection distinct from bubble income.
 			var first: float = (sin(TAU * 880.0 * seconds) + 0.28 * sin(TAU * 1760.0 * seconds)) * exp(-seconds * 11.0)

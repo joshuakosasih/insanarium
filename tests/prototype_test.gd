@@ -62,11 +62,16 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 13, "shop starts closed with reusable product cards")
-	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coin_value.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 12, "shop starts closed with reusable product cards")
+	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coins.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
+	check(tank.shop_scroll.scroll_deadzone == 8, "shop catalog uses a short touch-drag threshold")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
 	tank.shop_button.pressed.emit()
 	check(tank.shop_panel.visible and tank.menu_paused and paused, "shop button opens its panel and pauses the tank")
+	var shop_drag := InputEventScreenDrag.new()
+	shop_drag.relative = Vector2(0, -120)
+	tank.shop_cards.fish._gui_input(shop_drag)
+	check(tank.shop_scroll.scroll_vertical > 0, "dragging directly over a shop card scrolls the catalog")
 	tank.toggle_shop()
 	check(not tank.menu_paused and not paused, "closing the shop resumes the tank")
 	tank.controls_button.pressed.emit()
@@ -250,16 +255,16 @@ func run() -> void:
 	tank.handle_tank_click(snail.position)
 	check(snail.sleep_left == 0.0 and snail.stamina_left == snail.max_stamina and get_nodes_in_group("food").size() == food_before_wake, "tapping a sleeping snail wakes it without dropping food")
 	var old_life: float = falling_coin.lifetime
-	tank.select_shop_item("coin_lifetime")
+	tank.select_shop_item("coins")
+	check(tank.shop_secondary_button.visible, "one fish-coin card exposes lifetime and value upgrades")
 	balance = tank.economy.money
 	tank.activate_shop_item()
 	check(tank.assets.levels.coin_lifetime == 1 and tank.assets.coin_lifetime() == 15.0 and falling_coin.lifetime == old_life + 7.0 and tank.economy.money == balance - 40, "coin preservation upgrades future and existing reward lifetime")
 	check(tank.assets.upgrade_price("coin_lifetime") == 100, "upgrade prices grow geometrically")
-	tank.select_shop_item("coin_value")
 	balance = tank.economy.money
-	tank.activate_shop_item()
+	tank.activate_shop_secondary()
 	check(tank.assets.coin_multiplier() == 2 and tank.economy.money == balance - 200, "coin-value upgrade doubles future fish rewards at its rebalanced price")
-	check(tank.shop_cards.coin_value.discovered, "first upgrade reveals its shop artwork")
+	check(tank.shop_cards.coins.discovered, "either fish-coin upgrade reveals the shared shop artwork")
 	var teen := get_nodes_in_group("fish")[0] as AquariumFish
 	teen.growth.stage = 1
 	teen.coin_produced.emit(teen.position, 1, false, 1)
@@ -271,10 +276,10 @@ func run() -> void:
 	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "diamond value upgrades independently from ordinary coin value")
 	teen.coin_produced.emit(teen.position, 10, true, 4)
 	var fish_diamond = get_nodes_in_group("coins")[-1]
-	check(fish_diamond.value == 40 and fish_diamond.diamond, "Diamond fish output stacks coin and diamond multipliers")
+	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == TankCoin.BASE_LIFETIME, "fish diamonds use only Diamond Value and keep their fixed lifetime")
 	tank.invasions.alien_defeated.emit(Vector2(620, 320))
 	var alien_diamond = get_nodes_in_group("coins")[-1]
-	check(alien_diamond.value == fish_diamond.value and alien_diamond.diamond, "alien diamonds use the same upgraded value as fish diamonds")
+	check(alien_diamond.value == fish_diamond.value * 2 and alien_diamond.diamond and alien_diamond.lifetime == TankCoin.BASE_LIFETIME, "alien diamonds are worth twice a normal fish diamond")
 	tank.select_shop_item("idle_duration")
 	check("Locked" in tank.shop_detail_state.text and tank.shop_action_button.text.contains("$50"), "away-time card explains the initial lock and first price")
 	balance = tank.economy.money

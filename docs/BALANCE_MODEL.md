@@ -55,7 +55,7 @@ Coin Value affects every fish forever, so its price must be judged by payback ra
 | 3× → 5× | +2× | 7.0 hr | 1.4 hr |
 | 5× → 8× | +3× | 18.8 hr | 3.8 hr |
 
-This curve makes the first level a deliberate early goal and pushes later levels into established-tank progression. More fish and Royal or Diamond output shorten these paybacks, while missed coins lengthen them.
+This curve makes the first level a deliberate early goal and pushes later levels into established-tank progression. More fish and Royal output shorten these paybacks, while missed coins lengthen them. Diamond output uses its own independent upgrade and is excluded from Coin Value payback.
 
 Run the calculation from the repository root with:
 

@@ -65,6 +65,7 @@ var buy_button: Button
 var shop_button: Button
 var controls_button: Button
 var shop_panel: Panel
+var shop_scroll: ScrollContainer
 var shop_status: Label
 var shop_cards: Dictionary = {}
 var shop_items: Dictionary = {}
@@ -121,7 +122,7 @@ func _ready() -> void:
 	invasions.presentation_scale = PET_PRESENTATION_SCALE
 	invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
 	invasions.alien_defeated.connect(func(at: Vector2) -> void:
-		spawn_coin(at, assets.reward_value(10, true), true, 4)
+		spawn_coin(at, assets.reward_value(20, true), true, 4)
 		audio.set_danger_music(false))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
@@ -491,7 +492,7 @@ func spawn_coin(at: Vector2, value: int, diamond: bool = false, grade: int = -1)
 	coin.value = value
 	coin.diamond = diamond
 	coin.grade = grade
-	coin.lifetime = assets.coin_lifetime()
+	coin.lifetime = TankCoin.BASE_LIFETIME if diamond else assets.coin_lifetime()
 	var extra_width: float = maxf(0.0, get_viewport_rect().size.x - 1152.0)
 	coin.collection_target.x = 825.0 + extra_width * 0.5 - position.x
 	coin.grounded = coin.position.y >= coin.floor_y
@@ -852,7 +853,8 @@ func purchase_upgrade(track: String) -> void:
 		if track == "coin_lifetime":
 			var added: float = assets.coin_lifetime() - old_coin_lifetime
 			for coin in get_tree().get_nodes_in_group("coins"):
-				coin.lifetime = minf(assets.coin_lifetime(), coin.lifetime + added)
+				if not coin.diamond:
+					coin.lifetime = minf(assets.coin_lifetime(), coin.lifetime + added)
 		audio.play("buy")
 		show_shop_message("%s upgraded to level %d." % [track.replace("_", " ").capitalize(), int(assets.levels[track]) + 1])
 		update_money(economy.money)
@@ -915,8 +917,7 @@ func activate_shop_item() -> void:
 		"feeder": purchase_asset("feeder")
 		"stock": restock()
 		"feed": purchase_feed_upgrade()
-		"coin_lifetime": purchase_upgrade("coin_lifetime")
-		"coin_value": purchase_upgrade("coin_value")
+		"coins": purchase_upgrade("coin_lifetime")
 		"diamond_value": purchase_upgrade("diamond_value")
 		"idle_duration": purchase_upgrade("idle_duration")
 		"bubbles": purchase_upgrade("bubble_capacity")
@@ -933,6 +934,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("seahorse_feed")
 	elif shop_selected_id == "bubbles":
 		purchase_upgrade("bubble_value")
+	elif shop_selected_id == "coins":
+		purchase_upgrade("coin_value")
 	refresh_shop()
 
 func activate_shop_tertiary() -> void:
@@ -985,8 +988,7 @@ func refresh_shop() -> void:
 		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
-		"coin_lifetime": "Lv. %d · %ds" % [int(assets.levels.coin_lifetime) + 1, int(assets.coin_lifetime())],
-		"coin_value": "Lv. %d · ×%d" % [int(assets.levels.coin_value) + 1, assets.coin_multiplier()],
+		"coins": "Life %d · Value %d" % [int(assets.levels.coin_lifetime) + 1, int(assets.levels.coin_value) + 1],
 		"diamond_value": "Lv. %d · ×%d" % [int(assets.levels.diamond_value) + 1, assets.diamond_multiplier()],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
 		"bubbles": "%d max · ×%.2f" % [assets.bubble_capacity(), assets.bubble_multiplier()]}
@@ -999,8 +1001,7 @@ func refresh_shop() -> void:
 		"feeder": assets.owned.feeder,
 		"stock": assets.owned.feeder,
 		"feed": feed_upgrades.unlocked_tier > 0,
-		"coin_lifetime": int(assets.levels.coin_lifetime) > 0,
-		"coin_value": int(assets.levels.coin_value) > 0,
+		"coins": int(assets.levels.coin_lifetime) > 0 or int(assets.levels.coin_value) > 0,
 		"diamond_value": int(assets.levels.diamond_value) > 0,
 		"idle_duration": int(assets.levels.idle_duration) > 0,
 		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
@@ -1132,26 +1133,27 @@ func refresh_shop() -> void:
 			unavailable = action_price == 0
 			shop_detail_state.text = "%s feed · $%d per pellet · %d growth credit" % [feed.title, feed.price, feed.growth_credit]
 			shop_action_button.text = "Fully upgraded" if unavailable else "Unlock %s  $%d" % [feeds[feed_upgrades.unlocked_tier + 1].title, action_price]
-		"coin_lifetime":
+		"coins":
 			var level: int = int(assets.levels.coin_lifetime)
+			var value_level: int = int(assets.levels.coin_value)
 			action_price = assets.upgrade_price("coin_lifetime")
 			unavailable = action_price == 0
-			var next_text: String = "Maximum preservation reached" if unavailable else "%d → %d simulation seconds" % [int(assets.coin_lifetime()), int(IdleAssets.COIN_LIFETIMES[level + 1])]
-			shop_detail_state.text = "Level %d / 5\n%s\nExisting rewards gain the added time." % [level + 1, next_text]
-			shop_action_button.text = "Fully upgraded" if unavailable else "Preserve longer  $%d" % action_price
-		"coin_value":
-			var value_level: int = int(assets.levels.coin_value)
-			action_price = assets.upgrade_price("coin_value")
-			unavailable = action_price == 0
-			var next_value: String = "Maximum value reached" if unavailable else "×%d → ×%d for future fish coins" % [assets.coin_multiplier(), IdleAssets.COIN_MULTIPLIERS[value_level + 1]]
-			shop_detail_state.text = "Level %d / 5\n%s\nCoin color still follows the fish's life stage." % [value_level + 1, next_value]
-			shop_action_button.text = "Fully upgraded" if unavailable else "Raise coin value  $%d" % action_price
+			shop_detail_state.text = "Lifetime Lv. %d: %ds on the floor\nValue Lv. %d: ×%d for fish coins\nDiamond rewards use separate value and lifetime." % [level + 1, int(assets.coin_lifetime()), value_level + 1, assets.coin_multiplier()]
+			shop_action_button.position = Vector2(24, 350)
+			shop_action_button.size = Vector2(160, 58)
+			shop_action_button.text = "Lifetime MAX" if unavailable else "Lifetime +1  $%d" % action_price
+			var coin_value_price: int = assets.upgrade_price("coin_value")
+			shop_secondary_button.position = Vector2(222, 350)
+			shop_secondary_button.size = Vector2(160, 58)
+			shop_secondary_button.text = "Value MAX" if coin_value_price == 0 else "Value +1  $%d" % coin_value_price
+			shop_secondary_button.disabled = coin_value_price == 0 or coin_value_price > economy.money
+			shop_secondary_button.show()
 		"diamond_value":
 			var diamond_level: int = int(assets.levels.diamond_value)
 			action_price = assets.upgrade_price("diamond_value")
 			unavailable = action_price == 0
 			var next_diamond: String = "Maximum diamond value reached" if unavailable else "×%d → ×%d for every blue diamond" % [assets.diamond_multiplier(), IdleAssets.DIAMOND_MULTIPLIERS[diamond_level + 1]]
-			shop_detail_state.text = "Level %d / 5\n%s\nStacks with Coin Value for fish and alien drops." % [diamond_level + 1, next_diamond]
+			shop_detail_state.text = "Level %d / 5\n%s\nIndependent from ordinary Coin Value. Alien diamonds have twice the base value." % [diamond_level + 1, next_diamond]
 			shop_action_button.text = "Fully upgraded" if unavailable else "Raise diamond value  $%d" % action_price
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
@@ -1379,9 +1381,11 @@ func build_shop(hud: CanvasLayer) -> void:
 	make_button(shop_panel, "Close", Vector2(960, 14), Vector2(96, 42), toggle_shop)
 
 	var scroll := ScrollContainer.new()
+	shop_scroll = scroll
 	scroll.position = Vector2(30, 72)
 	scroll.size = Vector2(620, 430)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.scroll_deadzone = 8
 	shop_panel.add_child(scroll)
 	var grid := GridContainer.new()
 	grid.custom_minimum_size = Vector2(600, 0)
@@ -1394,9 +1398,9 @@ func build_shop(hud: CanvasLayer) -> void:
 		var card = ShopCardScript.new()
 		card.configure(item)
 		card.pressed.connect(select_shop_item.bind(item.id))
+		card.scroll_dragged.connect(scroll_shop_catalog)
 		grid.add_child(card)
 		shop_cards[item.id] = card
-
 	var detail := Panel.new()
 	detail.position = Vector2(660, 72)
 	detail.size = Vector2(430, 430)
@@ -1439,6 +1443,10 @@ func build_shop(hud: CanvasLayer) -> void:
 	label_at(shop_panel, "Purchases and upgrades are saved locally.", Vector2(760, 528), 12, Color("83a9b7"))
 	select_shop_item("fish")
 	shop_panel.hide()
+
+func scroll_shop_catalog(relative_y: float) -> void:
+	if is_instance_valid(shop_scroll):
+		shop_scroll.scroll_vertical -= roundi(relative_y)
 
 func make_button(parent: Node, text: String, at: Vector2, dimensions: Vector2, action: Callable) -> Button:
 	var button := Button.new()
@@ -1602,7 +1610,8 @@ func restore(data: Dictionary) -> void:
 		fish.coin_left = clampf(float(item.get("coin_left", 20)), 0, fish.genome.output_interval(fish.profile.coin_interval))
 	for item in data.get("coins", []).slice(0, 150):
 		var coin := spawn_coin(Vector2(item.get("x", 500), item.get("y", 650)), maxi(1, int(item.get("value", 1))), bool(item.get("diamond", false)), int(item.get("grade", -1)))
-		coin.lifetime = clampf(float(item.get("life", assets.coin_lifetime())), 0.01, TankCoin.MAX_LIFETIME)
+		var default_lifetime: float = TankCoin.BASE_LIFETIME if bool(item.get("diamond", false)) else assets.coin_lifetime()
+		coin.lifetime = clampf(float(item.get("life", default_lifetime)), 0.01, TankCoin.MAX_LIFETIME)
 		coin.grounded = bool(item.get("grounded", coin.position.y >= coin.floor_y))
 	for item in data.get("waste", []).slice(0, 100):
 		var waste := FishWaste.new()

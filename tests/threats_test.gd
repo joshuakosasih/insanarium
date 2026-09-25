@@ -32,7 +32,7 @@ func run() -> void:
 	while not alien.dead:
 		alien.hit(alien.position)
 	assert(get_nodes_in_group("coins").size() == coins + 1)
-	assert(get_nodes_in_group("coins")[-1].value == 10)
+	assert(get_nodes_in_group("coins")[-1].value == 20)
 	assert(not tank.audio.danger_music)
 	tank.set_challenges_enabled(false)
 	assert(not tank.invasions.running)

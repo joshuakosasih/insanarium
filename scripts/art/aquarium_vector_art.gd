@@ -110,40 +110,32 @@ static func draw_puffer(canvas: CanvasItem, at: Vector2, size: float = 1.0, infl
 
 static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	var shell := Color("ef8f72")
-	var shell_dark := Color("a95558")
-	var shell_light := Color("f7b29d")
-	# A tapered tail fan and one arched shell silhouette avoid the bead-like insect shape.
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-27, 3), Vector2(-46, -8), Vector2(-40, 5), Vector2(-48, 17), Vector2(-25, 12)]), shell_dark)
+	var shell := Color("f29b82")
+	var shell_dark := Color("b85f63")
+	var shell_light := Color("ffc2ad")
+	# A soft comma-shaped body and oversized head keep the helper playful.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, 4), Vector2(-42, -4), Vector2(-37, 7), Vector2(-43, 17), Vector2(-23, 12)]), shell_dark)
 	canvas.draw_colored_polygon(PackedVector2Array([
-		Vector2(-30, 4), Vector2(-25, -5), Vector2(-16, -14), Vector2(-3, -20),
-		Vector2(12, -21), Vector2(25, -15), Vector2(30, -5), Vector2(22, 3),
-		Vector2(9, 6), Vector2(-6, 9), Vector2(-20, 11)
+		Vector2(-27, 3), Vector2(-22, -7), Vector2(-12, -14), Vector2(1, -16),
+		Vector2(14, -12), Vector2(18, -2), Vector2(11, 6), Vector2(-3, 10), Vector2(-18, 11)
 	]), shell)
-	canvas.draw_polyline(PackedVector2Array([Vector2(-29, 3), Vector2(-24, -6), Vector2(-15, -15), Vector2(-2, -21), Vector2(12, -22), Vector2(25, -16)]), shell_light, 2.0, true)
-	# Curved shell plates read as an abdomen without breaking it into round beads.
+	canvas.draw_polyline(PackedVector2Array([Vector2(-25, 2), Vector2(-20, -7), Vector2(-10, -13), Vector2(2, -15), Vector2(12, -11)]), shell_light, 2.2, true)
+	for i in range(4):
+		var stripe_x: float = -18.0 + i * 7.0
+		canvas.draw_line(Vector2(stripe_x, -8 - i * 1.2), Vector2(stripe_x + 2, 7), shell_dark, 1.3, true)
+	canvas.draw_circle(Vector2(19, -8), 14.0, shell)
+	canvas.draw_circle(Vector2(24, -13), 4.2, Color("fff4e9"))
+	canvas.draw_circle(Vector2(25, -13), 2.1, Color("24343b"))
+	canvas.draw_circle(Vector2(17, -3), 2.4, Color("ef796f"))
+	canvas.draw_arc(Vector2(22, -7), 6.0, 0.35, 1.25, 8, shell_dark, 1.4, true)
+	# Short, buoyant feelers replace the previous sharp realistic antennae.
+	canvas.draw_polyline(PackedVector2Array([Vector2(27, -17), Vector2(37, -25), Vector2(48, -23 + sin(phase * 2.5))]), shell_light, 1.8, true)
+	canvas.draw_polyline(PackedVector2Array([Vector2(29, -13), Vector2(40, -18), Vector2(50, -15 + sin(phase * 2.5 + 1.0))]), shell_dark, 1.5, true)
+	# Five tiny feet paddle as a friendly wave instead of a dense realistic cluster.
 	for i in range(5):
-		var x: float = -21.0 + i * 7.2
-		var top_y: float = -8.0 - sin(float(i) * 0.42) * 7.0
-		canvas.draw_polyline(PackedVector2Array([Vector2(x, top_y), Vector2(x + 2.0, 0), Vector2(x + 1.0, 8)]), shell_dark, 1.25, true)
-	# Pointed rostrum, stalked eye, and long feelers establish the shrimp head.
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(25, -14), Vector2(43, -18), Vector2(29, -7)]), shell)
-	canvas.draw_line(Vector2(23, -16), Vector2(27, -22), shell_dark, 2.0, true)
-	canvas.draw_circle(Vector2(28, -22), 3.5, Color("f7f4e8"))
-	canvas.draw_circle(Vector2(29, -22), 1.8, Color("182934"))
-	canvas.draw_polyline(PackedVector2Array([Vector2(30, -14), Vector2(43, -29), Vector2(60, -33 + sin(phase * 2.2) * 1.5)]), shell_light, 1.4, true)
-	canvas.draw_polyline(PackedVector2Array([Vector2(30, -11), Vector2(47, -21), Vector2(63, -20 + sin(phase * 2.2 + 1.2) * 1.5)]), Color("d6796d"), 1.2, true)
-	# Tiny swimmerets ripple in sequence below the abdomen while it walks.
-	for i in range(7):
-		var swim_root := Vector2(-21 + i * 6.2, 7 - sin(float(i) * 0.35) * 2.0)
-		var swim_swing: float = sin(phase * 9.0 + float(i) * 0.85)
-		var knee := swim_root + Vector2(1.5 + swim_swing, 5.0)
-		var tip := swim_root + Vector2(4.0 + swim_swing * 2.4, 10.0)
-		canvas.draw_polyline(PackedVector2Array([swim_root, knee, tip]), shell_dark, 1.25, true)
-	for i in range(3):
-		var walk_root := Vector2(8 + i * 6, 3 - i)
-		var walk_swing: float = sin(phase * 7.0 + float(i) * 1.1)
-		canvas.draw_polyline(PackedVector2Array([walk_root, walk_root + Vector2(3, 7), walk_root + Vector2(8 + walk_swing * 2.0, 13)]), shell_dark, 1.5, true)
+		var foot_root := Vector2(-13 + i * 7.0, 8 - absf(float(i) - 2.0) * 0.7)
+		var foot_swing: float = sin(phase * 8.0 + float(i) * 0.9)
+		canvas.draw_polyline(PackedVector2Array([foot_root, foot_root + Vector2(1, 5), foot_root + Vector2(4 + foot_swing * 1.8, 9)]), shell_dark, 1.5, true)
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_feeder(canvas: CanvasItem, at: Vector2, size: float = 1.0, label: bool = false) -> void:

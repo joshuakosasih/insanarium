@@ -1,6 +1,6 @@
 # Multi-seed balance simulation
 
-Run September 25, 2026 against the real Godot gameplay systems. This is a diagnostic model, not a substitute for human playtesting. Subsequent hands-on play showed that this version materially overestimates alien danger: its one-second movement step and probabilistic action scan do not represent a warned player tracking the spawn point and tapping continuously. Treat its alien death and extinction figures as a stress case, not expected player outcomes.
+Run September 25, 2026 against the real Godot gameplay systems. This is a diagnostic model, not a substitute for human playtesting. Subsequent hands-on play showed that this version materially overestimates alien danger: its one-second movement step and probabilistic action scan do not represent a warned player tracking the spawn point and tapping continuously. Treat its alien death and extinction figures as a stress case, not expected player outcomes. The recorded economy also predates the separation of Coin Value from Diamond Value, so its late-game wallet figures are retained as historical evidence rather than current projections.
 
 ## Method
 
@@ -47,7 +47,7 @@ The peaceful loop is financially stable, but population growth is fast: the medi
 
 1. **This driver exaggerates alien pressure.** A Typical profile that checks only every two seconds loses fish in every run and suffers total extinction in 25%, while the no-alien control has no deaths. Human testing does not reproduce that result because the warning and music cause earlier attention and real input is continuous rather than quantized into one-second movement steps.
 2. **The biological growth curve is consistent.** Without alien disruption, stage timing has narrow variation and matches the analytical estimate: Teen around 1.6 minutes, Adult around 8, Royal around 23, and Diamond around 60.
-3. **Optimized income still has a runaway tail.** The optimizer's final wallet is $431.75 at the 10th percentile, $1,906.58 at the median, and $92,152.10 at the 90th percentile. Population, Diamond output, breeding, and Coin Value multiply each other. Raising upgrade prices delayed the first purchase to a median 42.5 minutes but did not remove the later compounding.
+3. **The former stacked economy had a runaway tail.** The optimizer's final wallet was $431.75 at the 10th percentile, $1,906.58 at the median, and $92,152.10 at the 90th percentile. That run allowed Diamond output and Coin Value to multiply each other. The current build separates those reward tracks and needs a fresh simulation before drawing a new late-game conclusion.
 4. **Active attention is high.** Typical peaceful play takes a median 12.8 clicks per minute. Most are bubble collection before the puffer is purchased; automation-aware feeding is already modeled. This may suit an active clicker session but is high for a relaxed idle session.
 5. **Pet-first spending does not protect the aquarium from combat.** Utility pets improve care but provide no defense, so the pet-first profile still has 70% extinction under current invasions.
 

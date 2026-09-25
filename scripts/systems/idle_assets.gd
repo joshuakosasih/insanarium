@@ -164,7 +164,7 @@ func diamond_multiplier() -> int:
 	return DIAMOND_MULTIPLIERS[clampi(int(levels.diamond_value), 0, MAX_UPGRADE_LEVEL)]
 
 func reward_value(base_value: int, diamond: bool) -> int:
-	return base_value * coin_multiplier() * (diamond_multiplier() if diamond else 1)
+	return base_value * (diamond_multiplier() if diamond else coin_multiplier())
 
 func idle_limit() -> float:
 	return idle_limit_for(int(levels.idle_duration))
