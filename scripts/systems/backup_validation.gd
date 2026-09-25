@@ -45,14 +45,18 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(data.asset_levels.snail, 0, 3) or bool(data.owned.snail) != (int(data.asset_levels.snail) > 0):
 				return {}
 		else:
-			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "idle_duration", "bubble_capacity", "bubble_value"]:
+			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "seahorse_interval", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "idle_duration", "bubble_capacity", "bubble_value"]:
 				if not integer_in_range(data.asset_levels.get(track, 0), 0, 4):
 					return {}
+			if not integer_in_range(data.asset_levels.get("seahorse_feed", 0), 0, 2):
+				return {}
 			if not data.owned.snail and (int(data.asset_levels.get("snail_speed", 0)) > 0 or int(data.asset_levels.get("snail_stamina", 0)) > 0 or int(data.asset_levels.get("snail_sleep", 0)) > 0):
 				return {}
 			if not bool(data.owned.get("puffer", data.owned.get("urchin", false))) and (int(data.asset_levels.get("puffer_speed", 0)) > 0 or int(data.asset_levels.get("puffer_curiosity", 0)) > 0):
 				return {}
 			if not bool(data.owned.get("shrimp", false)) and (int(data.asset_levels.get("shrimp_speed", 0)) > 0 or int(data.asset_levels.get("shrimp_digestion", 0)) > 0):
+				return {}
+			if not bool(data.owned.get("seahorse", false)) and (int(data.asset_levels.get("seahorse_interval", 0)) > 0 or int(data.asset_levels.get("seahorse_feed", 0)) > 0):
 				return {}
 	for tier in data.reserve:
 		if not number(tier, 0, 2):

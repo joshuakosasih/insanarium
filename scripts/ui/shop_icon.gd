@@ -9,8 +9,7 @@ var discovered: bool = true
 
 func set_discovered(value: bool) -> void:
 	discovered = value
-	# The grayscale shader keeps the exact contours and shading of the shared
-	# artwork while withholding its real colors until discovery.
+	# Keep the exact outer contour but hide every internal color and line.
 	material = null if discovered else silhouette_material()
 	queue_redraw()
 
@@ -63,8 +62,8 @@ func silhouette_material() -> ShaderMaterial:
 	shader.code = """
 shader_type canvas_item;
 void fragment() {
-	float shade = 0.09 + dot(COLOR.rgb, vec3(0.299, 0.587, 0.114)) * 0.18;
-	COLOR = vec4(vec3(shade), COLOR.a);
+	float solid_alpha = smoothstep(0.01, 0.08, COLOR.a);
+	COLOR = vec4(vec3(0.105), solid_alpha);
 }
 """
 	var result := ShaderMaterial.new()

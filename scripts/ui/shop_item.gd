@@ -19,7 +19,7 @@ static func catalog() -> Array[ShopItemDefinition]:
 		ShopItemDefinition.new("fish", "Young fish", "LIVESTOCK", "Add a young Amberfin with a random sex to the aquarium.", "fish"),
 		ShopItemDefinition.new("snail", "Snail", "HELPER", "Collects coins along the tank floor, but must sleep after spending its stamina.", "snail"),
 		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Forages for settled waste and pellets that are about to spoil, then pauses to digest.", "shrimp"),
-		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Produces free Basic feed when fish are hungry.", "seahorse"),
+		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Produces free feed when fish are hungry; upgrade its timing and pellet quality.", "seahorse"),
 		ShopItemDefinition.new("puffer", "Bubble puffer", "HELPER", "Wanders through the tank and may chase income bubbles it notices during active play.", "puffer"),
 		ShopItemDefinition.new("feeder", "Auto-feeder", "EQUIPMENT", "Uses purchased pellet stock to feed hungry fish automatically.", "feeder"),
 		ShopItemDefinition.new("stock", "Pellet stock", "SUPPLY", "Load up to 20 pellets of the currently unlocked feed into the auto-feeder.", "stock"),

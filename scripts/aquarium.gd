@@ -75,6 +75,7 @@ var shop_detail_state: Label
 var shop_action_button: Button
 var shop_secondary_button: Button
 var shop_tertiary_button: Button
+var shop_sell_button: Button
 var care_panel: Panel
 var care_details: Label
 var care_warnings: Label
@@ -312,6 +313,7 @@ func spawn_asset(kind: String) -> void:
 		seahorse.feed_produced.connect(supply_pet_food)
 		seahorse.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(seahorse)
+		seahorse.apply_upgrades(int(assets.levels.seahorse_interval), int(assets.levels.seahorse_feed))
 	elif kind == "puffer":
 		var puffer = BubblePufferScript.new()
 		puffer.presentation_scale = PET_PRESENTATION_SCALE
@@ -415,9 +417,9 @@ func update_inspection() -> void:
 		inspect_label.text = "Click a fish to inspect its sale value"
 		sell_button.text = "Select a fish to sell"
 
-func supply_pet_food(at: Vector2) -> void:
+func supply_pet_food(at: Vector2, tier: int = 0) -> void:
 	if get_tree().get_nodes_in_group("food").size() < 80:
-		spawn_food(at, feeds[0])
+		spawn_food(at, feeds[clampi(tier, 0, feeds.size() - 1)])
 
 func birth(at: Vector2, father_id: String = "", mother_id: String = "") -> void:
 	if get_tree().get_nodes_in_group("fish").size() >= breeding.BREEDING_LIMIT:
@@ -731,6 +733,14 @@ func handle_tank_click(at: Vector2) -> void:
 		if waste.position.distance_to(at) <= 20.0 * absf(waste.scale.x):
 			clean_waste(waste)
 			return
+	for pet in get_tree().get_nodes_in_group("pets"):
+		if pet is SnailPet and pet.position.distance_to(at) <= SnailPet.HIT_RADIUS * absf(pet.scale.x):
+			if pet.wake_up():
+				audio.play("bubble")
+				show_feedback(pet.position + Vector2(0, -45), "Snail woke up!")
+			else:
+				show_feedback(pet.position + Vector2(0, -45), "Snail is awake")
+			return
 	for fish in get_tree().get_nodes_in_group("fish"):
 		if fish.position.distance_to(at) < 30 * fish.visual_size:
 			if is_instance_valid(selected_fish):
@@ -826,6 +836,8 @@ func purchase_upgrade(track: String) -> void:
 				pet.apply_upgrades(int(assets.levels.puffer_speed), int(assets.levels.puffer_curiosity))
 			elif pet is CleanupShrimpScript:
 				pet.apply_upgrades(int(assets.levels.shrimp_speed), int(assets.levels.shrimp_digestion))
+			elif pet is SeahorsePet:
+				pet.apply_upgrades(int(assets.levels.seahorse_interval), int(assets.levels.seahorse_feed))
 		if track == "coin_lifetime":
 			var added: float = assets.coin_lifetime() - old_coin_lifetime
 			for coin in get_tree().get_nodes_in_group("coins"):
@@ -871,7 +883,11 @@ func activate_shop_item() -> void:
 				purchase_upgrade("shrimp_speed")
 			else:
 				purchase_asset("shrimp")
-		"seahorse": purchase_asset("seahorse")
+		"seahorse":
+			if assets.owned.seahorse:
+				purchase_upgrade("seahorse_interval")
+			else:
+				purchase_asset("seahorse")
 		"puffer":
 			if assets.owned.puffer:
 				purchase_upgrade("puffer_speed")
@@ -894,6 +910,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("puffer_curiosity")
 	elif shop_selected_id == "shrimp" and assets.owned.shrimp:
 		purchase_upgrade("shrimp_digestion")
+	elif shop_selected_id == "seahorse" and assets.owned.seahorse:
+		purchase_upgrade("seahorse_feed")
 	elif shop_selected_id == "bubbles":
 		purchase_upgrade("bubble_value")
 	refresh_shop()
@@ -902,6 +920,32 @@ func activate_shop_tertiary() -> void:
 	if shop_selected_id == "snail" and assets.owned.snail:
 		purchase_upgrade("snail_sleep")
 	refresh_shop()
+
+func activate_shop_sell() -> void:
+	var kind := shop_selected_id
+	if not kind in ["snail", "shrimp", "seahorse", "puffer"] or not bool(assets.owned.get(kind, false)):
+		return
+	var sale_value := assets.pet_sell_value(kind)
+	for pet in get_tree().get_nodes_in_group("pets"):
+		if pet_kind(pet) == kind:
+			pet.remove_from_group("pets")
+			pet.queue_free()
+	if assets.sell_pet(kind, economy) > 0:
+		audio.play("coin")
+		show_shop_message("Sold %s for $%d. Its upgrades were reset." % [pet_display_name(kind), sale_value])
+		update_money(economy.money)
+	refresh_shop()
+
+func pet_kind(pet: Node) -> String:
+	if pet is SnailPet:
+		return "snail"
+	if pet is CleanupShrimpScript:
+		return "shrimp"
+	if pet is SeahorsePet:
+		return "seahorse"
+	if pet is BubblePufferScript:
+		return "puffer"
+	return ""
 
 func refresh_shop() -> void:
 	if not is_instance_valid(shop_panel):
@@ -917,7 +961,7 @@ func refresh_shop() -> void:
 		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, breeding.CAPACITY],
 		"snail": "$%d" % assets.PRICES.snail if not assets.owned.snail else "SPD %d · STA %d · SLP %d" % [int(assets.levels.snail_speed) + 1, int(assets.levels.snail_stamina) + 1, int(assets.levels.snail_sleep) + 1],
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
-		"seahorse": "Owned" if assets.owned.seahorse else "$%d" % assets.PRICES.seahorse,
+		"seahorse": "$%d" % assets.PRICES.seahorse if not assets.owned.seahorse else "Rate %d · Feed %d" % [int(assets.levels.seahorse_interval) + 1, int(assets.levels.seahorse_feed) + 1],
 		"puffer": "$%d" % assets.PRICES.puffer if not assets.owned.puffer else "Speed %d · Curiosity %d" % [int(assets.levels.puffer_speed) + 1, int(assets.levels.puffer_curiosity) + 1],
 		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
@@ -954,6 +998,7 @@ func refresh_shop() -> void:
 	shop_tertiary_button.add_theme_font_size_override("font_size", 13)
 	shop_secondary_button.hide()
 	shop_tertiary_button.hide()
+	shop_sell_button.hide()
 	var action_price: int = 0
 	var unavailable: bool = false
 	match shop_selected_id:
@@ -1014,10 +1059,25 @@ func refresh_shop() -> void:
 				shop_secondary_button.disabled = digestion_price == 0 or digestion_price > economy.money
 				shop_secondary_button.show()
 		"seahorse":
-			action_price = assets.PRICES.seahorse
-			unavailable = assets.owned.seahorse
-			shop_detail_state.text = "Owned" if unavailable else "Produces one Basic pellet every 8 simulation seconds when needed."
-			shop_action_button.text = "Owned" if unavailable else "Buy seahorse  $%d" % action_price
+			if not assets.owned.seahorse:
+				action_price = assets.PRICES.seahorse
+				shop_detail_state.text = "Not owned\nProduces one Basic pellet every 18 simulation seconds when fish are hungry."
+				shop_action_button.text = "Buy seahorse  $%d" % action_price
+			else:
+				var interval_level: int = int(assets.levels.seahorse_interval)
+				var quality_level: int = int(assets.levels.seahorse_feed)
+				action_price = assets.upgrade_price("seahorse_interval")
+				shop_detail_state.text = "Production Lv. %d: every %ss\nPellet Lv. %d: %s\nOnly produces feed when fish need it." % [interval_level + 1, Economy.format_money(assets.seahorse_interval()), quality_level + 1, feeds[assets.seahorse_feed_tier()].title]
+				shop_action_button.position = Vector2(24, 350)
+				shop_action_button.size = Vector2(160, 58)
+				shop_action_button.text = "Rate MAX" if action_price == 0 else "Rate +1  $%d" % action_price
+				unavailable = action_price == 0
+				var feed_price: int = assets.upgrade_price("seahorse_feed")
+				shop_secondary_button.position = Vector2(222, 350)
+				shop_secondary_button.size = Vector2(160, 58)
+				shop_secondary_button.text = "Pellet MAX" if feed_price == 0 else "%s feed  $%d" % [feeds[IdleAssets.SEAHORSE_FEED_TIERS[quality_level + 1]].title, feed_price]
+				shop_secondary_button.disabled = feed_price == 0 or feed_price > economy.money
+				shop_secondary_button.show()
 		"puffer":
 			if not assets.owned.puffer:
 				action_price = assets.PRICES.puffer
@@ -1098,6 +1158,9 @@ func refresh_shop() -> void:
 			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money
 			shop_secondary_button.show()
 	shop_action_button.disabled = unavailable or action_price > economy.money
+	if shop_selected_id in ["snail", "shrimp", "seahorse", "puffer"] and bool(assets.owned.get(shop_selected_id, false)):
+		shop_sell_button.text = "Sell $%d" % assets.pet_sell_value(shop_selected_id)
+		shop_sell_button.show()
 	buy_button = shop_action_button
 
 func update_money(amount: float) -> void:
@@ -1344,6 +1407,9 @@ func build_shop(hud: CanvasLayer) -> void:
 	shop_tertiary_button = make_button(detail, "", Vector2(286, 350), Vector2(130, 58), activate_shop_tertiary)
 	shop_tertiary_button.add_theme_font_size_override("font_size", 13)
 	shop_tertiary_button.hide()
+	shop_sell_button = make_button(detail, "", Vector2(292, 14), Vector2(114, 36), activate_shop_sell)
+	shop_sell_button.add_theme_font_size_override("font_size", 13)
+	shop_sell_button.hide()
 
 	var rule := ColorRect.new()
 	rule.position = Vector2(30, 512)
@@ -1425,7 +1491,7 @@ func snapshot() -> Dictionary:
 	for food in get_tree().get_nodes_in_group("food"):
 		if not food.consumed and not food.is_queued_for_deletion():
 			pellets.append({"x": food.position.x, "y": food.position.y, "tier": feeds.find(food.profile), "life": food.lifetime})
-	var seahorse_left: float = 8.0
+	var seahorse_left: float = assets.seahorse_interval()
 	var snail_x: float = 300.0
 	var snail_stamina: float = assets.snail_stamina()
 	var snail_sleep: float = 0.0
@@ -1481,7 +1547,7 @@ func restore(data: Dictionary) -> void:
 	assets.feeder_left = clampf(float(data.get("feeder_left", 2)), 0, 2)
 	for pet in get_tree().get_nodes_in_group("pets"):
 		if pet is SeahorsePet:
-			pet.feed_left = clampf(float(data.get("seahorse_left", 8)), 0, 8)
+			pet.feed_left = clampf(float(data.get("seahorse_left", pet.feed_interval)), 0, pet.feed_interval)
 		elif pet is SnailPet:
 			pet.position.x = clampf(float(data.get("snail_x", 300)), pet.horizontal_bounds.x, pet.horizontal_bounds.y)
 			pet.stamina_left = clampf(float(data.get("snail_stamina", pet.max_stamina)), 0, pet.max_stamina)

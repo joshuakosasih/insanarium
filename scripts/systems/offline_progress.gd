@@ -29,7 +29,9 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var waste: Array = data.get("waste", []).duplicate(true)
 	var cleanliness: float = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	var feeder: float = float(data.get("feeder_left", 2.0))
-	var seahorse: float = float(data.get("seahorse_left", 8.0))
+	var seahorse_interval: float = IdleAssets.SEAHORSE_INTERVALS[clampi(int(asset_levels.get("seahorse_interval", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
+	var seahorse_tier: int = IdleAssets.SEAHORSE_FEED_TIERS[clampi(int(asset_levels.get("seahorse_feed", 0)), 0, IdleAssets.SEAHORSE_FEED_TIERS.size() - 1)]
+	var seahorse: float = clampf(float(data.get("seahorse_left", seahorse_interval)), 0.0, seahorse_interval)
 	var snail_progress: float = clampf(float(data.get("snail_collection_progress", 0.0)), 0.0, 0.999)
 	var snail_speed: float = IdleAssets.SNAIL_SPEEDS[clampi(int(asset_levels.get("snail_speed", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var snail_stamina: float = IdleAssets.SNAIL_STAMINAS[clampi(int(asset_levels.get("snail_stamina", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
@@ -130,9 +132,9 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				if reserve.is_empty():
 					report.stock_empty_at = elapsed - remaining
 		if seahorse <= 0.0:
-			seahorse = 8.0
+			seahorse = seahorse_interval
 			if owned.get("seahorse", false) and hungry and food.size() < 80:
-				food.append({"tier": 0, "life": 14.0, "x": 200, "y": 320})
+				food.append({"tier": seahorse_tier, "life": 14.0, "x": 200, "y": 320})
 		# Abstract availability: hungry fish can reach pellets; prioritize greatest need.
 		fish_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.hunger > b.hunger)
 		var survivors: Array = []

@@ -9,6 +9,7 @@ var sleep_left: float = 0.0
 var sleep_duration: float = 20.0
 var horizontal_bounds := Vector2(85, 1067)
 var presentation_scale: float = 1.0
+const HIT_RADIUS: float = 40.0
 
 func _ready() -> void:
 	add_to_group("pets")
@@ -51,6 +52,14 @@ func _process(delta: float) -> void:
 	elif stamina_left <= 0.0:
 		sleep_left = sleep_duration
 	queue_redraw()
+
+func wake_up() -> bool:
+	if sleep_left <= 0.0:
+		return false
+	sleep_left = 0.0
+	stamina_left = max_stamina
+	queue_redraw()
+	return true
 
 func _draw() -> void:
 	VectorArt.draw_snail(self, Vector2.ZERO, 1.0, sleep_left > 0.0)

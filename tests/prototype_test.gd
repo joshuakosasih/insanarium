@@ -141,6 +141,7 @@ func run() -> void:
 	var snail: SnailPet
 	var puffer
 	var shrimp: CleanupShrimpPet
+	var seahorse: SeahorsePet
 	for pet in get_nodes_in_group("pets"):
 		if pet is SnailPet:
 			snail = pet
@@ -148,9 +149,20 @@ func run() -> void:
 			puffer = pet
 		elif pet is CleanupShrimpPet:
 			shrimp = pet
+		elif pet is SeahorsePet:
+			seahorse = pet
 	check(snail != null and snail.crawl_speed == 16.0 and snail.max_stamina == 10.0 and snail.sleep_duration == 20.0, "new snail starts slow, tires quickly, and sleeps for a long time")
 	check(shrimp != null and shrimp.move_speed == 30.0 and shrimp.digestion_duration == 12.0, "new cleanup shrimp begins with modest speed and a long digestion pause")
 	check(puffer != null and puffer.move_speed == 45.0 and puffer.curiosity == 0.30, "new bubble puffer starts slow and selectively curious")
+	check(seahorse != null and seahorse.feed_interval == 18.0 and seahorse.feed_tier == 0, "new seahorse starts with deliberate Basic-feed production")
+	tank.select_shop_item("seahorse")
+	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible, "owned seahorse exposes rate, pellet quality, and sale controls")
+	balance = tank.economy.money
+	tank.activate_shop_item()
+	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 60, "seahorse production interval upgrades independently")
+	balance = tank.economy.money
+	tank.activate_shop_secondary()
+	check(tank.assets.levels.seahorse_feed == 1 and seahorse.feed_tier == 1 and tank.economy.money == balance - 150, "seahorse pellet quality upgrades to Premium")
 	tank.select_shop_item("puffer")
 	check(tank.shop_detail_title.text == "Bubble puffer" and tank.shop_secondary_button.visible, "puffer card exposes speed and curiosity upgrades")
 	balance = tank.economy.money
@@ -201,13 +213,13 @@ func run() -> void:
 	check(tank.shop_detail_title.text == "Snail" and tank.shop_secondary_button.visible and tank.shop_tertiary_button.visible, "snail card exposes speed, stamina, and sleep upgrades")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.snail_speed == 1 and snail.crawl_speed == 30.0 and tank.economy.money == balance - 15, "cheap first upgrade sharply increases snail speed")
+	check(tank.assets.levels.snail_speed == 1 and snail.crawl_speed == 30.0 and tank.economy.money == balance - 30, "first snail speed upgrade has a useful but non-trivial price")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
-	check(tank.assets.levels.snail_stamina == 1 and snail.max_stamina == 28.0 and tank.economy.money == balance - 15, "cheap first stamina upgrade sharply increases movement time")
+	check(tank.assets.levels.snail_stamina == 1 and snail.max_stamina == 28.0 and tank.economy.money == balance - 30, "first snail stamina upgrade sharply increases movement time")
 	balance = tank.economy.money
 	tank.activate_shop_tertiary()
-	check(tank.assets.levels.snail_sleep == 1 and snail.sleep_duration == 11.0 and tank.economy.money == balance - 15, "cheap first sleep upgrade sharply shortens rest time")
+	check(tank.assets.levels.snail_sleep == 1 and snail.sleep_duration == 11.0 and tank.economy.money == balance - 30, "first snail sleep upgrade sharply shortens rest time")
 	var falling_coin = tank.spawn_coin(Vector2(snail.position.x + 100, 600), 1)
 	falling_coin.set_process(false)
 	var snail_x: float = snail.position.x
@@ -220,6 +232,9 @@ func run() -> void:
 	check(snail.sleep_left == snail.sleep_duration, "snail sleeps after exhausting movement stamina")
 	snail._process(1.0)
 	check(snail.position.x == tired_x and snail.sleep_left < snail.sleep_duration, "sleeping snail stops moving")
+	var food_before_wake: int = get_nodes_in_group("food").size()
+	tank.handle_tank_click(snail.position)
+	check(snail.sleep_left == 0.0 and snail.stamina_left == snail.max_stamina and get_nodes_in_group("food").size() == food_before_wake, "tapping a sleeping snail wakes it without dropping food")
 	var old_life: float = falling_coin.lifetime
 	tank.select_shop_item("coin_lifetime")
 	balance = tank.economy.money
@@ -229,7 +244,7 @@ func run() -> void:
 	tank.select_shop_item("coin_value")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.coin_multiplier() == 2 and tank.economy.money == balance - 25, "cheap coin-value upgrade doubles future fish rewards")
+	check(tank.assets.coin_multiplier() == 2 and tank.economy.money == balance - 200, "coin-value upgrade doubles future fish rewards at its rebalanced price")
 	check(tank.shop_cards.coin_value.discovered, "first upgrade reveals its shop artwork")
 	var teen := get_nodes_in_group("fish")[0] as AquariumFish
 	teen.growth.stage = 1
@@ -279,7 +294,7 @@ func run() -> void:
 	tank._process(0.01)
 	check(tank.assets.reserve.size() == 19 and tank.economy.money == balance, "feeder consumes stock without a second charge")
 	var data: Dictionary = tank.snapshot()
-	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.owned.shrimp and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.shrimp_speed == 1 and data.asset_levels.shrimp_digestion == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
+	check(data.fish.size() == 2 and data.owned.feeder and data.owned.puffer and data.owned.shrimp and data.owned.seahorse and data.tier == 2 and data.asset_levels.snail_speed == 1 and data.asset_levels.snail_stamina == 1 and data.asset_levels.snail_sleep == 1 and data.asset_levels.shrimp_speed == 1 and data.asset_levels.shrimp_digestion == 1 and data.asset_levels.seahorse_interval == 1 and data.asset_levels.seahorse_feed == 1 and data.asset_levels.puffer_speed == 1 and data.asset_levels.puffer_curiosity == 1 and data.asset_levels.coin_lifetime == 1 and data.asset_levels.coin_value == 1 and data.asset_levels.diamond_value == 1 and data.asset_levels.idle_duration == 1 and data.asset_levels.bubble_capacity == 1 and data.asset_levels.bubble_value == 1, "snapshot includes progression automation and upgrade tracks")
 	# Round-trip JSON without touching the user's actual save.
 	check(LocalSave.write(data, "/tmp/insanarium-test-save.json"), "atomic save writer succeeds")
 	tank.queue_free()
@@ -293,6 +308,7 @@ func run() -> void:
 	var restored_snail: SnailPet
 	var restored_puffer
 	var restored_shrimp: CleanupShrimpPet
+	var restored_seahorse: SeahorsePet
 	for pet in get_nodes_in_group("pets"):
 		if pet is SnailPet:
 			restored_snail = pet
@@ -300,10 +316,20 @@ func run() -> void:
 			restored_puffer = pet
 		elif pet is CleanupShrimpPet:
 			restored_shrimp = pet
+		elif pet is SeahorsePet:
+			restored_seahorse = pet
 	check(get_nodes_in_group("fish").size() == 2 and restored.assets.reserve.size() == 19 and restored.feed_upgrades.unlocked_tier == 2 and restored.economy.money == int(data.money), "JSON round-trip restores wallet fish upgrades and stock")
 	check(restored.assets.levels.snail_speed == 1 and restored.assets.levels.snail_stamina == 1 and restored.assets.levels.snail_sleep == 1 and restored.assets.levels.coin_lifetime == 1 and restored.assets.levels.coin_value == 1 and restored.assets.levels.diamond_value == 1 and restored_snail != null and restored_snail.crawl_speed == 30.0 and restored_snail.max_stamina == 28.0 and restored_snail.sleep_duration == 11.0, "JSON round-trip restores snail and reward upgrades")
 	check(restored.assets.owned.puffer and restored_puffer != null and restored_puffer.position == Vector2(data.puffer_x, data.puffer_y) and restored_puffer.move_speed == 60.0 and restored_puffer.curiosity == 0.45, "JSON round-trip restores the bubble puffer and its upgrades")
 	check(restored.assets.owned.shrimp and restored_shrimp != null and restored_shrimp.move_speed == 45.0 and restored_shrimp.digestion_duration == 8.0 and is_equal_approx(restored_shrimp.position.x, float(data.shrimp_x)), "JSON round-trip restores cleanup shrimp state and upgrades")
+	check(restored.assets.owned.seahorse and restored_seahorse != null and restored_seahorse.feed_interval == 14.0 and restored_seahorse.feed_tier == 1, "JSON round-trip restores seahorse rate and pellet quality")
+	restored.select_shop_item("snail")
+	var pet_count_before_sale: int = get_nodes_in_group("pets").size()
+	var wallet_before_sale: float = restored.economy.money
+	var expected_sale: int = restored.assets.pet_sell_value("snail")
+	restored.activate_shop_sell()
+	await process_frame
+	check(not restored.assets.owned.snail and get_nodes_in_group("pets").size() == pet_count_before_sale - 1 and restored.economy.money == wallet_before_sale + expected_sale and restored.assets.levels.snail_speed == 0 and not restored.shop_cards.snail.discovered, "selling a pet refunds half its investment, removes it, and resets its upgrades")
 	for living in get_nodes_in_group("fish"):
 		living.die("Test")
 	restored.economy.money = 0

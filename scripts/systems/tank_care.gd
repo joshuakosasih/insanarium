@@ -13,7 +13,9 @@ static func assess(data: Dictionary) -> Dictionary:
 	for fish in data.fish:
 		var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
 		demand += profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) / meal_relief
-	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + (0.125 if data.owned.seahorse else 0.0)
+	var seahorse_level: int = clampi(int(data.get("asset_levels", {}).get("seahorse_interval", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)
+	var seahorse_supply: float = 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level] if data.owned.seahorse else 0.0
+	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + seahorse_supply
 	return {"count": data.fish.size(), "stock": data.reserve.size(),
 		"demand": demand * 60.0, "supply": supply * 60.0,
 		"adequate": supply >= demand, "report": result.report, "away_limit": limit}

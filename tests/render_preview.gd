@@ -55,6 +55,8 @@ func capture() -> void:
 		tank.select_shop_item("puffer")
 	if "--shrimp-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("shrimp")
+	if "--seahorse-shop" in OS.get_cmdline_user_args():
+		tank.select_shop_item("seahorse")
 	if "--puffed" in OS.get_cmdline_user_args():
 		for pet in get_nodes_in_group("pets"):
 			if pet is BubblePufferScript:
