@@ -7,6 +7,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	var registry := LifeRegistry.new()
 	registry.next_id = maxi(1, int(data.get("next_fish_id", 1)))
 	for item in data.get("fish", []):
+		item["species_id"] = "piranha" if str(item.get("species_id", "starter_fish")) == "piranha" else "starter_fish"
 		if source_version < 3:
 			var old_stage: int = clampi(int(item.get("stage", 0)), 0, 3)
 			# Insert Teen while preserving the equivalent maturity of existing fish.
@@ -33,6 +34,10 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	data["simulation_elapsed"] = maxf(0.0, float(data.get("simulation_elapsed", 0)))
 	data["cleanliness"] = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	data["population_goal_complete"] = bool(data.get("population_goal_complete", false))
+	data["piranha_unlocked"] = bool(data.get("piranha_unlocked", false)) or bool(data.population_goal_complete) or data.get("fish", []).size() >= 10
+	var sex_bag := FishSexBag.new()
+	sex_bag.from_data(data.get("guppy_sex_bag", []))
+	data["guppy_sex_bag"] = sex_bag.to_data()
 	if not data.has("waste") or not data.waste is Array:
 		data["waste"] = []
 	var owned: Dictionary = data.get("owned", {}).duplicate(true)

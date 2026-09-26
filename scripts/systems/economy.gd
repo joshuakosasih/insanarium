@@ -3,6 +3,7 @@ extends Node
 signal money_changed(amount: float)
 const FISH_BASE_PRICE: int = 50
 const FISH_PRICE_GROWTH: float = 1.65
+const PIRANHA_BASE_PRICE: int = 250
 var money_cents: int = 10000
 var money: float:
 	get:
@@ -22,6 +23,9 @@ func credit(amount: float) -> void:
 static func fish_price(population: int) -> int:
 	var exponent: int = maxi(0, population - 2)
 	return maxi(FISH_BASE_PRICE, roundi((FISH_BASE_PRICE * pow(FISH_PRICE_GROWTH, exponent)) / 5.0) * 5)
+
+static func piranha_price(piranha_count: int) -> int:
+	return roundi((PIRANHA_BASE_PRICE * pow(1.7, piranha_count)) / 5.0) * 5
 
 func buy_fish(population: int) -> bool:
 	return spend(fish_price(population))

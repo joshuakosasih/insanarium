@@ -16,7 +16,8 @@ func _init(item_id: String, item_title: String, item_category: String, item_desc
 
 static func catalog() -> Array[ShopItemDefinition]:
 	return [
-		ShopItemDefinition.new("fish", "Young fish", "LIVESTOCK", "Add a young Amberfin with a random sex to the aquarium.", "fish"),
+		ShopItemDefinition.new("fish", "Baby guppy", "LIVESTOCK", "Add a guppy. Sexes are drawn from a balanced marble bag.", "fish"),
+		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Babies eat pellets; hungry adults may hunt young guppies.", "piranha"),
 		ShopItemDefinition.new("snail", "Snail", "HELPER", "Collects coins along the tank floor, but must sleep after spending its stamina.", "snail"),
 		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Unlocked by an Auto-feeder or Seahorse. Forages for settled waste and expiring pellets.", "shrimp"),
 		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Unlocked by Premium feed. Produces free pellets when fish are hungry.", "seahorse"),

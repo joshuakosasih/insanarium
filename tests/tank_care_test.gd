@@ -39,6 +39,9 @@ func run() -> void:
 	check(care.adequate, "combined automation can match twenty fish while stocked")
 	var stock_case: Dictionary = data.duplicate(true)
 	stock_case.fish = stock_case.fish.slice(0, 5)
+	# Isolate the feeder reserve from pollution caused by random fish output.
+	for fish in stock_case.fish:
+		fish.coin_left = 1000000.0
 	stock_case.owned.seahorse = false
 	care = TankCare.assess(stock_case)
 	check(care.report.stock_empty_at > 0 and care.report.stock_used == 200, "forecast reports finite stock exhaustion")

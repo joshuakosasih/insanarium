@@ -6,13 +6,12 @@ static func assess(data: Dictionary) -> Dictionary:
 	checkpoint.saved_at = 0.0
 	var limit: float = IdleAssets.idle_limit_for(int(data.get("asset_levels", {}).get("idle_duration", 0)))
 	var result := OfflineProgress.advance(checkpoint, limit)
-	var profile := FishProfile.new()
 	# Fish eat at the hunger threshold; early meals cannot use all pellet nutrition.
-	var meal_relief: float = minf(profile.hungry_threshold, FeedProfile.new().nutrition)
 	var demand: float = 0.0
 	for fish in data.fish:
+		var fish_profile := FishProfile.for_species(str(fish.get("species_id", "starter_fish")))
 		var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
-		demand += profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) / meal_relief
+		demand += fish_profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
 	var seahorse_level: int = clampi(int(data.get("asset_levels", {}).get("seahorse_interval", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)
 	var seahorse_supply: float = 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level] if data.owned.seahorse else 0.0
 	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + seahorse_supply

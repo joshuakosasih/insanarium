@@ -24,6 +24,32 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_circle(Vector2(13, -16), 1.3, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
+static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
+	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+	var outline := color.darkened(0.42)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-20, 0), Vector2(-41, -16 + tail), Vector2(-38, 16 + tail)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, -3), Vector2(-36, -13 + tail), Vector2(-34, 12 + tail)]), color.darkened(0.12))
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, -9), Vector2(-12, -23), Vector2(-4, -15), Vector2(4, -26), Vector2(13, -14)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-15, 10), Vector2(-9, 22), Vector2(-3, 12)]), outline)
+	canvas.draw_set_transform(at, 0.0, Vector2(1.5, 0.88) * size)
+	canvas.draw_circle(Vector2.ZERO, 20.0, outline)
+	canvas.draw_circle(Vector2(1, -1), 18.0, color)
+	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(6, 4), Vector2(24, 3), Vector2(31, 10), Vector2(22, 16), Vector2(9, 12)]), Color("ffe1bc"))
+	canvas.draw_line(Vector2(10, 5), Vector2(29, 8), outline, 2.0, true)
+	for i in range(3):
+		var tooth_x: float = 16.0 + i * 4.0
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(tooth_x, 6), Vector2(tooth_x + 3, 7), Vector2(tooth_x + 1.5, 10)]), Color("fff8e9"))
+	canvas.draw_circle(Vector2(13, -7), 6.0, Color("fff1d7"))
+	if dead:
+		canvas.draw_line(Vector2(10, -10), Vector2(17, -4), outline, 2.0, true)
+		canvas.draw_line(Vector2(10, -4), Vector2(17, -10), outline, 2.0, true)
+	else:
+		canvas.draw_circle(Vector2(15, -7), 3.2, Color("172934"))
+	if crowned:
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(4, -16), Vector2(3, -24), Vector2(8, -20), Vector2(12, -27), Vector2(16, -20), Vector2(20, -24), Vector2(19, -16)]), Color("57b9ec"))
+	canvas.draw_set_transform(Vector2.ZERO)
+
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	if retracted:

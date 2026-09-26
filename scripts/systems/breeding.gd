@@ -30,10 +30,16 @@ func advance(delta: float, fish_list: Array) -> void:
 			males.append(fish)
 		elif fish.sex == AquariumFish.Sex.FEMALE:
 			females.append(fish)
-	if males.is_empty() or females.is_empty() or randf() >= chance:
+	var pairs: Array = []
+	for male in males:
+		for female in females:
+			if male.profile.species_id == female.profile.species_id:
+				pairs.append([male, female])
+	if pairs.is_empty() or randf() >= chance:
 		return
-	var male = males.pick_random()
-	var female = females.pick_random()
+	var pair: Array = pairs.pick_random()
+	var male: AquariumFish = pair[0]
+	var female: AquariumFish = pair[1]
 	male.breeding_left = male.genome.breeding_cooldown()
 	female.breeding_left = female.genome.breeding_cooldown()
 	offspring_requested.emit((male.position + female.position) * 0.5, male.life.id, female.life.id)

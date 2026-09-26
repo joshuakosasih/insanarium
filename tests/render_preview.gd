@@ -34,6 +34,24 @@ func capture() -> void:
 		fish.wander_left = 5.0
 		tank.spawn_coin(Vector2(600, 400), 100, true)
 		tank.spawn_coin(Vector2(400, 650), 20)
+	if "--piranha" in OS.get_cmdline_user_args():
+		tank.piranha_unlocked = true
+		tank.economy.credit(300)
+		tank.purchase_piranha()
+		var predator: AquariumFish = get_nodes_in_group("fish")[-1]
+		predator.growth.stage = 2
+		predator.visual_size = predator.profile.growth_sizes[2] * predator.presentation_scale
+		predator.scale = Vector2.ONE * predator.visual_size
+		predator.position = Vector2(510, 345)
+		predator.destination = Vector2(650, 345)
+		predator.hunger = 0.2
+		predator.queue_redraw()
+		var guppy: AquariumFish = get_nodes_in_group("fish")[0]
+		guppy.growth.stage = 1
+		guppy.visual_size = guppy.profile.growth_sizes[1] * guppy.presentation_scale
+		guppy.scale = Vector2.ONE * guppy.visual_size
+		guppy.position = Vector2(675, 340)
+		guppy.queue_redraw()
 	if "--warning" in OS.get_cmdline_user_args():
 		tank.invasions.begin_warning()
 	if "--alien" in OS.get_cmdline_user_args():
@@ -55,6 +73,8 @@ func capture() -> void:
 		print("Shop preview: position=", tank.shop_panel.position, " size=", tank.shop_panel.size)
 	if "--snail-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("snail")
+	if "--piranha-shop" in OS.get_cmdline_user_args():
+		tank.select_shop_item("piranha")
 	if "--puffer-shop" in OS.get_cmdline_user_args():
 		tank.select_shop_item("puffer")
 	if "--shrimp-shop" in OS.get_cmdline_user_args():

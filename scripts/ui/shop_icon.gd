@@ -22,6 +22,8 @@ func _draw() -> void:
 	match icon_kind:
 		"fish":
 			VectorArt.draw_fish(self, Vector2.ZERO, 1.25, Color("f6be73"))
+		"piranha":
+			VectorArt.draw_piranha(self, Vector2.ZERO, 1.25, Color("dd6c63"))
 		"snail":
 			VectorArt.draw_snail(self, Vector2(0, 12), 1.25)
 		"shrimp":

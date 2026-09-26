@@ -10,7 +10,11 @@ func run() -> void:
 		tank.spawn_fish()
 	tank.breeding.enabled = false # Fixed-population automation test.
 	tank.economy.credit(2000)
-	for kind in ["snail", "shrimp", "seahorse", "puffer", "feeder"]:
+	for kind in ["snail", "feeder", "shrimp"]:
+		tank.purchase_asset(kind)
+	tank.purchase_feed_upgrade()
+	tank.purchase_upgrade("bubble_capacity")
+	for kind in ["seahorse", "puffer"]:
 		tank.purchase_asset(kind)
 	for i in range(10):
 		tank.restock()

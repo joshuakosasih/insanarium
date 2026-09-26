@@ -62,7 +62,7 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 12, "shop starts closed with reusable product cards")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 13, "shop starts closed with reusable product cards")
 	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coins.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	check(tank.shop_scroll.scroll_deadzone == 8, "shop catalog uses a short touch-drag threshold")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")

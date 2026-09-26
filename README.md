@@ -12,7 +12,7 @@ Import `project.godot` in the standard Godot editor and press **F5**. Or run `go
 
 ## Idle loop
 
-Start with two fully fed amber fish and $100. Click water to feed, click rewards to collect, and click a fish to inspect it. Selling requires the separate **Sell fish** button, which displays its exact value. The first persistent tank objective is to reach 15 living fish. The goal remains complete afterward, while purchases and breeding can continue to the hard 20-fish safety cap.
+Start with a fully fed male and female guppy and $100. Click water to feed, click rewards to collect, and click a fish to inspect it. Selling requires the separate **Sell fish** button, which displays its exact value. Reaching 10 living fish permanently unlocks baby Piranhas in the shop; reaching 15 completes the first persistent tank goal. Purchases and breeding can continue to the hard 20-fish safety cap.
 
 **Income bubbles** appear every 3–5 active seconds, including at $0 with no fish. Small unlabelled bubbles rise from near the bottom to the surface. Pop one for a random $0.50, $1, $2, or $3; the reward is revealed after popping. The tank initially holds one bubble at a time. Capacity upgrades raise that limit through 1, 2, 3, 5, and 8, while a separate value track multiplies every reward by 1×, 1.5×, 2.25×, 3.5×, and 5×. Each track costs $30, $90, $270, then $810. Bubbles disappear at the surface after roughly 22–24 seconds; missed bubbles give no money. A purchased Bubble Puffer wanders through the water and may chase each bubble it notices. It pops accepted targets on contact and briefly inflates afterward. Bubbles are active-play income and are not generated offline, so the puffer earns no offline bubble income. Wallet arithmetic uses integer cents, retaining fractional dollars through purchases, saves, backups, and offline care. A replacement or third fish costs $50; each additional living fish raises the next shop price by about 65%, rounded to the nearest $5. The price reaches $2,745 at ten fish and $249,000 at nineteen, making breeding and selling stock central near the capacity limit. Losing or selling every fish does not reset the tank, upgrades, or pets: earn money and rebuild.
 
@@ -24,7 +24,7 @@ Start with two fully fed amber fish and $100. Click water to feed, click rewards
 | Royal | 30 growth credits | $3 gold | $350 | $700 |
 | Diamond | 75 actual meals | $10 blue diamond | $1,200 | $2,400 |
 
-Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Every normal fish is amber. Diamond fish wear a tiny blue crown attached to the head in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. Coin Value multiplies ordinary fish coins by 1×, 2×, 3×, 5×, and 8× for $200, $800, $3,200, and $12,800. Diamond Value independently multiplies blue diamonds by 1×, 2×, 4×, 7×, and 12× for $150, $450, $1,350, and $4,050. The multipliers do not stack; coin color continues to show the producing fish's stage. The assumptions, milestone estimates, and upgrade payback math are recorded in [`docs/BALANCE_MODEL.md`](docs/BALANCE_MODEL.md); multi-seed player simulations and findings are in [`docs/BALANCE_SIMULATION.md`](docs/BALANCE_SIMULATION.md).
+Babies are deliberately brief and do not produce coins or waste. Two Basic meals produce a visibly larger Teen and start bronze-coin income; Adult, Royal, and Diamond remain longer goals. Existing saves retain equivalent maturity through schema migration. Normal guppies are amber; normal piranhas are red. Diamond fish wear a tiny blue crown attached to the head in the aquarium and reveal card. Each growth-stage transition has an **8% mutation chance** for an unmutated fish. A mutation changes its color to Azure, Rose, or Jade and doubles its sale value. Each fish can mutate only once; mutation does not increase coin production. Already purchased or starting babies do not randomly start mutated. Coin Value multiplies ordinary fish coins by 1×, 2×, 3×, 5×, and 8× for $200, $800, $3,200, and $12,800. Diamond Value independently multiplies blue diamonds by 1×, 2×, 4×, 7×, and 12× for $150, $450, $1,350, and $4,050. The multipliers do not stack; coin color continues to show the producing fish's stage. The assumptions, milestone estimates, and upgrade payback math are recorded in [`docs/BALANCE_MODEL.md`](docs/BALANCE_MODEL.md); multi-seed player simulations and findings are in [`docs/BALANCE_SIMULATION.md`](docs/BALANCE_SIMULATION.md).
 
 ## Feed and survival
 
@@ -58,7 +58,9 @@ Save schema 3 migrates existing schema 1 and 2 files at the same local path. Leg
 
 ## Sex, breeding, and population
 
-Fish are randomly assigned Male, Female, or Asexual, shown when selected. Well-fed adult-or-older Male/Female pairs can breed. Every 30 simulation seconds, one eligible pair has a 25% chance of producing one normal baby with a random sex. Each parent receives its own Fertility-based cooldown between three and seven simulation minutes. Asexual fish do not reproduce in this version. All five traits are inherited; color mutation remains tied to later growth rather than parent color.
+Purchased and newborn guppies draw sexes from a nine-marble bag containing exactly three Male, three Female, and three Asexual. The bag refills after nine draws, and its remaining marbles are saved. The starter pair is always Male/Female. Piranhas are randomly Male or Female. Well-fed adult-or-older Male/Female pairs of the **same species** can breed. Every 30 simulation seconds, one eligible pair has a 25% chance of producing one baby of that species. Each parent receives its own Fertility-based cooldown between three and seven simulation minutes. Asexual guppies do not reproduce in this version. All five traits are inherited; color mutation remains tied to later growth rather than parent color.
+
+Baby piranhas cost $250 after the permanent 10-fish unlock; each additional piranha raises the next price by 70%. Babies and Teens eat pellets. Once Adult, a hungry piranha hunts Baby and Teen guppies if no pellet is available, swimming toward a nearby target and eating it on contact. Adult guppies are too large. Piranhas can still eat pellets as adults, so feeding them protects young guppies. Their separate vector art, species identity, growth, traits, and breeding persist in saves. Away calculations estimate piranha hunger, growth, and output but do not simulate predation, as no swimming occurs offline.
 
 Reaching 15 living fish completes the first tank population goal, which remains completed even if fish later die or are sold. The final Away Time upgrade uses this milestone as one of its progression requirements. Purchases and breeding both stop at 20 without charging money; sell fish to reopen room. **Allow breeding** disables births manually. Sex, cooldowns, breeding preference, and goal completion are saved. Old saves without sex information receive random assignments. Existing fish are not killed or discarded to enforce the cap.
 
@@ -72,7 +74,7 @@ Catch-up covers hunger, starvation, food expiry, stocked feeding, seahorse food,
 
 Open **Controls** above the aquarium for live hunger/stock/population warnings and an away forecast matching the current Away Time level. Before the first upgrade, the panel explains that offline simulation is locked. It shows reserve exhaustion, first starvation risk, and estimated feeding demand versus available automation. Predictions use the same offline care model without changing the tank, money, or random growth outcomes. Shop and Controls pause the aquarium while open, so aliens, hunger, movement, and other simulation clocks cannot advance while the player reads or purchases. The care forecast refreshes whenever Controls opens.
 
-Capacity assumes current Amberfin hunger and eating thresholds, accounting for nutrition wasted by early meals. A sufficient feeding rate does not mean unlimited food: the separate reserve forecast shows when stocked supply stops. Coverage is approximate, assumes a fixed population, and excludes away breeding and alien attacks. Active swimming and competition may produce different outcomes. Premium and Deluxe improve growth, not hunger relief.
+Capacity uses each fish species' hunger and eating thresholds, accounting for nutrition wasted by early meals. A sufficient feeding rate does not mean unlimited food: the separate reserve forecast shows when stocked supply stops. Coverage is approximate, assumes a fixed population, and excludes away breeding, piranha predation, and alien attacks. Active swimming and competition may produce different outcomes. Premium and Deluxe improve growth, not hunger relief.
 
 ## Purchasable automation
 
@@ -128,7 +130,7 @@ Visit `http://localhost:8000`. The server only serves static files; it is not a 
 
 - `scenes/aquarium.tscn`: main scene.
 - `scripts/aquarium.gd`: habitat, UI, purchases, selling, automation coordination, save snapshot/restore.
-- `scripts/creatures/`: species profile, movement, meal progression, mutation/sale values, health, starvation, individual history (`fish_life.gd`), and inspector formatting (`fish_inspector.gd`).
+- `scripts/creatures/`: species profiles, movement, modular predation rules (`fish_predation.gd`), the saved guppy sex bag (`fish_sex_bag.gd`), meal progression, mutation/sale values, health, starvation, individual history, and inspector formatting.
 - `scripts/systems/life_registry.gd`: non-reusable ID allocation and tank simulation time.
 - `scripts/systems/save_migration.gd`: legacy identity migration.
 - `scripts/entities/`: food, visible waste, feed profiles, collectible rewards, and income bubbles.
@@ -162,6 +164,7 @@ godot --headless --path . --script tests/threats_test.gd -- --test
 godot --headless --path . --script tests/idle_soak.gd -- --test
 godot --headless --path . --script tests/activity_test.gd -- --test
 godot --headless --path . --script tests/breeding_test.gd -- --test
+godot --headless --path . --script tests/piranha_test.gd -- --test
 godot --headless --path . --script tests/lifecycle_test.gd -- --test
 godot --headless --path . --script tests/offline_test.gd -- --test
 godot --headless --path . --script tests/tank_care_test.gd -- --test

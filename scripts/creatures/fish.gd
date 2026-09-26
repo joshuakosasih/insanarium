@@ -24,6 +24,7 @@ var bounds: Rect2
 var hunger: float = 0.0
 var destination: Vector2
 var food_target: FishFood
+var prey_target: AquariumFish
 var wander_left: float = 0.0
 var coin_left: float = 0.0
 var facing: float = 1.0
@@ -76,13 +77,21 @@ func _process(delta: float) -> void:
 			if distance < nearest:
 				nearest = distance
 				food_target = item
+	if hunger < profile.predation_hunger or not is_instance_valid(prey_target) or (prey_target != null and not FishPredation.eligible(self, prey_target)):
+		prey_target = null
+	if food_target != null:
+		prey_target = null
+	elif prey_target == null:
+		prey_target = FishPredation.nearest(self, get_tree().get_nodes_in_group("fish"))
 	wander_left -= delta
 	if food_target != null:
 		destination = food_target.position
+	elif prey_target != null:
+		destination = prey_target.position
 	elif wander_left <= 0.0 or position.distance_to(destination) < 12.0:
 		choose_destination()
 	var movement: Vector2 = destination - position
-	var movement_speed: float = swim_speed() * (1.5 if food_target != null else 1.0)
+	var movement_speed: float = swim_speed() * (1.5 if food_target != null else (1.35 if prey_target != null else 1.0))
 	position = position.move_toward(destination, movement_speed * delta)
 	position = position.clamp(bounds.position, bounds.end)
 	if absf(movement.x) > 3.0:
@@ -97,6 +106,13 @@ func _process(delta: float) -> void:
 			survival.fed()
 			growth.record_meal(profile, food_target.profile.growth_credit, genome.growth_multiplier())
 		food_target = null
+		choose_destination()
+	if prey_target != null and position.distance_to(prey_target.position) < 20.0 * visual_size + 8.0:
+		if FishPredation.eligible(self, prey_target) and prey_target.consume_by_predator():
+			hunger = maxf(0.0, hunger - profile.prey_nutrition)
+			survival.fed()
+			growth.record_meal(profile, profile.prey_growth_credit, genome.growth_multiplier())
+		prey_target = null
 		choose_destination()
 	if survival.advance(hunger, delta, profile.starvation_grace):
 		die("Starved")
@@ -121,6 +137,16 @@ func die(reason: String) -> void:
 	tween.chain().tween_property(self, "modulate:a", 0.0, 0.6)
 	tween.chain().tween_callback(queue_free)
 
+func consume_by_predator() -> bool:
+	if dead:
+		return false
+	dead = true
+	remove_from_group("fish")
+	set_process(false)
+	died.emit(position, "Eaten by piranha")
+	queue_free()
+	return true
+
 func current_coin_value() -> int:
 	return profile.coin_value * profile.growth_rewards[growth.stage]
 
@@ -138,9 +164,12 @@ func _on_stage_changed(stage: int) -> void:
 func _draw() -> void:
 	if selected and not dead:
 		draw_arc(Vector2.ZERO, 33, 0, TAU, 40, Color("d4f0df"), 1.5, true)
-	var color: Color = mutation.COLORS[mutation.variant]
+	var color: Color = profile.body_color if mutation.variant == 0 else mutation.COLORS[mutation.variant]
 	var tail: float = sin(phase) * 4.0
-	VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
+	if profile.species_id == "piranha":
+		VectorArt.draw_piranha(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
+	else:
+		VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
 	if not dead and hunger >= profile.hungry_threshold:
 		draw_circle(Vector2(0, -34), 5, Color("ff657f") if hunger >= 1.0 else Color("ffa86b"))
 	if not dead and hunger >= 1.0:

@@ -40,6 +40,16 @@ static func parse(text: String) -> Dictionary:
 			return {}
 	if data.has("population_goal_complete") and not data.population_goal_complete is bool:
 		return {}
+	if data.has("piranha_unlocked") and not data.piranha_unlocked is bool:
+		return {}
+	if data.has("guppy_sex_bag"):
+		if not data.guppy_sex_bag is Array or data.guppy_sex_bag.size() > 9:
+			return {}
+		var available := [0, 0, 0, 1, 1, 1, 2, 2, 2]
+		for marble in data.guppy_sex_bag:
+			if not integer_in_range(marble, 0, 2) or not available.has(int(marble)):
+				return {}
+			available.erase(int(marble))
 	if data.has("asset_levels"):
 		if not data.asset_levels is Dictionary:
 			return {}
@@ -65,6 +75,8 @@ static func parse(text: String) -> Dictionary:
 			return {}
 	for fish in data.fish:
 		if not fish is Dictionary:
+			return {}
+		if fish.has("species_id") and (not fish.species_id is String or not fish.species_id in ["starter_fish", "piranha"]):
 			return {}
 		for key in ["x", "y", "hunger", "stage", "meals", "credit", "mutation", "starving", "coin_left", "sex", "breeding_left"]:
 			if not number(fish.get(key, 0), 0, 1000000000000):

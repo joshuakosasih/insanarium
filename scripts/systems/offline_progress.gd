@@ -16,6 +16,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(JSON.stringify(source))
 	var profile := FishProfile.new()
+	var profiles := {"starter_fish": profile, "piranha": FishProfile.for_species("piranha")}
 	var feeds := FeedProfile.tiers()
 	var owned: Dictionary = data.get("owned", {})
 	var asset_levels: Dictionary = data.get("asset_levels", {})
@@ -119,11 +120,12 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				report.spoiled += 1
 		var hungry: bool = false
 		for fish in fish_list:
+			var fish_profile: FishProfile = profiles.get(str(fish.get("species_id", "starter_fish")), profile)
 			var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
-			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) * dt)
+			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + fish_profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) * dt)
 			fish.life.age = float(fish.life.age) + dt
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
-			hungry = hungry or fish.hunger >= profile.hungry_threshold
+			hungry = hungry or fish.hunger >= fish_profile.hungry_threshold
 		feeder -= dt
 		seahorse = maxf(0.0, seahorse - dt)
 		if feeder <= 0.0:
@@ -141,6 +143,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		fish_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.hunger > b.hunger)
 		var survivors: Array = []
 		for fish in fish_list:
+			var fish_profile: FishProfile = profiles.get(str(fish.get("species_id", "starter_fish")), profile)
 			var genome_data: Dictionary = fish.get("genome", {})
 			var metabolism: float = FishGenome.phenotype_from_data(genome_data, "metabolism")
 			var allocation: float = FishGenome.phenotype_from_data(genome_data, "allocation")
@@ -151,7 +154,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				if report.first_old_age_loss_at < 0.0:
 					report.first_old_age_loss_at = elapsed - remaining
 				continue
-			var health_rate: float = FishHealth.rate_for_conditions(cleanliness, fish.hunger < profile.hungry_threshold)
+			var health_rate: float = FishHealth.rate_for_conditions(cleanliness, fish.hunger < fish_profile.hungry_threshold)
 			var constitution: float = FishGenome.constitution_for(allocation)
 			health_rate = health_rate * constitution if health_rate >= 0.0 else health_rate / constitution
 			var maximum_health: float = FishGenome.max_health_for(vitality)
@@ -162,7 +165,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				if report.first_water_loss_at < 0.0:
 					report.first_water_loss_at = elapsed - remaining
 				continue
-			if fish.hunger >= profile.hungry_threshold and not food.is_empty():
+			if fish.hunger >= fish_profile.hungry_threshold and not food.is_empty():
 				var pellet: Dictionary = food.pop_front()
 				var feed: FeedProfile = feeds[clampi(int(pellet.tier), 0, 2)]
 				fish.hunger = maxf(0.0, fish.hunger - feed.nutrition)
@@ -171,8 +174,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				fish.credit = float(fish.get("credit", 0)) + feed.growth_credit * FishGenome.growth_multiplier_for(metabolism)
 				report.fed += 1
 				var old_stage: int = int(fish.get("stage", 0))
-				for stage in range(profile.growth_meals.size()):
-					if fish.credit >= profile.growth_meals[stage] and fish.meals >= profile.minimum_meals[stage]:
+				for stage in range(fish_profile.growth_meals.size()):
+					if fish.credit >= fish_profile.growth_meals[stage] and fish.meals >= fish_profile.minimum_meals[stage]:
 						fish.stage = maxi(int(fish.get("stage", 0)), stage)
 				if int(fish.stage) > old_stage:
 					report.growth += 1
@@ -180,14 +183,14 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 						fish.mutation = rng.randi_range(1, 3)
 						report.mutations += 1
 			fish.starving = float(fish.get("starving", 0)) + dt if fish.hunger >= 1.0 else 0.0
-			if fish.starving >= profile.starvation_grace:
+			if fish.starving >= fish_profile.starvation_grace:
 				report.lost += 1
 				if report.first_loss_at < 0.0:
 					report.first_loss_at = elapsed - remaining
 				continue
-			fish.coin_left = float(fish.get("coin_left", profile.coin_interval)) - dt
+			fish.coin_left = float(fish.get("coin_left", fish_profile.coin_interval)) - dt
 			if fish.coin_left <= 0.0:
-				fish.coin_left += FishGenome.output_interval_for(profile.coin_interval, metabolism)
+				fish.coin_left += FishGenome.output_interval_for(fish_profile.coin_interval, metabolism)
 				var output_stage: int = int(fish.get("stage", 0))
 				if output_stage <= 0:
 					pass
@@ -197,8 +200,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 					if waste.size() < 100:
 						waste.append({"x": fish.get("x", 550), "y": 642, "settled": true, "life": FishWaste.FLOOR_LIFETIME})
 				else:
-					var is_diamond: bool = output_stage == profile.diamond_stage
-					var value: int = profile.coin_value * profile.growth_rewards[output_stage] * (diamond_multiplier if is_diamond else coin_multiplier)
+					var is_diamond: bool = output_stage == fish_profile.diamond_stage
+					var value: int = fish_profile.coin_value * fish_profile.growth_rewards[output_stage] * (diamond_multiplier if is_diamond else coin_multiplier)
 					report.earned += value
 					if rewards.size() < 150:
 						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": is_diamond, "grade": output_stage, "life": diamond_lifetime if is_diamond else coin_lifetime, "grounded": true})

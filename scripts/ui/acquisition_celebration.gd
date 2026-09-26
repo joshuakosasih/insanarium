@@ -79,6 +79,7 @@ func _draw() -> void:
 		"shrimp": VectorArt.draw_shrimp(self, center + Vector2(0, 10), icon_scale, elapsed)
 		"seahorse": VectorArt.draw_seahorse(self, center + Vector2(0, 12), icon_scale, elapsed)
 		"puffer": VectorArt.draw_puffer(self, center, icon_scale, elapsed < 0.55, elapsed)
+		"piranha": VectorArt.draw_piranha(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned)
 		_: VectorArt.draw_fish(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned)
 	draw_string(ThemeDB.fallback_font, Vector2(40, 527), "A NEW DISCOVERY", HORIZONTAL_ALIGNMENT_CENTER, size.x - 80, 12, Color("83a9b7"))
 
