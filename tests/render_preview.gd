@@ -9,7 +9,11 @@ func capture() -> void:
 	root.add_child(tank)
 	if "--idle" in OS.get_cmdline_user_args():
 		tank.economy.credit(1500)
-		for kind in ["snail", "shrimp", "seahorse", "puffer", "feeder"]:
+		for kind in ["snail", "feeder", "shrimp"]:
+			tank.purchase_asset(kind)
+		tank.purchase_feed_upgrade()
+		tank.purchase_upgrade("bubble_capacity")
+		for kind in ["seahorse", "puffer"]:
 			tank.purchase_asset(kind)
 		tank.restock()
 		var specimen = get_nodes_in_group("fish")[0]

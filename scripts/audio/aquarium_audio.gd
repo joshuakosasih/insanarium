@@ -16,6 +16,7 @@ var last_played: Dictionary = {}
 var calm_music: AudioStreamPlayer
 var alien_music: AudioStreamPlayer
 var danger_music: bool = false
+var backgrounded: bool = false
 
 func _ready() -> void:
 	if not "--test" in OS.get_cmdline_user_args():
@@ -39,7 +40,7 @@ func _ready() -> void:
 		start_music()
 
 func _process(delta: float) -> void:
-	if music_muted:
+	if music_muted or backgrounded:
 		return
 	var calm_target: float = SILENT_DB if danger_music else CALM_DB
 	var alien_target: float = ALIEN_DB if danger_music else SILENT_DB
@@ -58,7 +59,7 @@ func _exit_tree() -> void:
 
 func set_music_muted(value: bool) -> void:
 	music_muted = value
-	if music_muted:
+	if music_muted or backgrounded:
 		calm_music.stop()
 		alien_music.stop()
 	else:
@@ -81,9 +82,21 @@ func save_preferences() -> void:
 
 func set_danger_music(enabled: bool) -> void:
 	danger_music = enabled
-	if music_muted:
+	if music_muted or backgrounded:
 		return
 	if not calm_music.playing or not alien_music.playing:
+		start_music()
+
+func set_backgrounded(value: bool) -> void:
+	if backgrounded == value:
+		return
+	backgrounded = value
+	if backgrounded:
+		calm_music.stop()
+		alien_music.stop()
+		for voice in voices:
+			voice.stop()
+	elif not music_muted:
 		start_music()
 
 func start_music() -> void:

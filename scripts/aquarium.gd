@@ -31,6 +31,8 @@ var pace_label: Label
 var away_data: Dictionary = {}
 var offline_ready: bool = false
 var applying_offline: bool = false
+var web_visibility_callback: JavaScriptObject
+var web_hidden_callback: JavaScriptObject
 var return_dialog: AcceptDialog
 var transfer: SaveTransfer
 var import_dialog: ConfirmationDialog
@@ -142,12 +144,17 @@ func _ready() -> void:
 		show_return(result.report)
 	update_money(economy.money)
 	offline_ready = true
+	setup_web_visibility_listener()
 	if persistence:
 		save_now()
 	set_idle(false if "--test" in OS.get_cmdline_user_args() else not get_window().has_focus())
 
 func set_idle(idle: bool) -> void:
+	if not idle and OS.has_feature("web"):
+		idle = bool(JavaScriptBridge.eval("document.hidden || !document.hasFocus()", true))
 	ActivityPace.set_idle(idle)
+	if is_instance_valid(audio):
+		audio.set_backgrounded(idle)
 	if is_instance_valid(pace_label):
 		pace_label.text = "AWAY · 0.1× EST." if idle else "ACTIVE · 1×"
 	if not persistence or not offline_ready or applying_offline:
@@ -160,6 +167,27 @@ func set_idle(idle: bool) -> void:
 		away_data = {}
 		apply_catchup(data)
 	update_pause_state()
+
+func setup_web_visibility_listener() -> void:
+	if not OS.has_feature("web"):
+		return
+	web_visibility_callback = JavaScriptBridge.create_callback(_on_web_visibility_changed)
+	web_hidden_callback = JavaScriptBridge.create_callback(_on_web_hidden)
+	var document = JavaScriptBridge.get_interface("document")
+	if document:
+		document.addEventListener("visibilitychange", web_visibility_callback)
+	var window = JavaScriptBridge.get_interface("window")
+	if window:
+		window.addEventListener("pagehide", web_hidden_callback)
+		window.addEventListener("blur", web_hidden_callback)
+		window.addEventListener("pageshow", web_visibility_callback)
+		window.addEventListener("focus", web_visibility_callback)
+
+func _on_web_visibility_changed(_args: Array) -> void:
+	set_idle(bool(JavaScriptBridge.eval("document.hidden || !document.hasFocus()", true)))
+
+func _on_web_hidden(_args: Array) -> void:
+	set_idle(true)
 
 func update_pause_state() -> void:
 	menu_paused = (is_instance_valid(shop_panel) and shop_panel.visible) or (is_instance_valid(care_panel) and care_panel.visible)
@@ -285,6 +313,10 @@ func finish_import() -> void:
 	save_label.text = "Backup restored"
 
 func purchase_asset(kind: String) -> void:
+	var requirement := asset_requirement(kind)
+	if not requirement.is_empty():
+		show_shop_message(requirement + " first.")
+		return
 	if assets.purchase(kind, economy):
 		spawn_asset(kind)
 		audio.play("buy")
@@ -882,15 +914,9 @@ func upgrade_requirement(track: String) -> String:
 	if assets.upgrade_price(track) == 0:
 		return ""
 	match track:
-		"coin_value":
-			if int(assets.levels.coin_lifetime) <= int(assets.levels.coin_value):
-				return "Requires Coin Lifetime Lv. %d" % (int(assets.levels.coin_value) + 2)
-		"diamond_value":
-			if int(assets.levels.diamond_lifetime) <= int(assets.levels.diamond_value):
-				return "Requires Diamond Lifetime Lv. %d" % (int(assets.levels.diamond_value) + 2)
-		"bubble_value":
-			if int(assets.levels.bubble_capacity) <= int(assets.levels.bubble_value):
-				return "Requires Bubble Capacity Lv. %d" % (int(assets.levels.bubble_value) + 2)
+		"diamond_value", "diamond_lifetime":
+			if int(assets.levels.coin_lifetime) == 0 and int(assets.levels.coin_value) == 0:
+				return "Requires any Fish Coins upgrade"
 		"idle_duration":
 			var level: int = int(assets.levels.idle_duration)
 			if level == 1 and not assets.owned.feeder:
@@ -899,6 +925,19 @@ func upgrade_requirement(track: String) -> String:
 				return "Requires Seahorse"
 			if level == 3 and not population_goal_complete:
 				return "Requires the %d-fish goal" % breeding.POPULATION_GOAL
+	return ""
+
+func asset_requirement(kind: String) -> String:
+	match kind:
+		"shrimp":
+			if not assets.owned.feeder and not assets.owned.seahorse:
+				return "Requires Auto-feeder or Seahorse"
+		"seahorse":
+			if feed_upgrades.unlocked_tier < 1:
+				return "Requires Premium feed"
+		"puffer":
+			if int(assets.levels.bubble_capacity) == 0 and int(assets.levels.bubble_value) == 0:
+				return "Requires any Income Bubbles upgrade"
 	return ""
 
 func show_shop_message(message: String) -> void:
@@ -1105,8 +1144,10 @@ func refresh_shop() -> void:
 		"shrimp":
 			if not assets.owned.shrimp:
 				action_price = assets.PRICES.shrimp
-				shop_detail_state.text = "Not owned\nSpeed: %d px/s · Digestion: %ds\nRestores %.2f cleanliness per waste." % [int(assets.shrimp_speed()), int(assets.shrimp_digestion()), TankEnvironment.SHRIMP_WASTE_RECOVERY]
-				shop_action_button.text = "Buy cleanup shrimp  $%d" % action_price
+				var shrimp_requirement := asset_requirement("shrimp")
+				unavailable = not shrimp_requirement.is_empty()
+				shop_detail_state.text = "Not owned\nSpeed: %d px/s · Digestion: %ds\n%s" % [int(assets.shrimp_speed()), int(assets.shrimp_digestion()), shrimp_requirement if unavailable else "Restores %.2f cleanliness per waste." % TankEnvironment.SHRIMP_WASTE_RECOVERY]
+				shop_action_button.text = shrimp_requirement if unavailable else "Buy cleanup shrimp  $%d" % action_price
 			else:
 				var shrimp_speed_level: int = int(assets.levels.shrimp_speed)
 				var shrimp_digestion_level: int = int(assets.levels.shrimp_digestion)
@@ -1125,8 +1166,10 @@ func refresh_shop() -> void:
 		"seahorse":
 			if not assets.owned.seahorse:
 				action_price = assets.PRICES.seahorse
-				shop_detail_state.text = "Not owned\nProduces one Basic pellet every 18 simulation seconds when fish are hungry."
-				shop_action_button.text = "Buy seahorse  $%d" % action_price
+				var seahorse_requirement := asset_requirement("seahorse")
+				unavailable = not seahorse_requirement.is_empty()
+				shop_detail_state.text = "Not owned\nProduces one Basic pellet every 18 simulation seconds when fish are hungry.\n%s" % seahorse_requirement
+				shop_action_button.text = seahorse_requirement if unavailable else "Buy seahorse  $%d" % action_price
 			else:
 				var interval_level: int = int(assets.levels.seahorse_interval)
 				var quality_level: int = int(assets.levels.seahorse_feed)
@@ -1145,8 +1188,10 @@ func refresh_shop() -> void:
 		"puffer":
 			if not assets.owned.puffer:
 				action_price = assets.PRICES.puffer
-				shop_detail_state.text = "Not owned · Active play only\n30% chance to chase each available bubble."
-				shop_action_button.text = "Buy bubble puffer  $%d" % action_price
+				var puffer_requirement := asset_requirement("puffer")
+				unavailable = not puffer_requirement.is_empty()
+				shop_detail_state.text = "Not owned · Active play only\n30%% chance to chase each available bubble.\n%s" % puffer_requirement
+				shop_action_button.text = puffer_requirement if unavailable else "Buy bubble puffer  $%d" % action_price
 			else:
 				var puffer_speed_level: int = int(assets.levels.puffer_speed)
 				var curiosity_level: int = int(assets.levels.puffer_curiosity)
@@ -1187,11 +1232,10 @@ func refresh_shop() -> void:
 			shop_action_button.size = Vector2(160, 58)
 			shop_action_button.text = "Lifetime MAX" if unavailable else "Lifetime +1  $%d" % action_price
 			var coin_value_price: int = assets.upgrade_price("coin_value")
-			var coin_value_requirement := upgrade_requirement("coin_value")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Value MAX" if coin_value_price == 0 else ("Need Life Lv. %d" % (value_level + 2) if not coin_value_requirement.is_empty() else "Value +1  $%d" % coin_value_price)
-			shop_secondary_button.disabled = coin_value_price == 0 or coin_value_price > economy.money or not coin_value_requirement.is_empty()
+			shop_secondary_button.text = "Value MAX" if coin_value_price == 0 else "Value +1  $%d" % coin_value_price
+			shop_secondary_button.disabled = coin_value_price == 0 or coin_value_price > economy.money
 			shop_secondary_button.show()
 		"diamond_value":
 			var diamond_level: int = int(assets.levels.diamond_value)
@@ -1199,15 +1243,15 @@ func refresh_shop() -> void:
 			action_price = assets.upgrade_price("diamond_value")
 			var diamond_value_requirement := upgrade_requirement("diamond_value")
 			unavailable = action_price == 0 or not diamond_value_requirement.is_empty()
-			shop_detail_state.text = "Value Lv. %d: ×%d for diamonds\nLifetime Lv. %d: %ds on the floor\nAlien diamonds have twice the base value." % [diamond_level + 1, assets.diamond_multiplier(), diamond_lifetime_level + 1, int(assets.diamond_lifetime())]
+			shop_detail_state.text = "Value Lv. %d: ×%d for diamonds\nLifetime Lv. %d: %ds on the floor\n%s" % [diamond_level + 1, assets.diamond_multiplier(), diamond_lifetime_level + 1, int(assets.diamond_lifetime()), diamond_value_requirement if not diamond_value_requirement.is_empty() else "Alien diamonds have twice the base value."]
 			shop_action_button.position = Vector2(24, 350)
 			shop_action_button.size = Vector2(160, 58)
-			shop_action_button.text = "Value MAX" if action_price == 0 else ("Need Life Lv. %d" % (diamond_level + 2) if not diamond_value_requirement.is_empty() else "Value +1  $%d" % action_price)
+			shop_action_button.text = "Value MAX" if action_price == 0 else ("Requires Fish Coins" if not diamond_value_requirement.is_empty() else "Value +1  $%d" % action_price)
 			var diamond_lifetime_price: int = assets.upgrade_price("diamond_lifetime")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Lifetime MAX" if diamond_lifetime_price == 0 else "Lifetime +1  $%d" % diamond_lifetime_price
-			shop_secondary_button.disabled = diamond_lifetime_price == 0 or diamond_lifetime_price > economy.money
+			shop_secondary_button.text = "Lifetime MAX" if diamond_lifetime_price == 0 else ("Requires Fish Coins" if not diamond_value_requirement.is_empty() else "Lifetime +1  $%d" % diamond_lifetime_price)
+			shop_secondary_button.disabled = diamond_lifetime_price == 0 or diamond_lifetime_price > economy.money or not diamond_value_requirement.is_empty()
 			shop_secondary_button.show()
 		"idle_duration":
 			var idle_level: int = int(assets.levels.idle_duration)
@@ -1230,11 +1274,10 @@ func refresh_shop() -> void:
 			shop_action_button.size = Vector2(160, 58)
 			shop_action_button.text = "Capacity MAX" if unavailable else "Capacity +1  $%d" % action_price
 			var value_price: int = assets.upgrade_price("bubble_value")
-			var bubble_value_requirement := upgrade_requirement("bubble_value")
 			shop_secondary_button.position = Vector2(222, 350)
 			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Value MAX" if value_price == 0 else ("Need Capacity Lv. %d" % (value_level + 2) if not bubble_value_requirement.is_empty() else "Value +1  $%d" % value_price)
-			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money or not bubble_value_requirement.is_empty()
+			shop_secondary_button.text = "Value MAX" if value_price == 0 else "Value +1  $%d" % value_price
+			shop_secondary_button.disabled = value_price == 0 or value_price > economy.money
 			shop_secondary_button.show()
 	shop_action_button.disabled = unavailable or action_price > economy.money
 	if shop_selected_id in ["snail", "shrimp", "seahorse", "puffer"] and bool(assets.owned.get(shop_selected_id, false)):
@@ -1695,10 +1738,10 @@ func save_now() -> void:
 		save_label.text = "Saved locally" if LocalSave.write(away_data if not away_data.is_empty() else snapshot()) else "Save failed"
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		set_idle(true)
-	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
 		set_idle(false)
-	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		if is_instance_valid(economy) and is_instance_valid(save_label):
 			save_now()

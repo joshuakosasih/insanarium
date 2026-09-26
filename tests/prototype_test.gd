@@ -133,11 +133,33 @@ func run() -> void:
 	tank.advance_fish_reveal()
 	check(not tank.reveal_panel.visible, "final reveal dismisses cleanly")
 	tank.economy.credit(2500)
-	for kind in ["snail", "shrimp", "seahorse", "puffer", "feeder"]:
+	for locked_kind in ["shrimp", "seahorse", "puffer"]:
+		tank.select_shop_item(locked_kind)
+		check(tank.shop_action_button.disabled and not tank.asset_requirement(locked_kind).is_empty(), "new helpers show their category requirement: " + locked_kind)
+	tank.assets.owned.seahorse = true
+	check(tank.asset_requirement("shrimp").is_empty(), "a Seahorse alone also unlocks the Cleanup Shrimp")
+	tank.assets.owned.seahorse = false
+	tank.assets.levels.bubble_value = 1
+	check(tank.asset_requirement("puffer").is_empty(), "bubble Value alone also unlocks the Puffer")
+	tank.assets.levels.bubble_value = 0
+	tank.assets.levels.coin_value = 1
+	check(tank.upgrade_requirement("diamond_value").is_empty() and tank.upgrade_requirement("diamond_lifetime").is_empty(), "coin Value alone also unlocks both Diamond upgrades")
+	tank.assets.levels.coin_value = 0
+	for kind in ["snail", "feeder", "shrimp"]:
 		balance = tank.economy.money
 		tank.purchase_asset(kind)
 		tank.purchase_asset(kind)
 		check(tank.assets.owned[kind] and tank.economy.money == balance - tank.assets.PRICES[kind], "automation purchase charges only once: " + kind)
+	tank.restock()
+	check(tank.assets.reserve.size() == 20 and tank.assets.reserve[0] == 0 and "20 basic pellets" in tank.shop_status.text.to_lower(), "reserve stores purchased Basic pellets before feed quality changes")
+	tank.purchase_feed_upgrade()
+	check(tank.feed_upgrades.unlocked_tier == 1 and tank.shop_cards.feed.pellet_color == tank.feeds[1].color and tank.shop_cards.feed.pellet_growth == 2, "Premium feed unlocks the Seahorse and updates the pellet preview")
+	tank.purchase_upgrade("bubble_capacity")
+	for kind in ["seahorse", "puffer"]:
+		balance = tank.economy.money
+		tank.purchase_asset(kind)
+		tank.purchase_asset(kind)
+		check(tank.assets.owned[kind] and tank.economy.money == balance - tank.assets.PRICES[kind], "unlocked helper purchase charges only once: " + kind)
 	check(tank.acquisition_celebration.visible and tank.acquisition_celebration.icon_kind == "snail" and tank.acquisition_queue.size() == 3, "pet purchases use the reusable celebration and queue in order")
 	while tank.acquisition_celebration.visible:
 		tank.acquisition_celebration.finish_now()
@@ -256,8 +278,10 @@ func run() -> void:
 	tank.handle_tank_click(snail.position)
 	check(snail.sleep_left == 0.0 and snail.stamina_left == snail.max_stamina and get_nodes_in_group("food").size() == food_before_wake, "tapping a sleeping snail wakes it without dropping food")
 	var old_life: float = falling_coin.lifetime
+	tank.select_shop_item("diamond_value")
+	check(tank.shop_action_button.disabled and tank.shop_secondary_button.disabled and "Fish Coins" in tank.shop_detail_state.text, "diamond upgrades wait for any fish-coin upgrade")
 	tank.select_shop_item("coins")
-	check(tank.shop_secondary_button.visible, "one fish-coin card exposes lifetime and value upgrades")
+	check(tank.shop_secondary_button.visible and not tank.shop_secondary_button.disabled, "fish coin lifetime and value are independently available")
 	balance = tank.economy.money
 	tank.activate_shop_item()
 	check(tank.assets.levels.coin_lifetime == 1 and tank.assets.coin_lifetime() == 15.0 and falling_coin.lifetime == old_life + 7.0 and tank.economy.money == balance - 40, "coin preservation upgrades future and existing reward lifetime")
@@ -272,14 +296,14 @@ func run() -> void:
 	var upgraded_coin = get_nodes_in_group("coins")[-1]
 	check(upgraded_coin.value == 2 and upgraded_coin.grade == 1 and upgraded_coin.coin_color() == Color("d79b69"), "coin-value upgrade pays more while the Teen coin stays bronze")
 	tank.select_shop_item("diamond_value")
-	check(tank.shop_action_button.disabled and "Need Life" in tank.shop_action_button.text, "diamond value clearly requires its matching lifetime upgrade first")
+	check(not tank.shop_action_button.disabled and not tank.shop_secondary_button.disabled, "either diamond upgrade unlocks after any fish coin upgrade")
 	var ordinary_life: float = upgraded_coin.lifetime
 	balance = tank.economy.money
-	tank.activate_shop_secondary()
-	check(tank.assets.diamond_lifetime() == 15.0 and tank.economy.money == balance - 50, "diamond lifetime unlocks the first diamond-value upgrade")
-	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "unlocked diamond value upgrades independently from ordinary coin value")
+	check(tank.assets.diamond_multiplier() == 2 and tank.economy.money == balance - 150 and tank.shop_cards.diamond_value.discovered, "diamond value can be bought before diamond lifetime")
+	balance = tank.economy.money
+	tank.activate_shop_secondary()
+	check(tank.assets.diamond_lifetime() == 15.0 and tank.economy.money == balance - 50, "diamond lifetime remains independently purchasable")
 	teen.coin_produced.emit(teen.position, 10, true, 4)
 	var fish_diamond = get_nodes_in_group("coins")[-1]
 	check(fish_diamond.value == 20 and fish_diamond.diamond and fish_diamond.lifetime == 15.0 and upgraded_coin.lifetime == ordinary_life, "fish diamonds use Diamond Value and Diamond Lifetime without changing ordinary coins")
@@ -307,18 +331,11 @@ func run() -> void:
 	tank.assets.levels.idle_duration = 1
 	tank.refresh_shop()
 	tank.select_shop_item("bubbles")
-	check(tank.shop_secondary_button.visible and tank.shop_action_button.text.contains("$30") and tank.shop_secondary_button.disabled and "Need Capacity" in tank.shop_secondary_button.text, "bubble value clearly requires its matching capacity upgrade first")
-	balance = tank.economy.money
-	tank.activate_shop_item()
-	check(tank.assets.levels.bubble_capacity == 1 and tank.assets.bubble_capacity() == 2 and tank.economy.money == balance - 30 and not tank.shop_secondary_button.disabled and tank.shop_secondary_button.text.contains("$30"), "bubble capacity upgrade raises the limit and unlocks matching value")
+	check(tank.assets.levels.bubble_capacity == 1 and tank.shop_secondary_button.visible and not tank.shop_secondary_button.disabled and tank.shop_secondary_button.text.contains("$30"), "bubble value stays independently available after a capacity upgrade")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
 	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 30, "bubble value upgrade raises every pop multiplier")
 	check(tank.assets.upgrade_price("bubble_capacity") == 90 and tank.assets.upgrade_price("bubble_value") == 90, "both bubble tracks use exponential prices")
-	tank.restock()
-	check(tank.assets.reserve.size() == 20 and tank.assets.reserve[0] == 0 and "20 basic pellets" in tank.shop_status.text.to_lower(), "reserve stores purchased basic pellets and confirms restock")
-	tank.purchase_feed_upgrade()
-	check(tank.feed_upgrades.unlocked_tier == 1 and tank.shop_cards.feed.pellet_color == tank.feeds[1].color and tank.shop_cards.feed.pellet_growth == 2, "premium unlock updates the shop pellet preview")
 	tank.purchase_feed_upgrade()
 	check(tank.feed_upgrades.unlocked_tier == 2 and tank.assets.reserve[0] == 0 and tank.shop_cards.feed.pellet_color == tank.feeds[2].color and tank.shop_cards.stock.pellet_color == tank.feeds[2].color, "deluxe changes shop pellet colors without changing stored pellet tiers")
 	tank.food_cooldown = 0.0

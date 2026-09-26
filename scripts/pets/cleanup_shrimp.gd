@@ -21,7 +21,7 @@ var rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	add_to_group("pets")
 	rng.randomize()
-	scale = Vector2.ONE * presentation_scale
+	scale = Vector2(-presentation_scale, presentation_scale)
 	position.y = floor_y
 	destination_x = position.x
 	z_index = 4
@@ -83,7 +83,7 @@ func nearest_cleanup_target() -> Node2D:
 func move_horizontally(delta: float) -> void:
 	var direction: float = destination_x - position.x
 	if absf(direction) > 1.0:
-		scale.x = signf(direction) * presentation_scale
+		scale.x = -signf(direction) * presentation_scale
 	position.x = clampf(move_toward(position.x, destination_x, move_speed * delta), horizontal_bounds.x, horizontal_bounds.y)
 
 func consume_target() -> void:

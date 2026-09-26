@@ -109,40 +109,50 @@ static func draw_puffer(canvas: CanvasItem, at: Vector2, size: float = 1.0, infl
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
-	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	var shell := Color("f08b72")
-	var shell_dark := Color("a94f5b")
-	var shell_light := Color("ffc18e")
-	# Compact head and a curved segmented abdomen make this read as a tiny
-	# aquarium shrimp rather than a long-bodied lobster.
+	# Face left like the reference; the live pet mirrors this whole silhouette
+	# when it crawls to the right.
+	canvas.draw_set_transform(at, 0.0, Vector2(-size, size))
+	var shell := Color("f48a78")
+	var shell_dark := Color("9d4e59")
+	var shell_light := Color("ffbd69")
+	# A broad triangular shell front, plump body, and curled abdomen follow the
+	# reference's shrimp silhouette without introducing a separate mouth.
 	canvas.draw_colored_polygon(PackedVector2Array([
-		Vector2(19, -11), Vector2(30, -6), Vector2(35, 2), Vector2(25, 1),
-		Vector2(20, 9), Vector2(4, 10), Vector2(-7, 5), Vector2(-9, -6), Vector2(2, -14)
+		Vector2(-12, -8), Vector2(7, -17), Vector2(28, -14), Vector2(43, -5),
+		Vector2(29, -2), Vector2(25, 8), Vector2(7, 12), Vector2(-10, 6)
+	]), shell_dark)
+	canvas.draw_colored_polygon(PackedVector2Array([
+		Vector2(-9, -7), Vector2(8, -14), Vector2(27, -11), Vector2(39, -5),
+		Vector2(27, -1), Vector2(22, 6), Vector2(7, 8), Vector2(-7, 4)
 	]), shell)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(31, -5), Vector2(45, 0), Vector2(31, 4)]), shell_light)
-	canvas.draw_arc(Vector2(5, 4), 17.0, 2.7, 6.1, 18, shell_dark, 9.0, true)
-	canvas.draw_arc(Vector2(-7, 10), 11.0, 2.4, 5.7, 14, shell, 7.0, true)
-	# Three warm bands follow the curl into a small fan tail.
-	for i in range(3):
-		var angle: float = 2.9 + i * 0.62
-		var segment := Vector2(5, 4) + Vector2.from_angle(angle) * 17.0
-		canvas.draw_line(segment - Vector2.from_angle(angle + PI * 0.5) * 3.5, segment + Vector2.from_angle(angle + PI * 0.5) * 3.5, shell_light, 2.0, true)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-15, 16), Vector2(-27, 14), Vector2(-20, 23), Vector2(-29, 27), Vector2(-13, 26), Vector2(-7, 18)]), shell_dark)
-	canvas.draw_line(Vector2(-24, 17), Vector2(-13, 23), shell_light, 1.5, true)
-	# One oversized eye and a short rostrum keep the face readable at tank size.
-	canvas.draw_circle(Vector2(22, -9), 7.0, Color("fff7e9"))
-	canvas.draw_circle(Vector2(24, -9), 3.6, Color("25343b"))
-	canvas.draw_circle(Vector2(25, -11), 1.2, Color.WHITE)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(31, -7), Vector2(43, -4), Vector2(32, -1)]), shell)
-	# Curled feelers echo the friendly reference while remaining original.
-	var feeler_sway: float = sin(phase * 2.7) * 1.5
-	canvas.draw_arc(Vector2(27, -19 + feeler_sway), 11.0, 2.7, 6.0, 15, shell_dark, 1.8, true)
-	canvas.draw_arc(Vector2(38, -16 - feeler_sway), 14.0, 2.8, 5.5, 15, shell_dark, 1.5, true)
-	# Four delicate feet paddle independently while it walks along the floor.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(17, -11), Vector2(35, -5), Vector2(20, -2)]), shell_light)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-4, -9), Vector2(17, -11), Vector2(21, -3), Vector2(-1, -3)]), shell_light)
+	# The abdomen curls under the shell as three compact rounded segments.
+	canvas.draw_circle(Vector2(-11, 7), 11.0, shell_dark)
+	canvas.draw_circle(Vector2(-10, 6), 8.0, shell)
+	canvas.draw_circle(Vector2(-20, 14), 9.0, shell_dark)
+	canvas.draw_circle(Vector2(-19, 13), 6.0, shell)
+	for segment in [Vector2(-16, 5), Vector2(-22, 11), Vector2(-22, 18)]:
+		canvas.draw_line(segment - Vector2(2, 3), segment + Vector2(3, -2), shell_light, 1.6, true)
+	# Two overlapping round lobes form the soft fan at the end of the tail.
+	canvas.draw_circle(Vector2(-31, 20), 8.5, shell_dark)
+	canvas.draw_circle(Vector2(-31, 20), 6.0, shell)
+	canvas.draw_circle(Vector2(-23, 27), 8.5, shell_dark)
+	canvas.draw_circle(Vector2(-23, 27), 6.0, Color("ee6f7d"))
+	# The large eye is the only facial feature.
+	canvas.draw_circle(Vector2(20, -13), 8.0, shell_dark)
+	canvas.draw_circle(Vector2(20, -13), 5.5, Color("fff8ea"))
+	canvas.draw_circle(Vector2(22, -13), 3.0, Color("25343b"))
+	canvas.draw_circle(Vector2(23, -15), 1.0, Color.WHITE)
+	# Static moustache-like antennae begin between the eye and pointed shell and
+	# curl backward toward the body instead of projecting forward.
+	canvas.draw_polyline(PackedVector2Array([Vector2(37, -8), Vector2(42, -19), Vector2(41, -27), Vector2(36, -29), Vector2(33, -25)]), shell_dark, 2.0, true)
+	canvas.draw_polyline(PackedVector2Array([Vector2(30, -10), Vector2(33, -28), Vector2(30, -39), Vector2(23, -42), Vector2(18, -38)]), shell_dark, 1.8, true)
+	# Four delicate feet are the only animated part of the animal.
 	for i in range(4):
-		var foot_root := Vector2(-1 + i * 6.0, 9)
-		var foot_swing: float = sin(phase * 9.0 + float(i) * 1.2) * 2.0
-		canvas.draw_polyline(PackedVector2Array([foot_root, foot_root + Vector2(foot_swing, 6), foot_root + Vector2(2 + foot_swing, 12)]), shell_dark, 1.6, true)
+		var foot_root := Vector2(0 + i * 6.0, 7)
+		var foot_swing: float = sin(phase * 8.0 + float(i) * 1.2) * 1.5
+		canvas.draw_polyline(PackedVector2Array([foot_root, foot_root + Vector2(foot_swing, 7), foot_root + Vector2(1 + foot_swing, 13)]), shell_dark, 1.6, true)
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_feeder(canvas: CanvasItem, at: Vector2, size: float = 1.0, label: bool = false) -> void:
