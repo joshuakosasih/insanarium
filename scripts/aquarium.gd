@@ -48,6 +48,7 @@ var active_acquisition: Dictionary = {}
 var inspect_left: float = 0.0
 var breeding := FishBreeding.new()
 var guppy_sex_bag := FishSexBag.new()
+var guppy_diamond_bag := FishDiamondBag.new()
 var breeding_status: Label
 var breeding_toggle: CheckButton
 var assets := IdleAssets.new()
@@ -513,6 +514,8 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased", species_i
 	if not from_save:
 		life_registry.allocate(fish.life, origin)
 	fish.profile = FishProfile.for_species(species_id)
+	if species_id == "starter_fish":
+		fish.growth.diamond_bag = guppy_diamond_bag
 	if species_id == "piranha":
 		fish.sex = randi_range(0, 1) as AquariumFish.Sex
 	elif not from_save and origin != "Starter":
@@ -757,6 +760,7 @@ func reset_test_tank() -> void:
 	population_goal_complete = false
 	piranha_unlocked = false
 	guppy_sex_bag = FishSexBag.new()
+	guppy_diamond_bag = FishDiamondBag.new()
 	for i in range(2):
 		var starter := spawn_fish(false, "Starter")
 		starter.sex = (AquariumFish.Sex.MALE if i == 0 else AquariumFish.Sex.FEMALE)
@@ -1217,7 +1221,7 @@ func refresh_shop() -> void:
 				var interval_level: int = int(assets.levels.seahorse_interval)
 				var quality_level: int = int(assets.levels.seahorse_feed)
 				action_price = assets.upgrade_price("seahorse_interval")
-				shop_detail_state.text = "Production Lv. %d: every %ss\nPellet Lv. %d: %s\nOnly produces feed when fish need it." % [interval_level + 1, Economy.format_money(assets.seahorse_interval()), quality_level + 1, feeds[assets.seahorse_feed_tier()].title]
+				shop_detail_state.text = "Production Lv. %d: every %ss (up to %.1f/min)\nPellet Lv. %d: %s\nWaits until a pellet-eating fish is hungry." % [interval_level + 1, Economy.format_money(assets.seahorse_interval()), 60.0 / assets.seahorse_interval(), quality_level + 1, feeds[assets.seahorse_feed_tier()].title]
 				shop_action_button.position = Vector2(24, 350)
 				shop_action_button.size = Vector2(160, 58)
 				shop_action_button.text = "Rate MAX" if action_price == 0 else "Rate +1  $%d" % action_price
@@ -1693,7 +1697,7 @@ func snapshot() -> Dictionary:
 			shrimp_x = pet.position.x
 			shrimp_digestion = pet.digestion_left
 	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "piranha_unlocked": piranha_unlocked, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
-		"guppy_sex_bag": guppy_sex_bag.to_data(),
+		"guppy_sex_bag": guppy_sex_bag.to_data(), "guppy_diamond_bag": guppy_diamond_bag.to_data(),
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
 		"shrimp_x": shrimp_x, "shrimp_digestion": shrimp_digestion, "shrimp_cleanup_progress": shrimp_cleanup_progress,
@@ -1704,6 +1708,7 @@ func snapshot() -> Dictionary:
 func restore(data: Dictionary) -> void:
 	data = SaveMigration.upgrade(data)
 	guppy_sex_bag.from_data(data.get("guppy_sex_bag", []))
+	guppy_diamond_bag.from_data(data.get("guppy_diamond_bag", []))
 	life_registry.next_id = int(data.next_fish_id)
 	life_registry.elapsed = float(data.simulation_elapsed)
 	breeding.enabled = bool(data.get("breeding_enabled", true))

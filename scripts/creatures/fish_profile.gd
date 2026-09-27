@@ -19,7 +19,7 @@ extends Resource
 
 @export var minimum_meals: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 75])
 @export var diamond_stage: int = 4
-@export var diamond_growth_chance: float = 0.20
+@export var diamond_growth_chance: float = 0.25
 
 @export var starvation_grace: float = 45.0
 

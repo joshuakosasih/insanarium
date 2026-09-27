@@ -24,7 +24,7 @@ With Basic feed and average metabolism, a fish reaches the hunger threshold abou
 | Royal | 30 | 24 min | 27–38 min |
 | Diamond | 75 | 60 min | 65–90 min |
 
-Premium and Deluxe feed shorten the growth-credit requirements but Diamond requires 75 actual meals and a one-time 20% growth roll. The practical range allows for swimming time, different metabolism genes, and imperfect feeding.
+Premium and Deluxe feed shorten the growth-credit requirements but Diamond requires 75 actual meals and one draw from a shared four-slot bag with one Diamond outcome. The practical range allows for swimming time, different metabolism genes, and imperfect feeding.
 
 ## Time to earn a purchase price
 

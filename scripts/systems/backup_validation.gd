@@ -50,6 +50,14 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(marble, 0, 2) or not available.has(int(marble)):
 				return {}
 			available.erase(int(marble))
+	if data.has("guppy_diamond_bag"):
+		if not data.guppy_diamond_bag is Array or data.guppy_diamond_bag.size() > 4:
+			return {}
+		var available_diamonds := [0, 0, 0, 1]
+		for marble in data.guppy_diamond_bag:
+			if not integer_in_range(marble, 0, 1) or not available_diamonds.has(int(marble)):
+				return {}
+			available_diamonds.erase(int(marble))
 	if data.has("asset_levels"):
 		if not data.asset_levels is Dictionary:
 			return {}

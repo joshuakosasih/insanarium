@@ -15,6 +15,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	report["pellets_rescued"] = 0
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(JSON.stringify(source))
+	var diamond_bag := FishDiamondBag.new()
+	diamond_bag.from_data(data.get("guppy_diamond_bag", []))
 	var profile := FishProfile.new()
 	var profiles := {"starter_fish": profile, "piranha": FishProfile.for_species("piranha")}
 	var feeds := FeedProfile.tiers()
@@ -179,7 +181,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 						if stage == fish_profile.diamond_stage and int(fish.get("stage", 0)) < stage:
 							if not bool(fish.get("diamond_trial_done", false)):
 								fish.diamond_trial_done = true
-								if rng.randf() >= fish_profile.diamond_growth_chance:
+								var awarded: bool = diamond_bag.draw_with_rng(rng) if fish_profile.species_id == "starter_fish" else rng.randf() < fish_profile.diamond_growth_chance
+								if not awarded:
 									continue
 							else:
 								continue
@@ -217,6 +220,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			survivors.append(fish)
 		fish_list = survivors
 	data.fish = fish_list
+	data.guppy_diamond_bag = diamond_bag.to_data()
 	data.food = food
 	data.coins = rewards
 	data.waste = waste

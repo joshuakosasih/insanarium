@@ -23,6 +23,26 @@ func run() -> void:
 	for i in range(5):
 		draws.append(int(restored_bag.draw()))
 	check(draws.count(0) == 3 and draws.count(1) == 3 and draws.count(2) == 3 and restored_bag.to_data().is_empty(), "each nine-draw bag contains exactly three of each guppy sex")
+	var diamond_bag := FishDiamondBag.new()
+	var diamond_results: Array[bool] = []
+	for i in range(2):
+		diamond_results.append(diamond_bag.draw())
+	var saved_diamonds: Array[int] = diamond_bag.to_data()
+	var restored_diamonds := FishDiamondBag.new()
+	restored_diamonds.from_data(saved_diamonds)
+	for i in range(2):
+		diamond_results.append(restored_diamonds.draw())
+	check(diamond_results.count(true) == 1 and restored_diamonds.to_data().is_empty(), "four eligible guppies produce one Diamond even across a save")
+	var growth_bag := FishDiamondBag.new()
+	var grown_diamonds: int = 0
+	for fish_index in range(4):
+		var candidate := FishGrowth.new()
+		candidate.diamond_bag = growth_bag
+		for meal in range(75):
+			candidate.record_meal(FishProfile.new())
+		if candidate.stage == 4:
+			grown_diamonds += 1
+	check(grown_diamonds == 1, "four Diamond growth milestones share one bag outcome")
 	var no_diamond := FishProfile.new()
 	no_diamond.diamond_growth_chance = 0.0
 	var royal_growth := FishGrowth.new()
@@ -135,9 +155,29 @@ func run() -> void:
 	tank.birth(Vector2(500, 350), predator.life.id, piranha_mother.life.id)
 	var offspring: AquariumFish = get_nodes_in_group("fish")[-1]
 	check(offspring.profile.species_id == "piranha" and offspring.growth.stage == 0 and offspring.life.parent_ids == PackedStringArray([predator.life.id, piranha_mother.life.id]), "piranha offspring inherits its species and parent identities")
+	tank.guppy_diamond_bag.draw()
 	var data: Dictionary = tank.snapshot()
-	check(data.piranha_unlocked and data.has("guppy_sex_bag") and data.fish.any(func(fish: Dictionary) -> bool: return fish.species_id == "piranha") and data.fish.all(func(fish: Dictionary) -> bool: return fish.has("diamond_trial_done")), "save includes species and growth-roll state")
+	check(data.piranha_unlocked and data.has("guppy_sex_bag") and data.has("guppy_diamond_bag") and data.fish.any(func(fish: Dictionary) -> bool: return fish.species_id == "piranha") and data.fish.all(func(fish: Dictionary) -> bool: return fish.has("diamond_trial_done")), "save includes species and growth-roll state")
 	check(not BackupValidation.parse(JSON.stringify(data)).is_empty(), "mixed-species backup validates")
+	var impossible_bag: Dictionary = data.duplicate(true)
+	impossible_bag.guppy_diamond_bag = [1, 1]
+	check(BackupValidation.parse(JSON.stringify(impossible_bag)).is_empty(), "backup rejects impossible Diamond bag contents")
+	var diamond_away: Dictionary = data.duplicate(true)
+	diamond_away.fish = data.fish.filter(func(fish: Dictionary) -> bool: return fish.species_id == "starter_fish").slice(0, 4)
+	for fish in diamond_away.fish:
+		fish.stage = 3
+		fish.meals = 74
+		fish.credit = 75.0
+		fish.hunger = 0.9
+		fish.starving = 0.0
+		fish.coin_left = 100.0
+		fish.diamond_trial_done = false
+	diamond_away.guppy_diamond_bag = []
+	diamond_away.food = [{"tier": 0, "life": 14.0, "x": 550, "y": 350}, {"tier": 0, "life": 14.0, "x": 550, "y": 350}, {"tier": 0, "life": 14.0, "x": 550, "y": 350}, {"tier": 0, "life": 14.0, "x": 550, "y": 350}]
+	diamond_away.saved_at = 0.0
+	diamond_away.asset_levels.idle_duration = 4
+	var diamond_result: Dictionary = OfflineProgress.advance(diamond_away, 10.0)
+	check(diamond_result.data.fish.filter(func(fish: Dictionary) -> bool: return int(fish.stage) == 4).size() == 1 and diamond_result.data.guppy_diamond_bag.is_empty(), "offline growth uses the same one-in-four Diamond bag")
 	var just_piranha: Dictionary = data.duplicate(true)
 	just_piranha.fish = data.fish.filter(func(fish: Dictionary) -> bool: return fish.species_id == "piranha").slice(0, 1)
 	just_piranha.fish[0].hunger = 0.0
@@ -162,6 +202,6 @@ func run() -> void:
 	for fish in get_nodes_in_group("fish"):
 		fish.free()
 	restored.restore(data)
-	check(restored.piranha_unlocked and restored.guppy_sex_bag.to_data() == data.guppy_sex_bag and get_nodes_in_group("fish").any(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha"), "mixed species and bag state restore without rerolling")
+	check(restored.piranha_unlocked and restored.guppy_sex_bag.to_data() == data.guppy_sex_bag and restored.guppy_diamond_bag.to_data() == data.guppy_diamond_bag and get_nodes_in_group("fish").any(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha"), "mixed species and bag state restore without rerolling")
 	print("Piranha failures: ", failures)
 	quit(1 if failures else 0)

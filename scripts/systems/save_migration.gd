@@ -38,6 +38,9 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	var sex_bag := FishSexBag.new()
 	sex_bag.from_data(data.get("guppy_sex_bag", []))
 	data["guppy_sex_bag"] = sex_bag.to_data()
+	var diamond_bag := FishDiamondBag.new()
+	diamond_bag.from_data(data.get("guppy_diamond_bag", []))
+	data["guppy_diamond_bag"] = diamond_bag.to_data()
 	if not data.has("waste") or not data.waste is Array:
 		data["waste"] = []
 	var owned: Dictionary = data.get("owned", {}).duplicate(true)

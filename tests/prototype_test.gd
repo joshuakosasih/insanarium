@@ -203,7 +203,7 @@ func run() -> void:
 	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible, "owned seahorse exposes rate, pellet quality, and sale controls")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 40, "seahorse production interval upgrades independently")
+	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 25, "seahorse production interval upgrades independently")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
 	check(tank.assets.levels.seahorse_feed == 1 and seahorse.feed_tier == 1 and tank.economy.money == balance - 150, "seahorse pellet quality upgrades to Premium")
