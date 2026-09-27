@@ -22,6 +22,12 @@ func _draw() -> void:
 	match icon_kind:
 		"fish":
 			VectorArt.draw_fish(self, Vector2.ZERO, 1.25, Color("f6be73"))
+		"feeder_fry":
+			VectorArt.draw_fish(self, Vector2.ZERO, 1.25, Color("f6ddb0"))
+		"tank":
+			draw_rect(Rect2(-42, -29, 84, 57), Color("8edfe9"), false, 4.0)
+			draw_rect(Rect2(-38, -3, 76, 28), Color(0.35, 0.75, 0.79, 0.4))
+			VectorArt.draw_fish(self, Vector2(0, 7), 0.7, Color("f6be73"))
 		"piranha":
 			VectorArt.draw_piranha(self, Vector2.ZERO, 1.25, Color("dd6c63"))
 		"serum":

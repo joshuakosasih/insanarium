@@ -21,7 +21,7 @@ func run() -> void:
 	var catalog_ids: Array[String] = []
 	for item in ShopItemDefinition.catalog():
 		catalog_ids.append(item.id)
-	check(catalog_ids.slice(0, 4) == ["fish", "feed", "bubbles", "idle_duration"] and catalog_ids.find("piranha") > catalog_ids.find("diamond_value") and catalog_ids[-1] == "sponge", "shop starts with everyday progression and places late-game helpers later")
+	check(catalog_ids.slice(0, 4) == ["fish", "feed", "bubbles", "idle_duration"] and catalog_ids.find("piranha") > catalog_ids.find("diamond_value") and catalog_ids[-1] == "tank2", "shop starts with everyday progression and places late-game helpers later")
 	check(not tank.shop_cards.has("stock"), "pellet stock is no longer a separate shop card")
 	tank.select_shop_item("feeder")
 	tank.activate_shop_item()

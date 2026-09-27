@@ -162,6 +162,17 @@ static func parse(text: String) -> Dictionary:
 			return {}
 	if not number(data.get("urchin_direction", 1), -1, 1):
 		return {}
+	if data.has("tank2_owned"):
+		if not data.tank2_owned is bool or not integer_in_range(data.get("active_tank", 1), 1, 2):
+			return {}
+		if data.tank2_owned:
+			var second: Variant = data.get("other_tank", {})
+			if not second is Dictionary or second.is_empty() or second.has("other_tank"):
+				return {}
+			if parse(JSON.stringify(second)).is_empty():
+				return {}
+		elif int(data.get("active_tank", 1)) != 1:
+			return {}
 	return data
 
 static func number(value: Variant, low: float, high: float) -> bool:

@@ -72,7 +72,7 @@ func run() -> void:
 	male.breeding_left = 0
 	female.breeding_left = 0
 	tank.breeding.advance(30, get_nodes_in_group("fish"))
-	check(get_nodes_in_group("fish").size() == 15 and tank.population_goal_complete and "TANK 2 UNLOCKED" in tank.count_label.text, "fifteen fish permanently unlocks the next-tank milestone")
+	check(get_nodes_in_group("fish").size() == 15 and tank.population_goal_complete and "TANK 2 AVAILABLE" in tank.count_label.text, "fifteen fish permanently unlocks the next-tank milestone")
 	while get_nodes_in_group("fish").size() < 19:
 		tank.spawn_fish()
 	male.breeding_left = 0
@@ -100,6 +100,6 @@ func run() -> void:
 	for fish in get_nodes_in_group("fish"):
 		fish.free()
 	restored.restore(data)
-	check(get_nodes_in_group("fish")[0].sex == data.fish[0].sex and restored.breeding.enabled == data.breeding_enabled and restored.population_goal_complete and "TANK 2 UNLOCKED" in restored.count_label.text, "saved breeding state and Tank 2 milestone restore")
+	check(get_nodes_in_group("fish")[0].sex == data.fish[0].sex and restored.breeding.enabled == data.breeding_enabled and restored.population_goal_complete and "TANK 2 AVAILABLE" in restored.count_label.text, "saved breeding state and Tank 2 milestone restore")
 	print("Breeding failures: ", failures)
 	quit(1 if failures else 0)

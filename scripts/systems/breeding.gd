@@ -9,6 +9,7 @@ const POPULATION_GOAL: int = 15
 const INTERVAL: float = 30.0
 const COOLDOWN: float = 300.0 # Neutral reference; genomes set the actual cooldown.
 var enabled: bool = true
+var capacity: int = CAPACITY
 var check_left: float = INTERVAL
 var chance: float = 0.25
 
@@ -19,7 +20,7 @@ func advance(delta: float, fish_list: Array) -> void:
 	if check_left > 0.0:
 		return
 	check_left = INTERVAL
-	if not enabled or fish_list.size() >= BREEDING_LIMIT:
+	if not enabled or fish_list.size() >= capacity:
 		return
 	var males: Array = []
 	var females: Array = []

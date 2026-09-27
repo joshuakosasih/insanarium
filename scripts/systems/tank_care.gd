@@ -52,7 +52,7 @@ static func duration(seconds: float) -> String:
 		return "%dm" % int(ceil(seconds / 60.0))
 	return "%.1fh" % (seconds / 3600.0)
 
-static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float = 100.0) -> String:
+static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float = 100.0, capacity: int = FishBreeding.CAPACITY) -> String:
 	var hungry: int = 0
 	var starving: int = 0
 	var hungry_predators: int = 0
@@ -87,7 +87,7 @@ static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float =
 		messages.append("Cloudy water: health beginning to fall")
 	if feeder and stock <= 20:
 		messages.append("Feeder empty" if stock == 0 else "Low stock: %d pellets" % stock)
-	if fish.size() >= FishBreeding.CAPACITY:
+	if fish.size() >= capacity:
 		messages.append("Tank full: purchases blocked")
 	elif fish.size() >= FishBreeding.COMFORT_WARNING:
 		messages.append("Population high: tank nearing capacity")

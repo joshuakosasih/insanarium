@@ -13,6 +13,10 @@ const MobileOrientationGateScript = preload("res://scripts/ui/mobile_orientation
 const TANK := Rect2(48, 166, 1056, 504)
 const SWIM_BOUNDS := Rect2(85, 197, 982, 443)
 const STARTER_TANK_WIDTH := 900.0
+const SECOND_TANK_WIDTH := 1056.0
+const SECOND_TANK_PRICE := 10000
+const SECOND_TANK_CAPACITY := 25
+const FEEDER_FRY_PRICE := 20
 const CREATURE_PRESENTATION_SCALE := 1.22
 const COLLECTIBLE_PRESENTATION_SCALE := 1.30
 const PET_PRESENTATION_SCALE := 1.16
@@ -117,6 +121,144 @@ var last_pointer_msec: int = -1000
 var menu_paused: bool = false
 var population_goal_complete: bool = false
 var piranha_unlocked: bool = false
+var tank2_owned: bool = false
+var active_tank: int = 1
+var other_tank: Dictionary = {}
+var tank_button: Button
+var tank_panel: Panel
+var tank_one_button: Button
+var tank_two_button: Button
+var tank_title: Label
+var move_fish_button: Button
+
+func tank_capacity() -> int:
+	return SECOND_TANK_CAPACITY if active_tank == 2 else FishBreeding.CAPACITY
+
+func total_piranhas() -> int:
+	var count: int = 0
+	for fish in get_tree().get_nodes_in_group("fish"):
+		if fish.profile.species_id == "piranha" and not fish.dead and not fish.is_queued_for_deletion():
+			count += 1
+	for fish in other_tank.get("fish", []):
+		if str(fish.get("species_id", "")) == "piranha":
+			count += 1
+	return count
+
+func tank_data_only(data: Dictionary) -> Dictionary:
+	var core: Dictionary = data.duplicate(true)
+	for key in ["tank2_owned", "active_tank", "other_tank"]:
+		core.erase(key)
+	return core
+
+func make_second_tank() -> Dictionary:
+	var data := tank_data_only(snapshot())
+	var defaults := IdleAssets.new()
+	data.fish = []
+	data.coins = []
+	data.food = []
+	data.waste = []
+	data.owned = defaults.owned.duplicate(true)
+	data.asset_levels = defaults.levels.duplicate(true)
+	for track in ["coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
+		data.asset_levels[track] = assets.levels[track]
+	data.reserve = []
+	data.cleanliness = 100.0
+	data.serum_doses = 0
+	data.population_goal_complete = true
+	data.piranha_unlocked = true
+	data.guppy_sex_bag = []
+	data.guppy_diamond_bag = []
+	data.tank_index = 2
+	return data
+
+func purchase_second_tank() -> void:
+	if active_tank != 1 or tank2_owned or not population_goal_complete:
+		return
+	if not economy.spend(SECOND_TANK_PRICE):
+		show_shop_message("Need $%d to open Tank 2." % SECOND_TANK_PRICE)
+		return
+	tank2_owned = true
+	other_tank = make_second_tank()
+	other_tank.money = economy.money
+	audio.play("buy")
+	show_shop_message("Tank 2 is ready. Move fish from their detail panel.")
+	refresh_tank_menu()
+	refresh_shop()
+	save_now()
+
+func sync_shared_upgrades() -> void:
+	if not tank2_owned or other_tank.is_empty():
+		return
+	for track in ["coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
+		other_tank.asset_levels[track] = assets.levels[track]
+	other_tank.tier = feed_upgrades.unlocked_tier
+
+func advance_other_tank() -> int:
+	if other_tank.is_empty():
+		return 0
+	var result := OfflineProgress.advance(other_tank, Time.get_unix_time_from_system())
+	other_tank = tank_data_only(result.data)
+	return int(result.report.collected)
+
+func switch_tank(destination: int) -> void:
+	if not tank2_owned or destination == active_tank or destination not in [1, 2]:
+		return
+	if not away_data.is_empty():
+		return
+	var current := tank_data_only(snapshot())
+	var gained: int = advance_other_tank()
+	var target: Dictionary = other_tank.duplicate(true)
+	var next_id: int = maxi(int(current.next_fish_id), int(target.get("next_fish_id", 1)))
+	current.next_fish_id = next_id
+	target.next_fish_id = next_id
+	other_tank = current
+	active_tank = destination
+	if active_tank == 2 and shop_selected_id in ["serum", "tank2"]:
+		shop_selected_id = "fish"
+	var wallet: float = economy.money + gained
+	shop_panel.hide()
+	care_panel.hide()
+	tank_panel.hide()
+	clear_tank()
+	restore(target, false)
+	life_registry.next_id = next_id
+	economy.money = wallet
+	breeding.capacity = tank_capacity()
+	update_viewport_layout()
+	update_count()
+	refresh_tank_menu()
+	update_pause_state()
+	save_now()
+
+func move_selected_fish() -> void:
+	if not tank2_owned or not is_instance_valid(selected_fish) or selected_fish.dead:
+		return
+	advance_other_tank()
+	var destination_capacity: int = SECOND_TANK_CAPACITY if active_tank == 1 else FishBreeding.CAPACITY
+	if other_tank.get("fish", []).size() >= destination_capacity:
+		show_feedback(selected_fish.position, "Other tank is full")
+		return
+	var moving_id: String = selected_fish.life.id
+	var entry: Dictionary = {}
+	for fish_data in snapshot().fish:
+		if str(fish_data.life.id) == moving_id:
+			entry = fish_data.duplicate(true)
+			break
+	if entry.is_empty():
+		return
+	entry.x = float(other_tank.get("fish", []).size() % 5) * 100.0 + 240.0
+	entry.y = 360.0
+	other_tank.fish.append(entry)
+	other_tank.next_fish_id = maxi(int(other_tank.get("next_fish_id", 1)), life_registry.next_id)
+	selected_fish.remove_from_group("fish")
+	selected_fish.free()
+	selected_fish = null
+	update_inspection()
+	update_count()
+	audio.play("buy")
+	show_feedback(tank_rect.get_center(), "Fish moved to Tank %d" % (3 - active_tank))
+	refresh_tank_menu()
+	save_now()
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -206,17 +348,17 @@ func _on_web_hidden(_args: Array) -> void:
 	set_idle(true)
 
 func update_pause_state() -> void:
-	menu_paused = (is_instance_valid(shop_panel) and shop_panel.visible) or (is_instance_valid(care_panel) and care_panel.visible)
+	menu_paused = (is_instance_valid(shop_panel) and shop_panel.visible) or (is_instance_valid(care_panel) and care_panel.visible) or (is_instance_valid(tank_panel) and tank_panel.visible)
 	if is_inside_tree():
 		get_tree().paused = menu_paused or not away_data.is_empty() or applying_offline
 
 func update_viewport_layout() -> void:
-	# The starter habitat has one fixed world size on every device. Center it in
-	# the available viewport so creatures keep the same proportion to the tank.
+	# Center the selected habitat while retaining its fixed world dimensions.
 	var viewport_size := get_viewport_rect().size
 	var extra_width: float = maxf(0.0, viewport_size.x - 1152.0)
-	tank_rect = Rect2(TANK.position, Vector2(STARTER_TANK_WIDTH, TANK.size.y))
-	swim_bounds = Rect2(SWIM_BOUNDS.position, Vector2(STARTER_TANK_WIDTH - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
+	var width: float = SECOND_TANK_WIDTH if active_tank == 2 else STARTER_TANK_WIDTH
+	tank_rect = Rect2(TANK.position, Vector2(width, TANK.size.y))
+	swim_bounds = Rect2(SWIM_BOUNDS.position, Vector2(width - (SWIM_BOUNDS.position.x - TANK.position.x) * 2.0, SWIM_BOUNDS.size.y))
 	# Preserve the desktop placement, but move the world slightly upward on short
 	# phone viewports so the tank keeps a visible safe gap beneath its border.
 	var tank_y: float = minf(-70.0, viewport_size.y - tank_rect.end.y - TANK_BOTTOM_MARGIN)
@@ -440,6 +582,8 @@ func sell_selected() -> void:
 	update_inspection()
 
 func purchase_serum() -> void:
+	if active_tank == 2:
+		return
 	if not piranha_unlocked or serum_doses >= 10 or not economy.spend(FishBroodstock.SERUM_PRICE):
 		return
 	serum_doses += 1
@@ -448,6 +592,8 @@ func purchase_serum() -> void:
 	update_money(economy.money)
 
 func inject_selected() -> void:
+	if active_tank == 2:
+		return
 	if serum_doses <= 0 or not is_instance_valid(selected_fish) or not FishBroodstock.can_convert(selected_fish):
 		return
 	serum_doses -= 1
@@ -469,10 +615,11 @@ func update_count() -> void:
 		if offline_ready:
 			audio.play("growth")
 			show_feedback(tank_rect.get_center(), "Tank 2 unlocked!")
-	count_label.text = "%02d FISH · TANK 2 UNLOCKED" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.POPULATION_GOAL]
+	count_label.text = "%02d/%d FISH · TANK 2 READY" % [count, tank_capacity()] if active_tank == 2 else ("%02d/%d FISH · TANK 2 AVAILABLE" % [count, tank_capacity()] if population_goal_complete else "%02d/%d FISH · GOAL %d" % [count, tank_capacity(), breeding.POPULATION_GOAL])
 	update_money(economy.money)
 	if is_instance_valid(shop_panel):
 		refresh_shop()
+	refresh_tank_menu()
 
 func update_cleanliness() -> void:
 	if not is_instance_valid(cleanliness_label):
@@ -520,8 +667,10 @@ func purchase_full_clean() -> void:
 
 func update_inspection() -> void:
 	var valid: bool = is_instance_valid(selected_fish) and not selected_fish.dead
+	move_fish_button.visible = valid and tank2_owned
+	move_fish_button.text = "Move to Tank %d" % (3 - active_tank)
 	sell_button.disabled = not valid
-	inject_button.visible = valid and FishBroodstock.can_convert(selected_fish)
+	inject_button.visible = valid and active_tank == 1 and FishBroodstock.can_convert(selected_fish)
 	inject_button.disabled = serum_doses <= 0
 	inject_button.text = "Inject serum (%d)" % serum_doses if serum_doses > 0 else "Buy serum"
 	sell_button.position.x = 174 if inject_button.visible else 69
@@ -544,7 +693,7 @@ func supply_pet_food(at: Vector2, tier: int = 0) -> void:
 		spawn_food(at, feeds[clampi(tier, 0, feeds.size() - 1)])
 
 func birth(at: Vector2, father_id: String = "", mother_id: String = "") -> void:
-	if get_tree().get_nodes_in_group("fish").size() >= breeding.BREEDING_LIMIT:
+	if get_tree().get_nodes_in_group("fish").size() >= tank_capacity():
 		return
 	var father: AquariumFish
 	var mother: AquariumFish
@@ -567,7 +716,7 @@ func birth(at: Vector2, father_id: String = "", mother_id: String = "") -> void:
 		show_fish_reveal(child, "NEW OFFSPRING", [father, mother] if father != null and mother != null else [])
 
 func spawn_fish(from_save: bool = false, origin: String = "Purchased", species_id: String = "starter_fish") -> AquariumFish:
-	if not from_save and get_tree().get_nodes_in_group("fish").size() >= breeding.CAPACITY:
+	if not from_save and get_tree().get_nodes_in_group("fish").size() >= tank_capacity():
 		return null
 	var fish := AquariumFish.new()
 	fish.presentation_scale = CREATURE_PRESENTATION_SCALE
@@ -714,7 +863,7 @@ func _process(delta: float) -> void:
 		inspect_left = 0.25
 		update_inspection()
 		if care_panel.visible:
-			care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness)
+			care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness, tank_capacity())
 	care_refresh -= delta
 	if care_panel.visible and care_refresh <= 0.0:
 		refresh_care()
@@ -739,7 +888,7 @@ func _process(delta: float) -> void:
 			fish.die("Poor water quality")
 		else:
 			fish.queue_redraw()
-	breeding_status.text = "Breeding paused: population %d/%d" % [count, breeding.BREEDING_LIMIT] if count >= breeding.BREEDING_LIMIT else "Well-fed adult pairs · 3–7 min cooldown"
+	breeding_status.text = "Breeding paused: population %d/%d" % [count, tank_capacity()] if count >= tank_capacity() else "Well-fed adult pairs · 3–7 min cooldown"
 	assets.feeder_left -= simulation_delta
 	if assets.owned.feeder and assets.feeder_left <= 0.0:
 		assets.feeder_left = 2.0
@@ -763,7 +912,7 @@ func advance_broodstock(simulation_delta: float) -> void:
 		parent.brood_left = maxf(0.0, parent.brood_left - simulation_delta)
 		if parent.brood_left > 0.0 or not breeding.enabled or parent.hunger >= parent.profile.hungry_threshold:
 			continue
-		if fish_list.size() >= breeding.CAPACITY or FishBroodstock.live_fry_for(parent.life.id, fish_list) >= FishBroodstock.MAX_LIVE_FRY:
+		if fish_list.size() >= tank_capacity() or FishBroodstock.live_fry_for(parent.life.id, fish_list) >= FishBroodstock.MAX_LIVE_FRY:
 			continue
 		var fry := spawn_fish(false, "Feeder fry", "feeder_guppy")
 		if fry == null:
@@ -859,6 +1008,11 @@ func reset_test_tank() -> void:
 	shrimp_cleanup_progress = 0.0
 	population_goal_complete = false
 	piranha_unlocked = false
+	tank2_owned = false
+	active_tank = 1
+	other_tank = {}
+	breeding.capacity = tank_capacity()
+	update_viewport_layout()
 	serum_doses = 0
 	guppy_sex_bag = FishSexBag.new()
 	guppy_diamond_bag = FishDiamondBag.new()
@@ -942,22 +1096,34 @@ func set_challenges_enabled(enabled: bool) -> void:
 		invasions.active = null
 
 func purchase_fish() -> void:
+	if active_tank == 2:
+		purchase_feeder_fry()
+		return
 	var population: int = get_tree().get_nodes_in_group("fish").size()
-	if population < breeding.CAPACITY and economy.buy_fish(population):
+	if population < tank_capacity() and economy.buy_fish(population):
 		var fish := spawn_fish()
 		audio.play("buy")
 		show_shop_message("New %s fish added to the tank." % AquariumFish.SEX_NAMES[fish.sex])
 		shop_panel.hide()
 		show_fish_reveal(fish, "NEW FISH PURCHASED")
 
+func purchase_feeder_fry() -> void:
+	if active_tank != 2 or get_tree().get_nodes_in_group("fish").size() >= tank_capacity() or not economy.spend(FEEDER_FRY_PRICE):
+		return
+	var fry := spawn_fish(false, "Purchased", "feeder_guppy")
+	fry.hunger = 0.0
+	audio.play("buy")
+	show_shop_message("Feeder fry added to Tank 2.")
+	shop_panel.hide()
+	show_fish_reveal(fry, "NEW FEEDER FRY")
+
 func purchase_piranha() -> void:
 	if not piranha_unlocked:
 		show_shop_message("Reach 10 fish to unlock Piranha.")
 		return
 	var population: int = get_tree().get_nodes_in_group("fish").size()
-	var piranha_count: int = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha").size()
-	var price: int = Economy.piranha_price(piranha_count)
-	if population < breeding.CAPACITY and economy.spend(price):
+	var price: int = Economy.piranha_price(total_piranhas())
+	if population < tank_capacity() and economy.spend(price):
 		var fish := spawn_fish(false, "Purchased", "piranha")
 		audio.play("buy")
 		show_shop_message("New %s piranha added to the tank." % AquariumFish.SEX_NAMES[fish.sex])
@@ -1014,6 +1180,7 @@ func inspect_revealed_fish(fish_id: String) -> void:
 
 func purchase_feed_upgrade() -> void:
 	if feed_upgrades.purchase(economy):
+		sync_shared_upgrades()
 		audio.play("buy")
 		show_shop_message("Feed upgraded to %s." % feeds[feed_upgrades.unlocked_tier].title)
 
@@ -1025,6 +1192,7 @@ func purchase_upgrade(track: String) -> void:
 	var old_coin_lifetime: float = assets.coin_lifetime()
 	var old_diamond_lifetime: float = assets.diamond_lifetime()
 	if assets.upgrade(track, economy):
+		sync_shared_upgrades()
 		for pet in get_tree().get_nodes_in_group("pets"):
 			if pet is SnailPet:
 				pet.apply_upgrades(int(assets.levels.snail_speed), int(assets.levels.snail_stamina), int(assets.levels.snail_sleep))
@@ -1090,6 +1258,7 @@ func toggle_shop() -> void:
 	shop_panel.visible = not shop_panel.visible
 	if shop_panel.visible:
 		care_panel.hide()
+		tank_panel.hide()
 		if is_instance_valid(selected_fish):
 			selected_fish.selected = false
 		selected_fish = null
@@ -1102,6 +1271,7 @@ func toggle_controls() -> void:
 	care_panel.visible = not care_panel.visible
 	if care_panel.visible:
 		shop_panel.hide()
+		tank_panel.hide()
 		refresh_care()
 	update_pause_state()
 
@@ -1116,6 +1286,7 @@ func select_shop_item(item_id: String) -> void:
 func activate_shop_item() -> void:
 	match shop_selected_id:
 		"fish": purchase_fish()
+		"tank2": purchase_second_tank()
 		"piranha": purchase_piranha()
 		"serum": purchase_serum()
 		"snail":
@@ -1228,16 +1399,17 @@ func refresh_shop() -> void:
 			shop_cards[pellet_card_id].set_pellet_preview(feed.color, feed.growth_credit)
 	var stock_count: int = maxi(0, mini(20, assets.capacity() - assets.reserve.size()))
 	var fish_count: int = get_tree().get_nodes_in_group("fish").size()
-	var current_fish_price: int = Economy.fish_price(fish_count)
+	var current_fish_price: int = FEEDER_FRY_PRICE if active_tank == 2 else Economy.fish_price(fish_count)
 	var piranha_count: int = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha").size()
-	var current_piranha_price: int = Economy.piranha_price(piranha_count)
+	var current_piranha_price: int = Economy.piranha_price(total_piranhas())
 	var feeder_status: String = "$%d" % assets.PRICES.feeder
 	if assets.owned.feeder:
 		feeder_status = "%d old stock · Lv. %d" % [assets.reserve.size(), int(assets.levels.feeder_capacity) + 1] if assets.reserve.size() > assets.capacity() else "%d/%d stock · Lv. %d" % [assets.reserve.size(), assets.capacity(), int(assets.levels.feeder_capacity) + 1]
 	var statuses := {
-		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, breeding.CAPACITY],
+		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, tank_capacity()],
 		"piranha": "$%d · %d owned" % [current_piranha_price, piranha_count] if piranha_unlocked else "Locked · 10 fish",
 		"serum": "%d doses · $%d" % [serum_doses, FishBroodstock.SERUM_PRICE] if piranha_unlocked else "Locked · 10 fish",
+		"tank2": "Owned · Switch tanks" if tank2_owned else ("$%d" % SECOND_TANK_PRICE if population_goal_complete else "Locked · 15 fish"),
 		"snail": "$%d" % assets.PRICES.snail if not assets.owned.snail else "SPD %d · STA %d · SLP %d" % [int(assets.levels.snail_speed) + 1, int(assets.levels.snail_stamina) + 1, int(assets.levels.snail_sleep) + 1],
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
 		"seahorse": "$%d" % assets.PRICES.seahorse if not assets.owned.seahorse else "Rate %d · Feed %d" % [int(assets.levels.seahorse_interval) + 1, int(assets.levels.seahorse_feed) + 1],
@@ -1253,6 +1425,7 @@ func refresh_shop() -> void:
 		"fish": true,
 		"piranha": piranha_unlocked,
 		"serum": piranha_unlocked,
+		"tank2": tank2_owned,
 		"snail": assets.owned.snail,
 		"shrimp": assets.owned.shrimp,
 		"seahorse": assets.owned.seahorse,
@@ -1264,12 +1437,16 @@ func refresh_shop() -> void:
 		"diamond_value": int(assets.levels.diamond_value) > 0 or int(assets.levels.diamond_lifetime) > 0,
 		"idle_duration": int(assets.levels.idle_duration) > 0,
 		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
+	shop_cards.fish.display_title = "Feeder fry" if active_tank == 2 else "Baby guppy"
+	shop_cards.fish.icon_preview.icon_kind = "feeder_fry" if active_tank == 2 else "fish"
+	shop_cards.serum.visible = active_tank == 1
+	shop_cards.tank2.visible = active_tank == 1
 	for key in shop_cards:
 		shop_cards[key].set_status(statuses[key])
 		shop_cards[key].set_discovered(bool(discoveries[key]))
 	var item = shop_items[shop_selected_id]
-	shop_detail_title.text = item.title
-	shop_detail_description.text = item.description
+	shop_detail_title.text = "Feeder fry" if shop_selected_id == "fish" and active_tank == 2 else item.title
+	shop_detail_description.text = "Cheap, sterile prey for piranhas. Guppies and broodstock must be moved from Tank 1." if shop_selected_id == "fish" and active_tank == 2 else item.description
 	shop_action_button.position = Vector2(24, 350)
 	shop_action_button.size = Vector2(333, 58)
 	shop_action_button.add_theme_font_size_override("font_size", 17)
@@ -1284,14 +1461,19 @@ func refresh_shop() -> void:
 	match shop_selected_id:
 		"fish":
 			action_price = current_fish_price
-			unavailable = fish_count >= breeding.CAPACITY
-			shop_detail_state.text = "Population %d/%d" % [fish_count, breeding.CAPACITY]
-			shop_action_button.text = "Buy guppy  $%d" % action_price
+			unavailable = fish_count >= tank_capacity()
+			shop_detail_state.text = "Population %d/%d" % [fish_count, tank_capacity()]
+			shop_action_button.text = "Buy feeder fry  $%d" % action_price if active_tank == 2 else "Buy guppy  $%d" % action_price
 		"piranha":
 			action_price = current_piranha_price
-			unavailable = fish_count >= breeding.CAPACITY or not piranha_unlocked
-			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies and bite aliens." % [fish_count, breeding.CAPACITY, piranha_count]
+			unavailable = fish_count >= tank_capacity() or not piranha_unlocked
+			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies and bite aliens." % [fish_count, tank_capacity(), piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
+		"tank2":
+			action_price = SECOND_TANK_PRICE
+			unavailable = tank2_owned or not population_goal_complete or active_tank != 1
+			shop_detail_state.text = "Reach 15 fish, then open a larger 25-fish habitat. Your fish can move between tanks."
+			shop_action_button.text = "Already owned" if tank2_owned else ("Reach 15 fish" if not population_goal_complete else "Open Tank 2  $%d" % SECOND_TANK_PRICE)
 		"serum":
 			action_price = FishBroodstock.SERUM_PRICE
 			unavailable = not piranha_unlocked or serum_doses >= 10
@@ -1520,15 +1702,16 @@ func refresh_care() -> void:
 	care_refresh = 10.0
 	var care := TankCare.assess(snapshot())
 	var capacity: String = "Supply meets average demand" if care.adequate else "Supply below average demand: manual feeding needed"
-	care_details.text = "Stock: %d / %d pellets | Fish: %d / 20\nAutomation: %.1f meals/min | Estimated need: %.1f/min active\n%s\n\n%s\n\nApproximate care, not a guarantee. Swimming and food competition vary.\nOffline estimates include broodstock fry and predation, but no natural pair breeding or aliens. Refreshes every 10s." % [care.stock, assets.capacity(), care.count, care.supply, care.demand, capacity, TankCare.forecast_text(care)]
-	care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness)
+	care_details.text = "Stock: %d / %d pellets | Fish: %d / %d\nAutomation: %.1f meals/min | Estimated need: %.1f/min active\n%s\n\n%s\n\nApproximate care, not a guarantee. Swimming and food competition vary.\nOffline estimates include broodstock fry and predation, but no natural pair breeding or aliens. Refreshes every 10s." % [care.stock, assets.capacity(), care.count, tank_capacity(), care.supply, care.demand, capacity, TankCare.forecast_text(care)]
+	care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness, tank_capacity())
 
 func build_hud() -> void:
 	var hud := CanvasLayer.new()
 	hud_layer = hud
 	add_child(hud)
 	label_at(hud, "I N S A N A R I U M", Vector2(48, 4), 23, Color("e8f2ed"))
-	label_at(hud, "01  /  THE QUIET TANK", Vector2(300, 5), 13, Color("c7dfdb"))
+	tank_button = make_button(hud, "TANK 1", Vector2(285, 7), Vector2(150, 46), toggle_tank_menu)
+	tank_button.add_theme_font_size_override("font_size", 16)
 	label_at(hud, "YOUR WALLET", Vector2(785, 4), 11, Color("83a9b7"))
 	money_label = label_at(hud, "", Vector2(782, 20), 23, Color("ffdb80"))
 	shop_button = Button.new()
@@ -1566,7 +1749,7 @@ func build_hud() -> void:
 	care_details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	make_button(care_panel, "Close", Vector2(550, 10), Vector2(82, 30), toggle_controls)
 	care_panel.hide()
-	count_label = label_at(hud, "", Vector2(300, 31), 12, Color("83a9b7"))
+	count_label = label_at(hud, "", Vector2(285, 57), 12, Color("83a9b7"))
 	cleanliness_label = label_at(hud, "", Vector2(450, 4), 12, Color("8edfe9"))
 	cleanliness_label.size = Vector2(150, 28)
 	clean_button = make_button(hud, "Full clean", Vector2(450, 27), Vector2(130, 28), purchase_full_clean)
@@ -1619,6 +1802,8 @@ func build_hud() -> void:
 	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 32), 12, Color("83a9b7"))
 	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 478), Vector2(210, 38), sell_selected)
 	sell_button.disabled = true
+	move_fish_button = make_button(inspector_panel, "Move fish", Vector2(185, 5), Vector2(116, 30), move_selected_fish)
+	move_fish_button.hide()
 	inject_button = make_button(inspector_panel, "Buy serum", Vector2(15, 478), Vector2(150, 38), inject_selected)
 	inject_button.hide()
 	var challenge := CheckButton.new()
@@ -1666,6 +1851,7 @@ func build_hud() -> void:
 	import_dialog.confirmed.connect(finish_import)
 	add_child(import_dialog)
 	build_shop(hud)
+	build_tank_menu(hud)
 	reveal_panel = FishRevealPanelScript.new()
 	reveal_panel.position = Vector2(300, 5)
 	reveal_panel.z_index = 30
@@ -1678,6 +1864,47 @@ func build_hud() -> void:
 	acquisition_celebration.finished.connect(finish_acquisition_celebration)
 	var orientation_gate: MobileOrientationGate = MobileOrientationGateScript.new()
 	hud.add_child(orientation_gate)
+
+func build_tank_menu(hud: CanvasLayer) -> void:
+	tank_panel = Panel.new()
+	tank_panel.position = Vector2(251, 38)
+	tank_panel.size = Vector2(650, 435)
+	tank_panel.z_index = 26
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("0b2230")
+	style.border_color = Color("729b9e")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(14)
+	tank_panel.add_theme_stylebox_override("panel", style)
+	hud.add_child(tank_panel)
+	label_at(tank_panel, "YOUR TANKS", Vector2(24, 19), 24, Color("e8f2ed"))
+	make_button(tank_panel, "Close", Vector2(540, 16), Vector2(86, 38), toggle_tank_menu)
+	tank_one_button = make_button(tank_panel, "", Vector2(27, 90), Vector2(280, 205), func() -> void: switch_tank(1))
+	tank_two_button = make_button(tank_panel, "", Vector2(341, 90), Vector2(280, 205), func() -> void: switch_tank(2))
+	label_at(tank_panel, "Fish, pets, water and stock belong to each tank. Your wallet and lasting upgrades are shared.", Vector2(30, 335), 15, Color("c7dfdb"))
+	tank_panel.hide()
+	refresh_tank_menu()
+
+func refresh_tank_menu() -> void:
+	if not is_instance_valid(tank_panel):
+		return
+	tank_button.text = "TANK %d" % active_tank
+	var current_count: int = get_tree().get_nodes_in_group("fish").size()
+	var other_count: int = other_tank.get("fish", []).size()
+	var first_count: int = current_count if active_tank == 1 else other_count
+	var second_count: int = current_count if active_tank == 2 else other_count
+	tank_one_button.text = "TANK 1 · THE QUIET TANK\n%d/20 fish\n%s" % [first_count, "Viewing" if active_tank == 1 else "View tank"]
+	tank_one_button.disabled = active_tank == 1
+	tank_two_button.text = "TANK 2 · WIDE TANK\n%d/25 fish\n%s" % [second_count, ("Viewing" if active_tank == 2 else "View tank") if tank2_owned else ("Buy in Shop · $10,000" if population_goal_complete else "Reach 15 fish")]
+	tank_two_button.disabled = not tank2_owned or active_tank == 2
+
+func toggle_tank_menu() -> void:
+	tank_panel.visible = not tank_panel.visible
+	if tank_panel.visible:
+		shop_panel.hide()
+		care_panel.hide()
+		refresh_tank_menu()
+	update_pause_state()
 
 func build_shop(hud: CanvasLayer) -> void:
 	shop_panel = Panel.new()
@@ -1867,7 +2094,7 @@ func snapshot() -> Dictionary:
 		elif pet is CleanupShrimpScript:
 			shrimp_x = pet.position.x
 			shrimp_digestion = pet.digestion_left
-	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "seahorse_served": seahorse_served, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "piranha_unlocked": piranha_unlocked, "serum_doses": serum_doses, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
+	var data: Dictionary = {"tank_index": active_tank, "saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "seahorse_served": seahorse_served, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "piranha_unlocked": piranha_unlocked, "serum_doses": serum_doses, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
 		"guppy_sex_bag": guppy_sex_bag.to_data(), "guppy_diamond_bag": guppy_diamond_bag.to_data(),
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
@@ -1875,9 +2102,20 @@ func snapshot() -> Dictionary:
 		"owned": assets.owned.duplicate(), "asset_levels": assets.levels.duplicate(), "reserve": assets.reserve.duplicate(),
 		"cleanliness": environment.cleanliness, "waste": waste_data,
 		"fish": fish_data, "coins": rewards, "food": pellets}
+	data["tank2_owned"] = tank2_owned
+	data["active_tank"] = active_tank
+	if tank2_owned:
+		data["other_tank"] = other_tank.duplicate(true)
+	return data
 
-func restore(data: Dictionary) -> void:
+func restore(data: Dictionary, include_portfolio: bool = true) -> void:
 	data = SaveMigration.upgrade(data)
+	if include_portfolio:
+		tank2_owned = bool(data.get("tank2_owned", false))
+		active_tank = clampi(int(data.get("active_tank", 1)), 1, 2) if tank2_owned else 1
+		other_tank = data.get("other_tank", {}).duplicate(true) if tank2_owned else {}
+	update_viewport_layout()
+	breeding.capacity = tank_capacity()
 	guppy_sex_bag.from_data(data.get("guppy_sex_bag", []))
 	guppy_diamond_bag.from_data(data.get("guppy_diamond_bag", []))
 	life_registry.next_id = int(data.next_fish_id)

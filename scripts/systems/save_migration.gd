@@ -41,6 +41,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	data["cleanliness"] = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	data["population_goal_complete"] = bool(data.get("population_goal_complete", false))
 	data["piranha_unlocked"] = bool(data.get("piranha_unlocked", false)) or bool(data.population_goal_complete) or data.get("fish", []).size() >= 10
+	data["tank_index"] = clampi(int(data.get("tank_index", data.get("active_tank", 1))), 1, 2)
 	var served: Array = []
 	for fish_id in data.get("seahorse_served", []):
 		if fish_id is String and fish_id.length() <= 64 and not fish_id in served and served.size() < 50:

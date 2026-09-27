@@ -153,7 +153,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			if not bool(parent.get("broodstock", false)):
 				continue
 			parent.brood_left = maxf(0.0, float(parent.get("brood_left", 0)) - dt)
-			if parent.brood_left > 0.0 or not bool(data.get("breeding_enabled", true)) or float(parent.hunger) >= profile.hungry_threshold or fish_list.size() + new_fry.size() >= FishBreeding.CAPACITY:
+			if parent.brood_left > 0.0 or not bool(data.get("breeding_enabled", true)) or float(parent.hunger) >= profile.hungry_threshold or fish_list.size() + new_fry.size() >= (25 if int(data.get("tank_index", 1)) == 2 else FishBreeding.CAPACITY):
 				continue
 			var live_fry: int = 0
 			for candidate in fish_list + new_fry:
