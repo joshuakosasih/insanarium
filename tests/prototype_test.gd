@@ -200,7 +200,7 @@ func run() -> void:
 	get_nodes_in_group("food")[-1].free()
 	hungry_specimen.hunger = 0.0
 	tank.select_shop_item("seahorse")
-	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible, "owned seahorse exposes rate, pellet quality, and sale controls")
+	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible and tank.shop_sell_button.position.x == 24.0 and not tank.shop_detail_kicker.visible, "owned seahorse shows a sale control at the left of its detail card, away from Close")
 	balance = tank.economy.money
 	tank.activate_shop_item()
 	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 25, "seahorse production interval upgrades independently")
@@ -385,7 +385,9 @@ func run() -> void:
 	var pet_count_before_sale: int = get_nodes_in_group("pets").size()
 	var wallet_before_sale: float = restored.economy.money
 	var expected_sale: int = restored.assets.pet_sell_value("snail")
-	restored.activate_shop_sell()
+	restored.request_shop_sell()
+	check(restored.shop_sell_dialog.visible and restored.assets.owned.snail and restored.economy.money == wallet_before_sale, "pet sale requires confirmation before changing ownership or money")
+	restored.shop_sell_dialog.confirmed.emit()
 	await process_frame
 	check(not restored.assets.owned.snail and get_nodes_in_group("pets").size() == pet_count_before_sale - 1 and restored.economy.money == wallet_before_sale + expected_sale and restored.assets.levels.snail_speed == 0 and not restored.shop_cards.snail.discovered, "selling a pet refunds half its investment, removes it, and resets its upgrades")
 	for living in get_nodes_in_group("fish"):

@@ -25,9 +25,9 @@ func _ready() -> void:
 	add_child(message)
 
 	var icon := Label.new()
-	icon.text = "↻"
+	icon.text = "TURN"
 	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.add_theme_font_size_override("font_size", 72)
+	icon.add_theme_font_size_override("font_size", 36)
 	icon.add_theme_color_override("font_color", Color("8edfe9"))
 	message.add_child(icon)
 

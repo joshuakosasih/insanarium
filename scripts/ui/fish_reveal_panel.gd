@@ -84,10 +84,10 @@ static func capture(fish: AquariumFish, heading: String, parents: Array = []) ->
 				parent_average /= parent_rows.size()
 				var difference: float = float(rows[index].progress) - parent_average
 				rows[index] = rows[index].duplicate()
-				rows[index].comparison = "↑" if difference > 0.035 else ("↓" if difference < -0.035 else "≈")
+				rows[index].comparison = "+" if difference > 0.035 else ("-" if difference < -0.035 else "=")
 	var comparison: String = "A new bloodline for your aquarium."
 	if not parent_ids.is_empty():
-		comparison = "Parents: %s\n↑ above parents · ↓ below parents · ≈ similar" % " + ".join(parent_ids)
+		comparison = "Parents: %s\n+ above parents · - below parents · = similar" % " + ".join(parent_ids)
 	return {"heading": heading, "id": fish.life.id, "species_id": fish.profile.species_id, "guppy_role": "broodstock" if fish.broodstock else "",
 		"identity": "%s · %s\n%s · %s · %s" % [fish.life.id, fish.profile.species_name, AquariumFish.SEX_NAMES[fish.sex], fish.profile.growth_names[fish.growth.stage], FishMutation.NAMES[fish.mutation.variant]],
 		"details": "Output %.1fs · Water resilience ×%.2f" % [fish.genome.output_interval(fish.profile.coin_interval), fish.genome.constitution()],

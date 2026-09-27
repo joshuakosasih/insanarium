@@ -78,12 +78,15 @@ var shop_cards: Dictionary = {}
 var shop_items: Dictionary = {}
 var shop_selected_id: String = "fish"
 var shop_detail_title: Label
+var shop_detail_kicker: Label
 var shop_detail_description: Label
 var shop_detail_state: Label
 var shop_action_button: Button
 var shop_secondary_button: Button
 var shop_tertiary_button: Button
 var shop_sell_button: Button
+var shop_sell_dialog: ConfirmationDialog
+var pending_shop_sell_kind: String = ""
 var care_panel: Panel
 var care_details: Label
 var care_warnings: Label
@@ -1133,6 +1136,18 @@ func activate_shop_sell() -> void:
 		update_money(economy.money)
 	refresh_shop()
 
+func request_shop_sell() -> void:
+	if not shop_selected_id in ["snail", "shrimp", "seahorse", "puffer"] or not bool(assets.owned.get(shop_selected_id, false)):
+		return
+	pending_shop_sell_kind = shop_selected_id
+	shop_sell_dialog.dialog_text = "Sell %s for $%d? Its upgrades will be reset." % [pet_display_name(pending_shop_sell_kind), assets.pet_sell_value(pending_shop_sell_kind)]
+	shop_sell_dialog.popup_centered(Vector2i(470, 170))
+
+func confirm_shop_sell() -> void:
+	if pending_shop_sell_kind == shop_selected_id:
+		activate_shop_sell()
+	pending_shop_sell_kind = ""
+
 func pet_kind(pet: Node) -> String:
 	if pet is SnailPet:
 		return "snail"
@@ -1166,7 +1181,7 @@ func refresh_shop() -> void:
 		"puffer": "$%d" % assets.PRICES.puffer if not assets.owned.puffer else "Speed %d · Curiosity %d" % [int(assets.levels.puffer_speed) + 1, int(assets.levels.puffer_curiosity) + 1],
 		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
 		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
-		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s → %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
+		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s to %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coins": "Life %d · Value %d" % [int(assets.levels.coin_lifetime) + 1, int(assets.levels.coin_value) + 1],
 		"diamond_value": "Life %d · Value %d" % [int(assets.levels.diamond_lifetime) + 1, int(assets.levels.diamond_value) + 1],
 		"idle_duration": "Locked" if assets.idle_limit() <= 0.0 else "Lv. %d · %s" % [int(assets.levels.idle_duration), FishInspector.duration(assets.idle_limit())],
@@ -1200,6 +1215,7 @@ func refresh_shop() -> void:
 	shop_secondary_button.hide()
 	shop_tertiary_button.hide()
 	shop_sell_button.hide()
+	shop_detail_kicker.show()
 	var action_price: int = 0
 	var unavailable: bool = false
 	match shop_selected_id:
@@ -1389,7 +1405,8 @@ func refresh_shop() -> void:
 			shop_secondary_button.show()
 	shop_action_button.disabled = unavailable or action_price > economy.money
 	if shop_selected_id in ["snail", "shrimp", "seahorse", "puffer"] and bool(assets.owned.get(shop_selected_id, false)):
-		shop_sell_button.text = "Sell $%d" % assets.pet_sell_value(shop_selected_id)
+		shop_detail_kicker.hide()
+		shop_sell_button.text = "Sell pet  $%d" % assets.pet_sell_value(shop_selected_id)
 		shop_sell_button.show()
 	buy_button = shop_action_button
 
@@ -1627,7 +1644,7 @@ func build_shop(hud: CanvasLayer) -> void:
 	detail_style.set_corner_radius_all(12)
 	detail.add_theme_stylebox_override("panel", detail_style)
 	shop_panel.add_child(detail)
-	label_at(detail, "SELECTED", Vector2(24, 22), 12, Color("8edfe9"))
+	shop_detail_kicker = label_at(detail, "SELECTED", Vector2(24, 22), 12, Color("8edfe9"))
 	shop_detail_title = label_at(detail, "", Vector2(24, 53), 25, Color("e8f2ed"))
 	shop_detail_description = label_at(detail, "", Vector2(24, 102), 15, Color("c7dfdb"))
 	shop_detail_description.size = Vector2(392, 105)
@@ -1643,9 +1660,13 @@ func build_shop(hud: CanvasLayer) -> void:
 	shop_tertiary_button = make_button(detail, "", Vector2(286, 350), Vector2(130, 58), activate_shop_tertiary)
 	shop_tertiary_button.add_theme_font_size_override("font_size", 13)
 	shop_tertiary_button.hide()
-	shop_sell_button = make_button(detail, "", Vector2(292, 14), Vector2(114, 36), activate_shop_sell)
+	shop_sell_button = make_button(detail, "", Vector2(24, 14), Vector2(175, 36), request_shop_sell)
 	shop_sell_button.add_theme_font_size_override("font_size", 13)
 	shop_sell_button.hide()
+	shop_sell_dialog = ConfirmationDialog.new()
+	shop_sell_dialog.title = "Sell pet?"
+	shop_sell_dialog.confirmed.connect(confirm_shop_sell)
+	add_child(shop_sell_dialog)
 
 	var rule := ColorRect.new()
 	rule.position = Vector2(30, 512)

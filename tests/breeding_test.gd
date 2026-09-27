@@ -61,7 +61,7 @@ func run() -> void:
 	check(tank.reveal_panel.visible and tank.reveal_panel.heading_label.text == "NEW OFFSPRING" and "Parents:" in tank.reveal_panel.comparison_label.text, "celebration opens a reveal card naming both parents")
 	var has_comparison: bool = false
 	for bar in tank.reveal_panel.trait_bars:
-		has_comparison = has_comparison or bar.comparison in ["↑", "↓", "≈"]
+		has_comparison = has_comparison or bar.comparison in ["+", "-", "="]
 	check(has_comparison, "offspring reveal compares every direct trait with its parents")
 	tank.advance_fish_reveal()
 	check(is_equal_approx(male.breeding_left, male.genome.breeding_cooldown()) and is_equal_approx(female.breeding_left, female.genome.breeding_cooldown()) and male.breeding_left > female.breeding_left, "each parent receives its Fertility-based breeding cooldown")
