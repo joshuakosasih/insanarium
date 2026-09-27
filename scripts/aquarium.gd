@@ -54,6 +54,8 @@ var breeding_toggle: CheckButton
 var assets := IdleAssets.new()
 var selected_fish: AquariumFish
 var sell_button: Button
+var inject_button: Button
+var serum_doses: int = 0
 var inspect_label: Label
 var save_label: Label
 var autosave_left: float = 15.0
@@ -294,12 +296,13 @@ Meals eaten: %d · Stock used: %d
 Growth events: %d · Mutations: %d
 Waste produced: %d · Pellets spoiled: %d
 Shrimp cleanup: %d waste · %d pellets rescued
+Feeder fry born: %d · Prey eaten: %d
 Fish lost: %d · Water-quality: %d · Old age: %d
 
-Estimated care; no offline breeding or alien attacks." % [
+Estimated care; no natural offline breeding or alien attacks." % [
 		FishInspector.duration(report.away), FishInspector.duration(report.simulated), " (%s cap)" % FishInspector.duration(float(report.away_limit)) if report.capped else "",
-		report.earned, report.collected, report.fed, report.stock_used, report.growth, report.mutations, report.waste, report.spoiled, report.shrimp_cleaned, report.pellets_rescued, report.lost, report.water_lost, report.old_age_lost]
-	return_dialog.popup_centered(Vector2i(550, 390))
+		report.earned, report.collected, report.fed, report.stock_used, report.growth, report.mutations, report.waste, report.spoiled, report.shrimp_cleaned, report.pellets_rescued, report.get("brood_fry", 0), report.get("preyed", 0), report.lost, report.water_lost, report.old_age_lost]
+	return_dialog.popup_centered(Vector2i(550, 420))
 
 func confirm_import(data: Dictionary) -> void:
 	pending_import = data
@@ -418,6 +421,24 @@ func sell_selected() -> void:
 	update_count()
 	update_inspection()
 
+func purchase_serum() -> void:
+	if not piranha_unlocked or serum_doses >= 10 or not economy.spend(FishBroodstock.SERUM_PRICE):
+		return
+	serum_doses += 1
+	audio.play("buy")
+	show_shop_message("Serum ready. Select an Adult guppy, then Inject.")
+	update_money(economy.money)
+
+func inject_selected() -> void:
+	if serum_doses <= 0 or not is_instance_valid(selected_fish) or not FishBroodstock.can_convert(selected_fish):
+		return
+	serum_doses -= 1
+	selected_fish.broodstock = true
+	selected_fish.brood_left = FishBroodstock.interval_for(selected_fish.genome.fertility_value())
+	audio.play("growth")
+	show_feedback(selected_fish.position, "Broodstock!")
+	update_inspection()
+
 func update_count() -> void:
 	var count: int = get_tree().get_nodes_in_group("fish").size()
 	if count >= 10 and not piranha_unlocked:
@@ -465,6 +486,11 @@ func purchase_full_clean() -> void:
 func update_inspection() -> void:
 	var valid: bool = is_instance_valid(selected_fish) and not selected_fish.dead
 	sell_button.disabled = not valid
+	inject_button.visible = valid and FishBroodstock.can_convert(selected_fish)
+	inject_button.disabled = serum_doses <= 0
+	inject_button.text = "Inject serum (%d)" % serum_doses if serum_doses > 0 else "Buy serum"
+	sell_button.position.x = 174 if inject_button.visible else 69
+	sell_button.size.x = 158 if inject_button.visible else 210
 	inspector_panel.visible = valid
 	if valid:
 		inspector_detail.text = FishInspector.describe(selected_fish)
@@ -472,6 +498,8 @@ func update_inspection() -> void:
 		for index in range(inspector_trait_bars.size()):
 			inspector_trait_bars[index].configure(rows[index])
 		inspect_label.text = "%s · %s · %s" % [FishMutation.NAMES[selected_fish.mutation.variant], selected_fish.profile.growth_names[selected_fish.growth.stage], AquariumFish.SEX_NAMES[selected_fish.sex]]
+		if selected_fish.broodstock:
+			inspect_label.text += " · Broodstock"
 		sell_button.text = "Sell fish  $%d" % selected_fish.sell_value()
 	else:
 		inspect_label.text = "Click a fish to inspect its sale value"
@@ -518,6 +546,8 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased", species_i
 		fish.growth.diamond_bag = guppy_diamond_bag
 	if species_id == "piranha":
 		fish.sex = randi_range(0, 1) as AquariumFish.Sex
+	elif species_id == "feeder_guppy":
+		fish.sex = AquariumFish.Sex.ASEXUAL
 	elif not from_save and origin != "Starter":
 		fish.sex = guppy_sex_bag.draw()
 	fish.bounds = swim_bounds
@@ -652,6 +682,7 @@ func _process(delta: float) -> void:
 			debug_autoplay_step()
 	life_registry.elapsed += simulation_delta
 	breeding.advance(simulation_delta, get_tree().get_nodes_in_group("fish"))
+	advance_broodstock(simulation_delta)
 	var count: int = get_tree().get_nodes_in_group("fish").size()
 	environment.advance(simulation_delta, count + get_tree().get_nodes_in_group("pets").size(), get_tree().get_nodes_in_group("waste").size())
 	update_cleanliness()
@@ -661,7 +692,7 @@ func _process(delta: float) -> void:
 			fish.die("Poor water quality")
 		else:
 			fish.queue_redraw()
-	breeding_status.text = "Breeding paused: population %d/16" % count if count >= breeding.BREEDING_LIMIT else "Well-fed adult pairs · 5 min cooldown"
+	breeding_status.text = "Breeding paused: population %d/%d" % [count, breeding.BREEDING_LIMIT] if count >= breeding.BREEDING_LIMIT else "Well-fed adult pairs · 3–7 min cooldown"
 	assets.feeder_left -= simulation_delta
 	if assets.owned.feeder and assets.feeder_left <= 0.0:
 		assets.feeder_left = 2.0
@@ -676,6 +707,28 @@ func _process(delta: float) -> void:
 	if persistence and autosave_left <= 0.0:
 		autosave_left = 15.0
 		save_now()
+
+func advance_broodstock(simulation_delta: float) -> void:
+	var fish_list: Array = get_tree().get_nodes_in_group("fish")
+	for parent in fish_list:
+		if not parent.broodstock or parent.dead:
+			continue
+		parent.brood_left = maxf(0.0, parent.brood_left - simulation_delta)
+		if parent.brood_left > 0.0 or not breeding.enabled or parent.hunger >= parent.profile.hungry_threshold:
+			continue
+		if fish_list.size() >= breeding.CAPACITY or FishBroodstock.live_fry_for(parent.life.id, fish_list) >= FishBroodstock.MAX_LIVE_FRY:
+			continue
+		var fry := spawn_fish(false, "Feeder fry", "feeder_guppy")
+		if fry == null:
+			continue
+		fry.genome.from_data(parent.genome.to_data())
+		fry.apply_genome(true)
+		fry.life.parent_ids = PackedStringArray([parent.life.id])
+		fry.position = (parent.position + Vector2(16, -8)).clamp(swim_bounds.position, swim_bounds.end)
+		fry.hunger = 0.1
+		parent.brood_left = FishBroodstock.interval_for(parent.genome.fertility_value())
+		fish_list.append(fry)
+		show_feedback(fry.position, "Feeder fry!")
 
 func debug_autoplay_step() -> void:
 	# A deterministic caretaker for observing the economy over long accelerated runs.
@@ -759,6 +812,7 @@ func reset_test_tank() -> void:
 	shrimp_cleanup_progress = 0.0
 	population_goal_complete = false
 	piranha_unlocked = false
+	serum_doses = 0
 	guppy_sex_bag = FishSexBag.new()
 	guppy_diamond_bag = FishDiamondBag.new()
 	for i in range(2):
@@ -1013,6 +1067,7 @@ func activate_shop_item() -> void:
 	match shop_selected_id:
 		"fish": purchase_fish()
 		"piranha": purchase_piranha()
+		"serum": purchase_serum()
 		"snail":
 			if assets.owned.snail:
 				purchase_upgrade("snail_speed")
@@ -1105,6 +1160,7 @@ func refresh_shop() -> void:
 	var statuses := {
 		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, breeding.CAPACITY],
 		"piranha": "$%d · %d owned" % [current_piranha_price, piranha_count] if piranha_unlocked else "Locked · 10 fish",
+		"serum": "%d doses · $%d" % [serum_doses, FishBroodstock.SERUM_PRICE] if piranha_unlocked else "Locked · 10 fish",
 		"snail": "$%d" % assets.PRICES.snail if not assets.owned.snail else "SPD %d · STA %d · SLP %d" % [int(assets.levels.snail_speed) + 1, int(assets.levels.snail_stamina) + 1, int(assets.levels.snail_sleep) + 1],
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
 		"seahorse": "$%d" % assets.PRICES.seahorse if not assets.owned.seahorse else "Rate %d · Feed %d" % [int(assets.levels.seahorse_interval) + 1, int(assets.levels.seahorse_feed) + 1],
@@ -1119,6 +1175,7 @@ func refresh_shop() -> void:
 	var discoveries := {
 		"fish": true,
 		"piranha": piranha_unlocked,
+		"serum": piranha_unlocked,
 		"snail": assets.owned.snail,
 		"shrimp": assets.owned.shrimp,
 		"seahorse": assets.owned.seahorse,
@@ -1157,6 +1214,11 @@ func refresh_shop() -> void:
 			unavailable = fish_count >= breeding.CAPACITY or not piranha_unlocked
 			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies and bite aliens." % [fish_count, breeding.CAPACITY, piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
+		"serum":
+			action_price = FishBroodstock.SERUM_PRICE
+			unavailable = not piranha_unlocked or serum_doses >= 10
+			shop_detail_state.text = "%d dose(s) available.\nSelect an Adult guppy to inject. It gives up coin production and produces up to two live feeder fry at a time." % serum_doses
+			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else ("Stock full" if serum_doses >= 10 else "Buy serum  $%d" % action_price)
 		"snail":
 			if not assets.owned.snail:
 				action_price = assets.PRICES.snail
@@ -1456,6 +1518,8 @@ func build_hud() -> void:
 	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 32), 12, Color("83a9b7"))
 	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 478), Vector2(210, 38), sell_selected)
 	sell_button.disabled = true
+	inject_button = make_button(inspector_panel, "Buy serum", Vector2(15, 478), Vector2(150, 38), inject_selected)
+	inject_button.hide()
 	var challenge := CheckButton.new()
 	challenge.text = "Alien challenges"
 	challenge.position = Vector2(350, 390)
@@ -1652,7 +1716,7 @@ func snapshot() -> Dictionary:
 	for fish in get_tree().get_nodes_in_group("fish"):
 		fish_data.append({"x": fish.position.x, "y": fish.position.y, "hunger": fish.hunger, "health": fish.health.current, "genome": fish.genome.to_data(),
 			"life": fish.life.to_data(), "species_id": fish.profile.species_id,
-			"sex": fish.sex, "breeding_left": fish.breeding_left,
+			"sex": fish.sex, "breeding_left": fish.breeding_left, "broodstock": fish.broodstock, "brood_left": fish.brood_left,
 			"starving": fish.survival.starving_for, "meals": fish.growth.meals,
 			"credit": fish.growth.growth_credit, "stage": fish.growth.stage,
 			"diamond_trial_done": fish.growth.diamond_trial_done,
@@ -1696,7 +1760,7 @@ func snapshot() -> Dictionary:
 		elif pet is CleanupShrimpScript:
 			shrimp_x = pet.position.x
 			shrimp_digestion = pet.digestion_left
-	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "piranha_unlocked": piranha_unlocked, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
+	return {"saved_at": Time.get_unix_time_from_system(), "feeder_left": maxf(0.0, assets.feeder_left), "seahorse_left": seahorse_left, "version": 3, "next_fish_id": life_registry.next_id, "simulation_elapsed": life_registry.elapsed, "pace_version": 2, "breeding_enabled": breeding.enabled, "breeding_check": breeding.check_left, "population_goal_complete": population_goal_complete, "piranha_unlocked": piranha_unlocked, "serum_doses": serum_doses, "money": economy.money, "tier": feed_upgrades.unlocked_tier,
 		"guppy_sex_bag": guppy_sex_bag.to_data(), "guppy_diamond_bag": guppy_diamond_bag.to_data(),
 		"snail_x": snail_x, "snail_stamina": snail_stamina, "snail_sleep": snail_sleep, "snail_collection_progress": snail_collection_progress,
 		"puffer_x": puffer_x, "puffer_y": puffer_y, "puffer_destination_x": puffer_destination.x, "puffer_destination_y": puffer_destination.y, "puffer_wander": puffer_wander, "puffer_puff": puffer_puff,
@@ -1715,6 +1779,7 @@ func restore(data: Dictionary) -> void:
 	breeding.check_left = clampf(float(data.get("breeding_check", 30)), 0, 30)
 	population_goal_complete = bool(data.get("population_goal_complete", false))
 	piranha_unlocked = bool(data.get("piranha_unlocked", false)) or population_goal_complete or data.get("fish", []).size() >= 10
+	serum_doses = clampi(int(data.get("serum_doses", 0)), 0, 10)
 	breeding_toggle.set_pressed_no_signal(breeding.enabled)
 	economy.money = maxf(0.0, float(data.get("money", 100)))
 	environment.cleanliness = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
@@ -1758,6 +1823,8 @@ func restore(data: Dictionary) -> void:
 		else:
 			fish.sex = guppy_sex_bag.draw()
 		fish.breeding_left = clampf(float(item.get("breeding_left", 0)), 0, FishGenome.MAX_BREEDING_COOLDOWN)
+		fish.broodstock = bool(item.get("broodstock", false)) and fish.profile.species_id == "starter_fish"
+		fish.brood_left = clampf(float(item.get("brood_left", 0)), 0.0, 270.0) if fish.broodstock else 0.0
 		fish.position = Vector2(item.get("x", 500), item.get("y", 350)).clamp(swim_bounds.position, swim_bounds.end)
 		fish.hunger = clampf(float(item.get("hunger", 0)), 0, 1)
 		fish.health.current = clampf(float(item.get("health", fish.health.maximum)), 0.01, fish.health.maximum)
@@ -1767,7 +1834,7 @@ func restore(data: Dictionary) -> void:
 		fish.survival.starving_for = clampf(saved_starvation, 0, fish.profile.starvation_grace)
 		fish.growth.meals = maxi(0, int(item.get("meals", 0)))
 		fish.growth.growth_credit = maxf(0.0, float(item.get("credit", 0)))
-		fish.growth.stage = clampi(int(item.get("stage", 0)), 0, 4)
+		fish.growth.stage = clampi(int(item.get("stage", 0)), 0, fish.profile.max_growth_stage)
 		fish.growth.diamond_trial_done = bool(item.get("diamond_trial_done", fish.growth.stage >= fish.profile.diamond_stage))
 		fish.mutation.variant = clampi(int(item.get("mutation", 0)), 0, 3)
 		fish.visual_size = fish.profile.growth_sizes[fish.growth.stage]

@@ -32,6 +32,11 @@ extends Resource
 @export var prey_growth_credit: int = 2
 @export var prey_detection_radius: float = 520.0
 @export var alien_defense_stage: int = -1
+@export var max_growth_stage: int = 4
+@export var maximum_lifespan: float = INF
+@export var produces_only_waste: bool = false
+@export var feeder_for_species_id: String = ""
+@export var prey_priority: int = 0
 
 static func for_species(id: String) -> FishProfile:
 	var profile := FishProfile.new()
@@ -39,8 +44,8 @@ static func for_species(id: String) -> FishProfile:
 		profile.species_id = "piranha"
 		profile.species_name = "Piranha"
 		profile.swim_speed = 78.0
-		profile.hunger_rate = 1.0 / 420.0
-		profile.starvation_grace = 90.0
+		profile.hunger_rate = 1.0 / 300.0
+		profile.starvation_grace = 120.0
 		profile.coin_interval = 28.0
 		profile.coin_value = 2
 		profile.body_color = Color("dd6c63")
@@ -54,6 +59,18 @@ static func for_species(id: String) -> FishProfile:
 		profile.hunter_stage = 2
 		profile.prey_nutrition = 0.85
 		profile.alien_defense_stage = 2
+	elif id == "feeder_guppy":
+		profile.species_id = "feeder_guppy"
+		profile.species_name = "Feeder Fry"
+		profile.body_color = Color("a7d8b5")
+		profile.hunger_rate = 1.0 / 240.0
+		profile.starvation_grace = 120.0
+		profile.growth_sizes = PackedFloat32Array([0.42, 0.66, 0.66, 0.66, 0.66])
+		profile.max_growth_stage = 1
+		profile.maximum_lifespan = 900.0
+		profile.produces_only_waste = true
+		profile.feeder_for_species_id = "piranha"
+		profile.prey_priority = 1
 	return profile
 
 func eats_pellets_at(stage: int) -> bool:

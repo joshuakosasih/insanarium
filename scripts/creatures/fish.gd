@@ -12,6 +12,8 @@ var sex: Sex = Sex.MALE
 var breeding_left: float = 0.0
 var mutation := FishMutation.new()
 var genome := FishGenome.new()
+var broodstock: bool = false
+var brood_left: float = 0.0
 var survival := FishSurvival.new()
 var health := FishHealth.new()
 var dead: bool = false
@@ -54,7 +56,7 @@ func _process(delta: float) -> void:
 	if dead:
 		return
 	life.age_seconds += delta
-	if life.age_seconds >= FishAging.lifespan_for(genome):
+	if life.age_seconds >= minf(FishAging.lifespan_for(genome), profile.maximum_lifespan):
 		die("Old age")
 		return
 	hunger = minf(1.0, hunger + profile.hunger_rate_at(growth.stage) * genome.hunger_multiplier() * delta)
@@ -65,7 +67,7 @@ func _process(delta: float) -> void:
 		# Newborns have a short protected stage before they begin producing output.
 		if growth.stage > 0:
 			var output_at := position + Vector2(-12 * facing, 16)
-			if randf() > genome.coin_chance():
+			if broodstock or profile.produces_only_waste or randf() > genome.coin_chance():
 				waste_produced.emit(output_at)
 			else:
 				coin_produced.emit(output_at, current_coin_value(), profile.reward_is_diamond(growth.stage), profile.reward_grade(growth.stage))
@@ -171,6 +173,8 @@ func current_coin_value() -> int:
 	return profile.coin_value * profile.growth_rewards[growth.stage]
 
 func sell_value() -> int:
+	if profile.species_id == "feeder_guppy":
+		return 3
 	return mutation.sell_value(growth.stage)
 
 func wears_crown() -> bool:

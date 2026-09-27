@@ -1,6 +1,6 @@
 class_name OfflineProgress
 extends RefCounted
-## Bounded, deterministic data-only care model. No movement, breeding, or aliens.
+## Bounded, deterministic data-only care model. No movement, natural breeding, or aliens.
 const MAX_AWAY: float = 28800.0
 
 static func advance(source: Dictionary, now: float) -> Dictionary:
@@ -18,7 +18,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var diamond_bag := FishDiamondBag.new()
 	diamond_bag.from_data(data.get("guppy_diamond_bag", []))
 	var profile := FishProfile.new()
-	var profiles := {"starter_fish": profile, "piranha": FishProfile.for_species("piranha")}
+	var profiles := {"starter_fish": profile, "piranha": FishProfile.for_species("piranha"), "feeder_guppy": FishProfile.for_species("feeder_guppy")}
 	var feeds := FeedProfile.tiers()
 	var owned: Dictionary = data.get("owned", {})
 	var asset_levels: Dictionary = data.get("asset_levels", {})
@@ -28,6 +28,9 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var diamond_multiplier: int = IdleAssets.DIAMOND_MULTIPLIERS[clampi(int(asset_levels.get("diamond_value", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var reserve: Array = data.get("reserve", []).duplicate()
 	var fish_list: Array = data.get("fish", []).duplicate(true)
+	var next_fish_id: int = int(data.get("next_fish_id", 1))
+	report["brood_fry"] = 0
+	report["preyed"] = 0
 	var food: Array = data.get("food", []).duplicate(true)
 	var rewards: Array = data.get("coins", []).duplicate(true)
 	var waste: Array = data.get("waste", []).duplicate(true)
@@ -128,6 +131,47 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			fish.life.age = float(fish.life.age) + dt
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
 			hungry = hungry or (fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold)
+		# Serum broodstock keep their own clock; each can support at most two live fry.
+		var new_fry: Array = []
+		for parent in fish_list:
+			if not bool(parent.get("broodstock", false)):
+				continue
+			parent.brood_left = maxf(0.0, float(parent.get("brood_left", 0)) - dt)
+			if parent.brood_left > 0.0 or not bool(data.get("breeding_enabled", true)) or float(parent.hunger) >= profile.hungry_threshold or fish_list.size() + new_fry.size() >= FishBreeding.CAPACITY:
+				continue
+			var live_fry: int = 0
+			for candidate in fish_list + new_fry:
+				if str(candidate.get("species_id", "")) == "feeder_guppy" and str(parent.life.id) in candidate.get("life", {}).get("parents", []):
+					live_fry += 1
+			if live_fry >= FishBroodstock.MAX_LIVE_FRY:
+				continue
+			var fry_genome: Dictionary = parent.get("genome", {}).duplicate(true)
+			var fry_life := {"id": "F%06d" % next_fish_id, "parents": [str(parent.life.id)], "age": 0.0, "born_at": float(data.get("simulation_elapsed", 0)) + elapsed - remaining, "age_known": true, "origin": "Feeder fry"}
+			next_fish_id += 1
+			new_fry.append({"x": parent.get("x", 550), "y": parent.get("y", 350), "hunger": 0.1, "health": FishGenome.max_health_for(FishGenome.phenotype_from_data(fry_genome, "vitality")), "genome": fry_genome, "life": fry_life, "species_id": "feeder_guppy", "sex": 2, "breeding_left": 0.0, "broodstock": false, "brood_left": 0.0, "starving": 0.0, "meals": 0, "credit": 0.0, "stage": 0, "diamond_trial_done": false, "mutation": 0, "coin_left": 20.0})
+			parent.brood_left = FishBroodstock.interval_for(FishGenome.phenotype_from_data(parent.get("genome", {}), "fertility"))
+			report.brood_fry += 1
+		fish_list.append_array(new_fry)
+		var eaten_ids: Dictionary = {}
+		for predator in fish_list:
+			if str(predator.get("species_id", "")) != "piranha" or int(predator.get("stage", 0)) < 2 or float(predator.hunger) < profiles.piranha.predation_hunger:
+				continue
+			var prey: Dictionary = {}
+			for candidate in fish_list:
+				if eaten_ids.has(str(candidate.life.id)) or int(candidate.get("stage", 0)) > 1:
+					continue
+				if str(candidate.get("species_id", "")) == "feeder_guppy":
+					prey = candidate
+					break
+				if prey.is_empty() and str(candidate.get("species_id", "")) == "starter_fish":
+					prey = candidate
+			if not prey.is_empty():
+				eaten_ids[str(prey.life.id)] = true
+				predator.hunger = maxf(0.0, float(predator.hunger) - profiles.piranha.prey_nutrition)
+				predator.starving = 0.0
+				predator.meals = int(predator.get("meals", 0)) + 1
+				predator.credit = float(predator.get("credit", 0)) + profiles.piranha.prey_growth_credit
+				report.preyed += 1
 		feeder -= dt
 		seahorse = maxf(0.0, seahorse - dt)
 		if feeder <= 0.0:
@@ -145,12 +189,14 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		fish_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.hunger > b.hunger)
 		var survivors: Array = []
 		for fish in fish_list:
+			if eaten_ids.has(str(fish.life.id)):
+				continue
 			var fish_profile: FishProfile = profiles.get(str(fish.get("species_id", "starter_fish")), profile)
 			var genome_data: Dictionary = fish.get("genome", {})
 			var metabolism: float = FishGenome.phenotype_from_data(genome_data, "metabolism")
 			var allocation: float = FishGenome.phenotype_from_data(genome_data, "allocation")
 			var vitality: float = FishGenome.phenotype_from_data(genome_data, "vitality")
-			if float(fish.life.age) >= FishAging.lifespan_from_data(genome_data):
+			if float(fish.life.age) >= minf(FishAging.lifespan_from_data(genome_data), fish_profile.maximum_lifespan):
 				report.lost += 1
 				report.old_age_lost += 1
 				if report.first_old_age_loss_at < 0.0:
@@ -176,7 +222,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				fish.credit = float(fish.get("credit", 0)) + feed.growth_credit * FishGenome.growth_multiplier_for(metabolism)
 				report.fed += 1
 				var old_stage: int = int(fish.get("stage", 0))
-				for stage in range(fish_profile.growth_meals.size()):
+				for stage in range(fish_profile.max_growth_stage + 1):
 					if fish.credit >= fish_profile.growth_meals[stage] and fish.meals >= fish_profile.minimum_meals[stage]:
 						if stage == fish_profile.diamond_stage and int(fish.get("stage", 0)) < stage:
 							if not bool(fish.get("diamond_trial_done", false)):
@@ -204,7 +250,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				var output_stage: int = int(fish.get("stage", 0))
 				if output_stage <= 0:
 					pass
-				elif rng.randf() > FishGenome.coin_chance_for(allocation):
+				elif bool(fish.get("broodstock", false)) or fish_profile.produces_only_waste or rng.randf() > FishGenome.coin_chance_for(allocation):
 					cleanliness = maxf(0.0, cleanliness - TankEnvironment.WASTE_OUTPUT_POLLUTION)
 					report.waste += 1
 					if waste.size() < 100:
@@ -220,6 +266,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			survivors.append(fish)
 		fish_list = survivors
 	data.fish = fish_list
+	data.next_fish_id = next_fish_id
 	data.guppy_diamond_bag = diamond_bag.to_data()
 	data.food = food
 	data.coins = rewards

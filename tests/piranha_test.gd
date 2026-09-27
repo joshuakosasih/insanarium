@@ -132,7 +132,7 @@ func run() -> void:
 	defending_alien.free()
 	var neutral_metabolism: float = FishGenome.hunger_multiplier_for(0.5)
 	var prey_interval: float = predator.profile.prey_nutrition / (predator.profile.hunger_rate_at(2) * neutral_metabolism)
-	check(prey_interval > 300.0 and prey_interval < 360.0 and predator.profile.hunger_rate_at(1) > predator.profile.hunger_rate_at(2), "Adult piranhas need roughly one prey every five to six minutes while juveniles grow at normal feeding pace")
+	check(prey_interval > 220.0 and prey_interval < 260.0 and predator.profile.hunger_rate_at(1) > predator.profile.hunger_rate_at(2), "Adult piranhas need roughly one prey every four minutes while juveniles grow at normal feeding pace")
 	predator.hunger = 1.0
 	check("prey" in FishInspector.trait_rows(predator)[1].value and "PIRANHA NEEDS PREY" in TankCare.warnings([predator], 0, false), "Adult piranha care and traits clearly show its prey-only diet")
 	var mixed := FishBreeding.new()

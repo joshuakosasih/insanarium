@@ -12,7 +12,7 @@ func record_meal(profile: FishProfile, credit: int = 1, multiplier: float = 1.0)
 	meals += 1
 	growth_credit += maxi(0, credit) * maxf(0.0, multiplier)
 	var next_stage: int = stage
-	for i in range(profile.growth_meals.size()):
+	for i in range(mini(profile.growth_meals.size(), profile.max_growth_stage + 1)):
 		if growth_credit >= profile.growth_meals[i] and meals >= profile.minimum_meals[i]:
 			if i == profile.diamond_stage and stage < i:
 				if not diamond_trial_done:

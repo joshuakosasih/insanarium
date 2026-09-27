@@ -18,6 +18,7 @@ static func catalog() -> Array[ShopItemDefinition]:
 	return [
 		ShopItemDefinition.new("fish", "Baby guppy", "LIVESTOCK", "Add a guppy to the aquarium.", "fish"),
 		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies and defend against aliens.", "piranha"),
+		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum"),
 		ShopItemDefinition.new("snail", "Snail", "HELPER", "Collects coins along the tank floor, but must sleep after spending its stamina.", "snail"),
 		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Unlocked by an Auto-feeder or Seahorse. Forages for settled waste and expiring pellets.", "shrimp"),
 		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Unlocked by Premium feed. Produces free pellets when fish are hungry.", "seahorse"),

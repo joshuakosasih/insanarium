@@ -24,6 +24,12 @@ func _draw() -> void:
 			VectorArt.draw_fish(self, Vector2.ZERO, 1.25, Color("f6be73"))
 		"piranha":
 			VectorArt.draw_piranha(self, Vector2.ZERO, 1.25, Color("dd6c63"))
+		"serum":
+			draw_line(Vector2(-28, 28), Vector2(23, -23), Color("d8eef0"), 12, true)
+			draw_line(Vector2(-17, 17), Vector2(15, -15), Color("6adfc9"), 8, true)
+			draw_line(Vector2(-31, 31), Vector2(-39, 39), Color("d8eef0"), 3, true)
+			draw_line(Vector2(23, -23), Vector2(33, -33), Color("d8eef0"), 3, true)
+			draw_line(Vector2(16, -32), Vector2(32, -16), Color("d8eef0"), 5, true)
 		"snail":
 			VectorArt.draw_snail(self, Vector2(0, 12), 1.25)
 		"shrimp":
