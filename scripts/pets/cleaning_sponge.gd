@@ -6,7 +6,8 @@ var presentation_scale: float = 1.0
 
 func _ready() -> void:
 	add_to_group("pets")
-	scale = Vector2.ONE * presentation_scale
+	# Taller like the snail, but keep the hollow tube compact rather than long.
+	scale = Vector2(1.15, 1.45) * presentation_scale
 	# Its sibling order places it over the painted habitat and behind tank life.
 	z_index = 0
 

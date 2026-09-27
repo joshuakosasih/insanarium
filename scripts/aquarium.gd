@@ -378,7 +378,7 @@ func spawn_asset(kind: String) -> void:
 	elif kind == "sponge":
 		var sponge = CleaningSpongeScript.new()
 		sponge.presentation_scale = PET_PRESENTATION_SCALE
-		sponge.position = Vector2(swim_bounds.position.x + swim_bounds.size.x * 0.30, swim_bounds.end.y - 6)
+		sponge.position = Vector2(swim_bounds.position.x + swim_bounds.size.x * 0.30, swim_bounds.end.y - 12)
 		sponge.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(sponge)
 		move_child(sponge, 0)
