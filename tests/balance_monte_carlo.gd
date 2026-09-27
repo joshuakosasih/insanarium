@@ -139,7 +139,7 @@ func perform_player_actions(tank, profile: Dictionary, seen_bubbles: Dictionary,
 func try_purchase(tank, strategy: String, elapsed: float, result: Dictionary) -> bool:
 	var reserve_cash: float = 20.0 + get_nodes_in_group("fish").size() * 4.0
 	if tank.assets.owned.feeder and tank.assets.reserve.size() < 20:
-		var refill_cost: int = mini(20, tank.assets.CAPACITY - tank.assets.reserve.size()) * tank.feeds[tank.feed_upgrades.unlocked_tier].price
+		var refill_cost: int = mini(20, tank.assets.capacity() - tank.assets.reserve.size()) * tank.feeds[tank.feed_upgrades.unlocked_tier].price
 		if refill_cost > 0 and tank.economy.money >= refill_cost + reserve_cash and tank.assets.restock(tank.feed_upgrades.unlocked_tier, tank.feeds, tank.economy):
 			return true
 	var order: Array = ["snail", "feeder", "shrimp", "fish5", "seahorse", "puffer"]

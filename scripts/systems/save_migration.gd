@@ -71,7 +71,8 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	levels["puffer_curiosity"] = clampi(int(levels.get("puffer_curiosity", 0)), 0, 4)
 	levels["shrimp_speed"] = clampi(int(levels.get("shrimp_speed", 0)), 0, 4)
 	levels["shrimp_digestion"] = clampi(int(levels.get("shrimp_digestion", 0)), 0, 4)
-	levels["seahorse_interval"] = clampi(int(levels.get("seahorse_interval", 0)), 0, 4)
+	levels["seahorse_interval"] = clampi(int(levels.get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)
+	levels["feeder_capacity"] = clampi(int(levels.get("feeder_capacity", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)
 	levels["seahorse_feed"] = clampi(int(levels.get("seahorse_feed", 0)), 0, 2)
 	levels["coin_lifetime"] = clampi(int(levels.get("coin_lifetime", 0)), 0, 4)
 	levels["coin_value"] = clampi(int(levels.get("coin_value", 0)), 0, 4)
@@ -93,6 +94,8 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	if not owned.get("seahorse", false):
 		levels.seahorse_interval = 0
 		levels.seahorse_feed = 0
+	if not owned.get("feeder", false):
+		levels.feeder_capacity = 0
 	data["asset_levels"] = levels
 	data["version"] = 3
 	return data

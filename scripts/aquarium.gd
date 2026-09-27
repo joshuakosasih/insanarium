@@ -559,6 +559,7 @@ func spawn_fish(from_save: bool = false, origin: String = "Purchased", species_i
 	fish.waste_produced.connect(spawn_waste)
 	fish.grew.connect(show_growth)
 	fish.died.connect(on_fish_died)
+	fish.prey_eaten.connect(show_bite_effect)
 	fish.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(fish)
 	update_count()
@@ -569,6 +570,12 @@ func on_fish_died(at: Vector2, reason: String) -> void:
 	show_feedback(at, reason)
 	update_count()
 	update_inspection()
+
+func show_bite_effect(at: Vector2) -> void:
+	var effect := BiteBurst.new()
+	effect.position = at
+	effect.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(effect)
 
 func spawn_coin(at: Vector2, value: int, diamond: bool = false, grade: int = -1) -> TankCoin:
 	if get_tree().get_nodes_in_group("coins").size() >= 150:
@@ -651,6 +658,12 @@ func spawn_food(at: Vector2, feed: FeedProfile) -> FishFood:
 	add_child(food)
 	return food
 
+func spawn_feeder_food(hungry_fish: AquariumFish, tier: int) -> FishFood:
+	var at := Vector2(hungry_fish.position.x, swim_bounds.position.y + 8.0)
+	var pellet := spawn_food(at, feeds[clampi(tier, 0, feeds.size() - 1)])
+	pellet.lifetime = 14.0 + (pellet.floor_y - pellet.position.y) / FishFood.FALL_SPEED
+	return pellet
+
 func _process(delta: float) -> void:
 	# Poll visibility even while paused: browsers may suspend frame delivery entirely.
 	if persistence and offline_ready:
@@ -676,7 +689,7 @@ func _process(delta: float) -> void:
 	if care_panel.visible and care_refresh <= 0.0:
 		refresh_care()
 	var simulation_delta: float = delta * ActivityPace.multiplier
-	if debug_autoplay and OS.is_debug_build():
+	if debug_autoplay and debug_controls.visible:
 		debug_autoplay_left -= simulation_delta
 		debug_purchase_left -= simulation_delta
 		if debug_autoplay_left <= 0.0:
@@ -703,7 +716,7 @@ func _process(delta: float) -> void:
 			if fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold and (hungriest == null or fish.hunger > hungriest.hunger):
 				hungriest = fish
 		if hungriest != null and not assets.reserve.is_empty() and get_tree().get_nodes_in_group("food").size() < 80:
-			spawn_food(hungriest.position + Vector2(0, -12), feeds[assets.reserve.pop_front()])
+			spawn_feeder_food(hungriest, assets.reserve.pop_front())
 			update_money(economy.money)
 	autosave_left -= delta
 	if persistence and autosave_left <= 0.0:
@@ -765,7 +778,7 @@ func debug_autoplay_step() -> void:
 func debug_autoplay_purchase() -> void:
 	var reserve_cash: float = 20.0
 	if assets.owned.feeder and assets.reserve.size() < 20:
-		var stock_cost: int = mini(20, assets.CAPACITY - assets.reserve.size()) * feeds[feed_upgrades.unlocked_tier].price
+		var stock_cost: int = mini(20, assets.capacity() - assets.reserve.size()) * feeds[feed_upgrades.unlocked_tier].price
 		if stock_cost > 0 and economy.money >= stock_cost + reserve_cash:
 			assets.restock(feed_upgrades.unlocked_tier, feeds, economy)
 			return
@@ -794,7 +807,7 @@ func debug_autoplay_purchase() -> void:
 		purchase_upgrade(cheapest_track)
 
 func reset_test_tank() -> void:
-	if not OS.is_debug_build():
+	if not debug_controls.visible:
 		return
 	debug_autoplay = false
 	debug_autoplay_left = 0.0
@@ -1090,8 +1103,11 @@ func activate_shop_item() -> void:
 				purchase_upgrade("puffer_speed")
 			else:
 				purchase_asset("puffer")
-		"feeder": purchase_asset("feeder")
-		"stock": restock()
+		"feeder":
+			if assets.owned.feeder:
+				purchase_upgrade("feeder_capacity")
+			else:
+				purchase_asset("feeder")
 		"feed": purchase_feed_upgrade()
 		"coins": purchase_upgrade("coin_lifetime")
 		"diamond_value": purchase_upgrade("diamond_value")
@@ -1108,6 +1124,8 @@ func activate_shop_secondary() -> void:
 		purchase_upgrade("shrimp_digestion")
 	elif shop_selected_id == "seahorse" and assets.owned.seahorse:
 		purchase_upgrade("seahorse_feed")
+	elif shop_selected_id == "feeder" and assets.owned.feeder:
+		restock()
 	elif shop_selected_id == "bubbles":
 		purchase_upgrade("bubble_value")
 	elif shop_selected_id == "coins":
@@ -1163,10 +1181,10 @@ func refresh_shop() -> void:
 	if not is_instance_valid(shop_panel):
 		return
 	var feed: FeedProfile = feeds[feed_upgrades.unlocked_tier]
-	for pellet_card_id in ["feed", "stock"]:
+	for pellet_card_id in ["feed"]:
 		if shop_cards.has(pellet_card_id):
 			shop_cards[pellet_card_id].set_pellet_preview(feed.color, feed.growth_credit)
-	var stock_count: int = mini(20, assets.CAPACITY - assets.reserve.size())
+	var stock_count: int = mini(20, assets.capacity() - assets.reserve.size())
 	var fish_count: int = get_tree().get_nodes_in_group("fish").size()
 	var current_fish_price: int = Economy.fish_price(fish_count)
 	var piranha_count: int = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha").size()
@@ -1179,8 +1197,7 @@ func refresh_shop() -> void:
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
 		"seahorse": "$%d" % assets.PRICES.seahorse if not assets.owned.seahorse else "Rate %d · Feed %d" % [int(assets.levels.seahorse_interval) + 1, int(assets.levels.seahorse_feed) + 1],
 		"puffer": "$%d" % assets.PRICES.puffer if not assets.owned.puffer else "Speed %d · Curiosity %d" % [int(assets.levels.puffer_speed) + 1, int(assets.levels.puffer_curiosity) + 1],
-		"feeder": "Owned" if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
-		"stock": "%d/%d · $%d" % [assets.reserve.size(), assets.CAPACITY, stock_count * feed.price],
+		"feeder": "%d/%d stock · Lv. %d" % [assets.reserve.size(), assets.capacity(), int(assets.levels.feeder_capacity) + 1] if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s to %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coins": "Life %d · Value %d" % [int(assets.levels.coin_lifetime) + 1, int(assets.levels.coin_value) + 1],
 		"diamond_value": "Life %d · Value %d" % [int(assets.levels.diamond_lifetime) + 1, int(assets.levels.diamond_value) + 1],
@@ -1195,7 +1212,6 @@ func refresh_shop() -> void:
 		"seahorse": assets.owned.seahorse,
 		"puffer": assets.owned.puffer,
 		"feeder": assets.owned.feeder,
-		"stock": assets.owned.feeder,
 		"feed": feed_upgrades.unlocked_tier > 0,
 		"coins": int(assets.levels.coin_lifetime) > 0 or int(assets.levels.coin_value) > 0,
 		"diamond_value": int(assets.levels.diamond_value) > 0 or int(assets.levels.diamond_lifetime) > 0,
@@ -1332,15 +1348,22 @@ func refresh_shop() -> void:
 				shop_secondary_button.disabled = curiosity_price == 0 or curiosity_price > economy.money
 				shop_secondary_button.show()
 		"feeder":
-			action_price = assets.PRICES.feeder
-			unavailable = assets.owned.feeder
-			shop_detail_state.text = "Owned · Stock %d/%d" % [assets.reserve.size(), assets.CAPACITY] if unavailable else "Dispenses one stocked pellet every 2 simulation seconds when needed."
-			shop_action_button.text = "Owned" if unavailable else "Buy auto-feeder  $%d" % action_price
-		"stock":
-			action_price = stock_count * feed.price
-			unavailable = not assets.owned.feeder or stock_count == 0
-			shop_detail_state.text = "Current stock: %d/%d\nNext batch: %d %s pellets" % [assets.reserve.size(), assets.CAPACITY, stock_count, feed.title]
-			shop_action_button.text = "Requires auto-feeder" if not assets.owned.feeder else ("Stock full" if stock_count == 0 else "Buy %d pellets  $%d" % [stock_count, action_price])
+			if not assets.owned.feeder:
+				action_price = assets.PRICES.feeder
+				shop_detail_state.text = "Drops stocked pellets from the surface above hungry fish.\nBase capacity: %d pellets." % assets.capacity()
+				shop_action_button.text = "Buy auto-feeder  $%d" % action_price
+			else:
+				action_price = assets.upgrade_price("feeder_capacity")
+				unavailable = action_price == 0
+				shop_detail_state.text = "Stock: %d/%d · Current feed: %s\nNext refill: %d pellets for $%d\nDispenses at most once every 2s when needed." % [assets.reserve.size(), assets.capacity(), feed.title, stock_count, stock_count * feed.price]
+				shop_action_button.position = Vector2(24, 350)
+				shop_action_button.size = Vector2(160, 58)
+				shop_action_button.text = "Capacity MAX" if unavailable else "Capacity +1  $%d" % action_price
+				shop_secondary_button.position = Vector2(222, 350)
+				shop_secondary_button.size = Vector2(160, 58)
+				shop_secondary_button.text = "Stock full" if stock_count == 0 else "Buy %d  $%d" % [stock_count, stock_count * feed.price]
+				shop_secondary_button.disabled = stock_count == 0 or stock_count * feed.price > economy.money
+				shop_secondary_button.show()
 		"feed":
 			action_price = feed_upgrades.next_price()
 			unavailable = action_price == 0
@@ -1435,7 +1458,7 @@ func refresh_care() -> void:
 	care_refresh = 10.0
 	var care := TankCare.assess(snapshot())
 	var capacity: String = "Supply meets average demand" if care.adequate else "Supply below average demand: manual feeding needed"
-	care_details.text = "Stock: %d / 200 pellets | Fish: %d / 20\nAutomation: %.1f meals/min | Estimated need: %.1f/min active\n%s\n\n%s\n\nApproximate care, not a guarantee. Swimming and food competition vary.\nFixed population; no away breeding or aliens. Refreshes every 10s." % [care.stock, care.count, care.supply, care.demand, capacity, TankCare.forecast_text(care)]
+	care_details.text = "Stock: %d / %d pellets | Fish: %d / 20\nAutomation: %.1f meals/min | Estimated need: %.1f/min active\n%s\n\n%s\n\nApproximate care, not a guarantee. Swimming and food competition vary.\nOffline estimates include broodstock fry and predation, but no natural pair breeding or aliens. Refreshes every 10s." % [care.stock, assets.capacity(), care.count, care.supply, care.demand, capacity, TankCare.forecast_text(care)]
 	care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness)
 
 func build_hud() -> void:
@@ -1494,12 +1517,12 @@ func build_hud() -> void:
 	debug_controls.hunger_requested.connect(func() -> void:
 		for fish in get_tree().get_nodes_in_group("fish"):
 			fish.hunger = 1.0)
-	debug_controls.coins_requested.connect(func() -> void:
-		for i in range(1, 5):
-			spawn_coin(Vector2(400 + i * 90, 320), 10 if i == 4 else i, i == 4, i))
+	debug_controls.money_requested.connect(func() -> void:
+		economy.credit(10000))
 	debug_controls.invasion_requested.connect(func() -> void:
-		if challenges:
-			invasions.begin_warning())
+		if not challenges:
+			set_challenges_enabled(true)
+		invasions.spawn_now())
 	debug_controls.autoplay_toggled.connect(func(enabled: bool) -> void:
 		debug_autoplay = enabled
 		debug_autoplay_left = 0.0
@@ -1567,7 +1590,7 @@ func build_hud() -> void:
 	make_button(care_panel, "Import backup", Vector2(480, 465), Vector2(140, 42), transfer.import_save)
 	debug_controls.position = Vector2(18, 515)
 	care_panel.add_child(debug_controls)
-	label_at(care_panel, "Away time is upgradeable · No offline breeding or aliens", Vector2(18, 558), 10, Color("83a9b7"))
+	label_at(care_panel, "Away time is upgradeable · No natural pair breeding or aliens", Vector2(18, 558), 10, Color("83a9b7"))
 	debug_reset_dialog = ConfirmationDialog.new()
 	debug_reset_dialog.title = "Reset test tank?"
 	debug_reset_dialog.dialog_text = "Replace local progress with a fresh $100 tank and two starter fish?"
@@ -1807,7 +1830,7 @@ func restore(data: Dictionary) -> void:
 	snail_collection_progress = clampf(float(data.get("snail_collection_progress", 0)), 0, 0.999)
 	shrimp_cleanup_progress = clampf(float(data.get("shrimp_cleanup_progress", 0)), 0, 0.999)
 	for track in assets.levels:
-		assets.levels[track] = clampi(int(data.get("asset_levels", {}).get(track, 0)), 0, assets.MAX_UPGRADE_LEVEL)
+		assets.levels[track] = clampi(int(data.get("asset_levels", {}).get(track, 0)), 0, assets.track_max_level(track))
 	for kind in assets.owned:
 		assets.owned[kind] = bool(data.get("owned", {}).get(kind, false))
 		if assets.owned[kind]:
@@ -1829,7 +1852,7 @@ func restore(data: Dictionary) -> void:
 			pet.position.x = clampf(float(data.get("shrimp_x", 700)), pet.horizontal_bounds.x, pet.horizontal_bounds.y)
 			pet.position.y = pet.floor_y
 			pet.digestion_left = clampf(float(data.get("shrimp_digestion", 0)), 0, pet.digestion_duration)
-	for tier in data.get("reserve", []).slice(0, assets.CAPACITY):
+	for tier in data.get("reserve", []).slice(0, assets.capacity()):
 		assets.reserve.append(clampi(int(tier), 0, 2))
 	for item in data.get("fish", []).slice(0, 50):
 		var fish := spawn_fish(true, "Purchased", str(item.get("species_id", "starter_fish")))
@@ -1874,7 +1897,7 @@ func restore(data: Dictionary) -> void:
 		add_child(waste)
 	for item in data.get("food", []).slice(0, 80):
 		var food := spawn_food(Vector2(item.get("x", 500), item.get("y", 350)), feeds[clampi(int(item.get("tier", 0)), 0, 2)])
-		food.lifetime = clampf(float(item.get("life", 14)), 0, 14)
+		food.lifetime = clampf(float(item.get("life", 14)), 0, FishFood.MAX_LIFETIME)
 	update_count()
 	update_cleanliness()
 

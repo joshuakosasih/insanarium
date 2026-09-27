@@ -5,6 +5,7 @@ signal coin_produced(at: Vector2, value: int, diamond: bool, grade: int)
 signal waste_produced(at: Vector2)
 signal grew(at: Vector2, stage_name: String)
 signal died(at: Vector2, reason: String)
+signal prey_eaten(at: Vector2)
 enum Sex { MALE, FEMALE, ASEXUAL }
 const SEX_NAMES := ["Male", "Female", "Asexual"]
 var life := FishLife.new()
@@ -128,10 +129,12 @@ func _process(delta: float) -> void:
 		food_target = null
 		choose_destination()
 	if prey_target != null and position.distance_to(prey_target.position) < 20.0 * visual_size + 8.0:
+		var bite_at: Vector2 = prey_target.position
 		if FishPredation.eligible(self, prey_target) and prey_target.consume_by_predator():
 			hunger = maxf(0.0, hunger - profile.prey_nutrition)
 			survival.fed()
 			growth.record_meal(profile, profile.prey_growth_credit, genome.growth_multiplier())
+			prey_eaten.emit(bite_at)
 		prey_target = null
 		choose_destination()
 	if alien_target != null and position.distance_to(alien_target.position) < 42.0:

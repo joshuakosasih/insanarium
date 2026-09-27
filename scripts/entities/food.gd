@@ -3,6 +3,8 @@ extends Node2D
 const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
 signal expired(at: Vector2)
 @export var lifetime: float = 14.0
+const FALL_SPEED: float = 25.0
+const MAX_LIFETIME: float = 40.0
 var floor_y: float = 640.0
 var consumed: bool = false
 var profile: FeedProfile = FeedProfile.new()
@@ -13,7 +15,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	delta *= ActivityPace.multiplier
 	lifetime -= delta
-	position.y = minf(position.y + 25.0 * delta, floor_y)
+	position.y = minf(position.y + FALL_SPEED * delta, floor_y)
 	modulate.a = clampf(lifetime / 2.0, 0.0, 1.0)
 	if lifetime <= 0.0:
 		remove_from_group("food")

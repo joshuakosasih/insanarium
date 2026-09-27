@@ -36,7 +36,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var waste: Array = data.get("waste", []).duplicate(true)
 	var cleanliness: float = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	var feeder: float = float(data.get("feeder_left", 2.0))
-	var seahorse_interval: float = IdleAssets.SEAHORSE_INTERVALS[clampi(int(asset_levels.get("seahorse_interval", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
+	var seahorse_interval: float = IdleAssets.SEAHORSE_INTERVALS[clampi(int(asset_levels.get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)]
 	var seahorse_tier: int = IdleAssets.SEAHORSE_FEED_TIERS[clampi(int(asset_levels.get("seahorse_feed", 0)), 0, IdleAssets.SEAHORSE_FEED_TIERS.size() - 1)]
 	var seahorse: float = clampf(float(data.get("seahorse_left", seahorse_interval)), 0.0, seahorse_interval)
 	var snail_progress: float = clampf(float(data.get("snail_collection_progress", 0.0)), 0.0, 0.999)
@@ -98,9 +98,10 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			snail_progress = minf(snail_progress, 0.999)
 		for pellet in food:
 			pellet.life = float(pellet.get("life", 14.0)) - dt
+			pellet.y = minf(640.0, float(pellet.get("y", 350.0)) + FishFood.FALL_SPEED * dt)
 		var settled_waste: Array = waste.filter(func(item: Dictionary) -> bool: return bool(item.get("settled", false)))
 		var endangered_food: Array = food.filter(func(pellet: Dictionary) -> bool:
-			return float(pellet.get("life", 14.0)) > 0.0 and float(pellet.get("life", 14.0)) <= CleanupShrimpPet.PELLET_RESCUE_TIME)
+			return float(pellet.get("y", 350.0)) >= 640.0 and float(pellet.get("life", 14.0)) > 0.0 and float(pellet.get("life", 14.0)) <= CleanupShrimpPet.PELLET_RESCUE_TIME)
 		if owned.get("shrimp", false) and (not settled_waste.is_empty() or not endangered_food.is_empty()):
 			shrimp_progress += shrimp_cleanup_rate * dt
 			settled_waste.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.get("life", FishWaste.FLOOR_LIFETIME)) < float(b.get("life", FishWaste.FLOOR_LIFETIME)))
@@ -177,7 +178,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		if feeder <= 0.0:
 			feeder = 2.0
 			if owned.get("feeder", false) and hungry and not reserve.is_empty() and food.size() < 80:
-				food.append({"tier": reserve.pop_front(), "life": 14.0, "x": 550, "y": 350})
+				food.append({"tier": reserve.pop_front(), "life": 14.0 + (640.0 - 205.0) / FishFood.FALL_SPEED, "x": 550, "y": 205})
 				report.stock_used += 1
 				if reserve.is_empty():
 					report.stock_empty_at = elapsed - remaining

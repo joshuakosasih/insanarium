@@ -20,7 +20,7 @@ static func parse(text: String) -> Dictionary:
 	for key in ["fish", "food", "coins", "reserve"]:
 		if not data.get(key) is Array:
 			return {}
-	if data.fish.size() > 50 or data.food.size() > 80 or data.coins.size() > 150 or data.reserve.size() > 200:
+	if data.fish.size() > 50 or data.food.size() > 80 or data.coins.size() > 150 or data.reserve.size() > IdleAssets.FEEDER_CAPACITIES[-1]:
 		return {}
 	if data.has("waste"):
 		if not data.waste is Array or data.waste.size() > 100:
@@ -67,9 +67,11 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(data.asset_levels.snail, 0, 3) or bool(data.owned.snail) != (int(data.asset_levels.snail) > 0):
 				return {}
 		else:
-			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "seahorse_interval", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
+			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "feeder_capacity", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
 				if not integer_in_range(data.asset_levels.get(track, 0), 0, 4):
 					return {}
+			if not integer_in_range(data.asset_levels.get("seahorse_interval", 0), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1):
+				return {}
 			if not integer_in_range(data.asset_levels.get("seahorse_feed", 0), 0, 2):
 				return {}
 			if not data.owned.snail and (int(data.asset_levels.get("snail_speed", 0)) > 0 or int(data.asset_levels.get("snail_stamina", 0)) > 0 or int(data.asset_levels.get("snail_sleep", 0)) > 0):
@@ -79,6 +81,11 @@ static func parse(text: String) -> Dictionary:
 			if not bool(data.owned.get("shrimp", false)) and (int(data.asset_levels.get("shrimp_speed", 0)) > 0 or int(data.asset_levels.get("shrimp_digestion", 0)) > 0):
 				return {}
 			if not bool(data.owned.get("seahorse", false)) and (int(data.asset_levels.get("seahorse_interval", 0)) > 0 or int(data.asset_levels.get("seahorse_feed", 0)) > 0):
+				return {}
+			if not bool(data.owned.get("feeder", false)) and int(data.asset_levels.get("feeder_capacity", 0)) > 0:
+				return {}
+			var feeder_level: int = int(data.asset_levels.get("feeder_capacity", 0))
+			if data.reserve.size() > IdleAssets.FEEDER_CAPACITIES[feeder_level]:
 				return {}
 	for tier in data.reserve:
 		if not number(tier, 0, 2):

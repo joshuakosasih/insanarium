@@ -62,7 +62,7 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 14, "shop starts closed with reusable product cards")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 13, "shop starts closed with reusable product cards")
 	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coins.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	check(tank.shop_scroll.scroll_deadzone == 8, "shop catalog uses a short touch-drag threshold")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
@@ -339,7 +339,7 @@ func run() -> void:
 	check(tank.assets.levels.bubble_value == 1 and tank.assets.bubble_multiplier() == 1.5 and tank.economy.money == balance - 30, "bubble value upgrade raises every pop multiplier")
 	check(tank.assets.upgrade_price("bubble_capacity") == 90 and tank.assets.upgrade_price("bubble_value") == 90, "both bubble tracks use exponential prices")
 	tank.purchase_feed_upgrade()
-	check(tank.feed_upgrades.unlocked_tier == 2 and tank.assets.reserve[0] == 0 and tank.shop_cards.feed.pellet_color == tank.feeds[2].color and tank.shop_cards.stock.pellet_color == tank.feeds[2].color, "deluxe changes shop pellet colors without changing stored pellet tiers")
+	check(tank.feed_upgrades.unlocked_tier == 2 and tank.assets.reserve[0] == 0 and tank.shop_cards.feed.pellet_color == tank.feeds[2].color, "deluxe changes shop pellet colors without changing stored pellet tiers")
 	tank.food_cooldown = 0.0
 	pellet = tank.drop_food(Vector2(500, 400))
 	check(pellet.profile.growth_credit == 3, "manual feed always uses highest upgrade")

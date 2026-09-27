@@ -18,7 +18,7 @@ func _ready() -> void:
 
 func apply_upgrades(interval_level: int, quality_level: int) -> void:
 	var old_interval := feed_interval
-	feed_interval = IdleAssets.SEAHORSE_INTERVALS[clampi(interval_level, 0, IdleAssets.MAX_UPGRADE_LEVEL)]
+	feed_interval = IdleAssets.SEAHORSE_INTERVALS[clampi(interval_level, 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)]
 	feed_tier = IdleAssets.SEAHORSE_FEED_TIERS[clampi(quality_level, 0, IdleAssets.SEAHORSE_FEED_TIERS.size() - 1)]
 	feed_left = minf(feed_left * feed_interval / maxf(old_interval, 0.01), feed_interval)
 	queue_redraw()

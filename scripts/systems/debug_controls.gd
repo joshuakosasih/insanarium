@@ -1,8 +1,8 @@
 class_name DebugControls
 extends HBoxContainer
-## Available only in editor/debug builds. Does not participate in game economy.
+## Visible in debug builds or via ?admin=1 on web. Frontend-only test controls.
 signal hunger_requested
-signal coins_requested
+signal money_requested
 signal invasion_requested
 signal reset_requested
 signal autoplay_toggled(enabled: bool)
@@ -11,10 +11,10 @@ var autoplay_button: Button
 var autoplay_enabled: bool = false
 
 func _ready() -> void:
-	visible = OS.is_debug_build()
+	visible = OS.is_debug_build() or (OS.has_feature("web") and bool(JavaScriptBridge.eval("new URLSearchParams(location.search).get('admin') === '1'", true)))
 	add_theme_constant_override("separation", 6)
 	var caption := Label.new()
-	caption.text = "TEST"
+	caption.text = "ADMIN"
 	caption.add_theme_font_size_override("font_size", 11)
 	add_child(caption)
 	speed_button = make_debug_button("Speed 1×", func() -> void:
@@ -25,8 +25,8 @@ func _ready() -> void:
 		autoplay_button.text = "Auto: on" if autoplay_enabled else "Auto: off"
 		autoplay_toggled.emit(autoplay_enabled))
 	make_debug_button("Hungry", func() -> void: hunger_requested.emit())
-	make_debug_button("Coins", func() -> void: coins_requested.emit())
-	make_debug_button("Invader", func() -> void: invasion_requested.emit())
+	make_debug_button("+$10k", func() -> void: money_requested.emit())
+	make_debug_button("Alien now", func() -> void: invasion_requested.emit())
 	make_debug_button("Reset", func() -> void: reset_requested.emit())
 
 func make_debug_button(label: String, action: Callable) -> Button:

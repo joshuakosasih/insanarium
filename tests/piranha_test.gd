@@ -124,7 +124,10 @@ func run() -> void:
 	defending_alien.position = predator.position
 	var alien_health: int = defending_alien.health
 	defending_alien._process(0.1)
-	check(not predator.dead and defending_alien.health == alien_health - 1, "adult piranha bites an alien on contact and survives")
+	check(not predator.dead and adult.dead and defending_alien.health == alien_health, "alien ignores an Adult piranha and attacks a vulnerable guppy")
+	predator.alien_attack_left = 0.0
+	predator._process(0.1)
+	check(defending_alien.health == alien_health - 1, "Adult piranha can still intercept and bite an alien")
 	while not defending_alien.dead:
 		predator.alien_attack_left = 0.0
 		predator.attack_alien(defending_alien)

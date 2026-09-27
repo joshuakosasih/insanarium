@@ -10,11 +10,18 @@ var knockback := Vector2.ZERO
 var hit_flash: float = 0.0
 var attack_left: float = 0.0
 var dead: bool = false
+var wander_destination := Vector2.ZERO
+var wander_left: float = 0.0
 
 func _ready() -> void:
 	health = max_health
 	z_index = 10
 	add_to_group("invaders")
+	choose_wander_destination()
+
+func choose_wander_destination() -> void:
+	wander_destination = Vector2(randf_range(bounds.position.x, bounds.end.x), randf_range(bounds.position.y, bounds.end.y))
+	wander_left = randf_range(2.0, 4.0)
 
 func hit(at: Vector2) -> void:
 	if dead:
@@ -50,7 +57,7 @@ func _process(delta: float) -> void:
 	var target: AquariumFish
 	var nearest: float = INF
 	for fish in get_tree().get_nodes_in_group("fish"):
-		if fish.dead or fish.is_queued_for_deletion():
+		if fish.dead or fish.is_queued_for_deletion() or fish.can_fight_alien():
 			continue
 		var distance: float = position.distance_to(fish.position)
 		if distance < nearest:
@@ -59,11 +66,13 @@ func _process(delta: float) -> void:
 	if target != null:
 		position = position.move_toward(target.position, chase_speed * delta).clamp(bounds.position, bounds.end)
 		if position.distance_to(target.position) < 38.0 and attack_left <= 0.0:
-			if target.can_fight_alien():
-				target.attack_alien(self)
-			else:
-				target.die("Alien attack")
+			target.die("Alien attack")
 			attack_left = 2.0
+	else:
+		wander_left -= delta
+		if wander_left <= 0.0 or position.distance_to(wander_destination) < 15.0:
+			choose_wander_destination()
+		position = position.move_toward(wander_destination, chase_speed * 0.55 * delta).clamp(bounds.position, bounds.end)
 	queue_redraw()
 
 func _draw() -> void:
