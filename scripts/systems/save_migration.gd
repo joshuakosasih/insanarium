@@ -9,6 +9,8 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	for item in data.get("fish", []):
 		if not str(item.get("species_id", "starter_fish")) in ["starter_fish", "piranha", "feeder_guppy"]:
 			item["species_id"] = "starter_fish"
+		if item.species_id == "feeder_guppy":
+			item["mutation"] = 0
 		item["broodstock"] = bool(item.get("broodstock", false)) and item.species_id == "starter_fish"
 		item["brood_left"] = clampf(float(item.get("brood_left", 0)), 0.0, 270.0) if item.broodstock else 0.0
 		if source_version < 3:

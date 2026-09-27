@@ -25,16 +25,12 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String) -> void:
-	if role.is_empty():
+	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	if role == "broodstock":
-		# A violet shoulder sash remains clear on any mutation color.
-		canvas.draw_colored_polygon(PackedVector2Array([Vector2(-17, -14), Vector2(-11, -17), Vector2(0, 14), Vector2(-7, 15)]), Color("694f96"))
-		canvas.draw_line(Vector2(-15, -13), Vector2(-4, 12), Color("d7b5fb"), 2.5, true)
-	else:
-		# A single muted patch identifies feeder fry without making them ornamental.
-		canvas.draw_circle(Vector2(-10, 1), 4.0, Color("83998e"))
+	# A violet shoulder sash remains clear on any mutation color.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-17, -14), Vector2(-11, -17), Vector2(0, 14), Vector2(-7, 15)]), Color("694f96"))
+	canvas.draw_line(Vector2(-15, -13), Vector2(-4, 12), Color("d7b5fb"), 2.5, true)
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:

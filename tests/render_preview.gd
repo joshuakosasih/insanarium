@@ -132,6 +132,7 @@ func capture() -> void:
 			specimen.visual_size = specimen.profile.growth_sizes[specimen.growth.stage] * specimen.presentation_scale
 			specimen.scale = Vector2.ONE * specimen.visual_size
 			specimen.position = Vector2(390 + index * 190, 390)
+			specimen.hunger = 0.0
 			specimen.broodstock = specimen == brood
 			if specimen == brood:
 				specimen.brood_left = 9999.0

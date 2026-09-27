@@ -235,7 +235,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 						fish.stage = maxi(int(fish.get("stage", 0)), stage)
 				if int(fish.stage) > old_stage:
 					report.growth += 1
-					if int(fish.get("mutation", 0)) == 0 and rng.randf() < 0.08:
+					if fish_profile.species_id != "feeder_guppy" and int(fish.get("mutation", 0)) == 0 and rng.randf() < 0.08:
 						fish.mutation = rng.randi_range(1, 3)
 						report.mutations += 1
 			fish.starving = float(fish.get("starving", 0)) + dt if fish.hunger >= 1.0 else 0.0
