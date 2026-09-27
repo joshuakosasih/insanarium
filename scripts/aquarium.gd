@@ -1151,7 +1151,7 @@ func refresh_shop() -> void:
 		"piranha":
 			action_price = current_piranha_price
 			unavailable = fish_count >= breeding.CAPACITY or not piranha_unlocked
-			shop_detail_state.text = "Population %d/%d · %d piranhas\nBabies and Teens eat pellets. Adults hunt Baby and Teen guppies." % [fish_count, breeding.CAPACITY, piranha_count]
+			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies and bite aliens." % [fish_count, breeding.CAPACITY, piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
 		"snail":
 			if not assets.owned.snail:

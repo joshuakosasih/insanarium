@@ -32,14 +32,16 @@ static func describe(fish: AquariumFish) -> String:
 
 static func trait_rows(fish: AquariumFish) -> Array[Dictionary]:
 	var profile := fish.profile
-	var food_endurance: float = profile.hungry_threshold / (profile.hunger_rate * fish.genome.hunger_multiplier())
+	var hunts_prey: bool = not profile.eats_pellets_at(fish.growth.stage)
+	var hunger_threshold: float = profile.predation_hunger if hunts_prey else profile.hungry_threshold
+	var food_endurance: float = hunger_threshold / (profile.hunger_rate_at(fish.growth.stage) * fish.genome.hunger_multiplier())
 	var actual_speed: float = fish.swim_speed()
 	var coin_chance: float = fish.genome.coin_chance()
 	var lifespan: float = FishAging.lifespan_for(fish.genome)
 	var breed_seconds: int = roundi(fish.genome.breeding_cooldown())
 	return [
 		{"title": "Vitality", "value": "%d HP · %.1fh" % [roundi(fish.health.maximum), lifespan / 3600.0], "progress": fish.genome.vitality_value()},
-		{"title": "Metabolism", "value": "%ds food · ×%.2f" % [roundi(food_endurance), fish.genome.growth_multiplier()], "progress": fish.genome.metabolism_value()},
+		{"title": "Metabolism", "value": "%ds %s · ×%.2f" % [roundi(food_endurance), "prey" if hunts_prey else "food", fish.genome.growth_multiplier()], "progress": fish.genome.metabolism_value()},
 		{"title": "Agility", "value": "%d px/s" % roundi(actual_speed), "progress": fish.genome.speed_value()},
 		{"title": "Productivity", "value": "%d%% coin" % roundi(coin_chance * 100.0), "progress": fish.genome.allocation_value()},
 		{"title": "Fertility", "value": "%dm %02ds" % [breed_seconds / 60, breed_seconds % 60], "progress": fish.genome.fertility_value()}]

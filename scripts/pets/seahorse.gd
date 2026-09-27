@@ -21,6 +21,10 @@ func apply_upgrades(interval_level: int, quality_level: int) -> void:
 	feed_interval = IdleAssets.SEAHORSE_INTERVALS[clampi(interval_level, 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	feed_tier = IdleAssets.SEAHORSE_FEED_TIERS[clampi(quality_level, 0, IdleAssets.SEAHORSE_FEED_TIERS.size() - 1)]
 	feed_left = minf(feed_left * feed_interval / maxf(old_interval, 0.01), feed_interval)
+	queue_redraw()
+
+func charge_progress() -> float:
+	return 1.0 - clampf(feed_left / maxf(feed_interval, 0.01), 0.0, 1.0)
 
 func _process(delta: float) -> void:
 	delta *= ActivityPace.multiplier
@@ -36,4 +40,4 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	VectorArt.draw_seahorse(self, Vector2.ZERO, 1.0, phase)
+	VectorArt.draw_seahorse(self, Vector2.ZERO, 1.0, phase, charge_progress())

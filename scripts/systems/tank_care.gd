@@ -11,7 +11,8 @@ static func assess(data: Dictionary) -> Dictionary:
 	for fish in data.fish:
 		var fish_profile := FishProfile.for_species(str(fish.get("species_id", "starter_fish")))
 		var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
-		demand += fish_profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
+		if fish_profile.eats_pellets_at(int(fish.get("stage", 0))):
+			demand += fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
 	var seahorse_level: int = clampi(int(data.get("asset_levels", {}).get("seahorse_interval", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)
 	var seahorse_supply: float = 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level] if data.owned.seahorse else 0.0
 	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + seahorse_supply
@@ -53,11 +54,18 @@ static func duration(seconds: float) -> String:
 static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float = 100.0) -> String:
 	var hungry: int = 0
 	var starving: int = 0
+	var hungry_predators: int = 0
+	var starving_predators: int = 0
 	var injured: int = 0
 	for animal in fish:
 		if animal.health.current < animal.health.maximum:
 			injured += 1
-		if animal.hunger >= 1.0:
+		if not animal.profile.eats_pellets_at(animal.growth.stage):
+			if animal.hunger >= 1.0:
+				starving_predators += 1
+			elif animal.hunger >= animal.profile.predation_hunger:
+				hungry_predators += 1
+		elif animal.hunger >= 1.0:
 			starving += 1
 		elif animal.hunger >= animal.profile.hungry_threshold:
 			hungry += 1
@@ -66,6 +74,10 @@ static func warnings(fish: Array, stock: int, feeder: bool, cleanliness: float =
 		messages.append("FEED NOW: %d starving" % starving)
 	if hungry > 0:
 		messages.append("%d hungry" % hungry)
+	if starving_predators > 0:
+		messages.append("PIRANHA NEEDS PREY: %d starving" % starving_predators)
+	elif hungry_predators > 0:
+		messages.append("%d piranha hunting" % hungry_predators)
 	if cleanliness < 20.0:
 		messages.append("TOXIC WATER: health collapse accelerating")
 	elif cleanliness < 40.0:

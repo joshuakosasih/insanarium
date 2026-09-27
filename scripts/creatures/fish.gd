@@ -25,6 +25,8 @@ var hunger: float = 0.0
 var destination: Vector2
 var food_target: FishFood
 var prey_target: AquariumFish
+var alien_target: TankAlien
+var alien_attack_left: float = 0.0
 var wander_left: float = 0.0
 var coin_left: float = 0.0
 var facing: float = 1.0
@@ -55,8 +57,9 @@ func _process(delta: float) -> void:
 	if life.age_seconds >= FishAging.lifespan_for(genome):
 		die("Old age")
 		return
-	hunger = minf(1.0, hunger + profile.hunger_rate * genome.hunger_multiplier() * delta)
+	hunger = minf(1.0, hunger + profile.hunger_rate_at(growth.stage) * genome.hunger_multiplier() * delta)
 	coin_left -= delta
+	alien_attack_left = maxf(0.0, alien_attack_left - delta)
 	if coin_left <= 0.0:
 		coin_left += genome.output_interval(profile.coin_interval)
 		# Newborns have a short protected stage before they begin producing output.
@@ -85,15 +88,28 @@ func _process(delta: float) -> void:
 		prey_target = null
 	elif prey_target == null:
 		prey_target = FishPredation.nearest(self, get_tree().get_nodes_in_group("fish"))
+	alien_target = null
+	if can_fight_alien():
+		var nearest_alien: float = 520.0
+		for candidate in get_tree().get_nodes_in_group("invaders"):
+			if candidate is TankAlien and not candidate.dead and not candidate.is_queued_for_deletion():
+				var gap: float = position.distance_to(candidate.position)
+				if gap < nearest_alien:
+					nearest_alien = gap
+					alien_target = candidate
+	if alien_target != null:
+		prey_target = null
 	wander_left -= delta
-	if food_target != null:
+	if alien_target != null:
+		destination = alien_target.position
+	elif food_target != null:
 		destination = food_target.position
 	elif prey_target != null:
 		destination = prey_target.position
 	elif wander_left <= 0.0 or position.distance_to(destination) < 12.0:
 		choose_destination()
 	var movement: Vector2 = destination - position
-	var movement_speed: float = swim_speed() * (1.5 if food_target != null else (1.35 if prey_target != null else 1.0))
+	var movement_speed: float = swim_speed() * (1.35 if alien_target != null or prey_target != null else (1.5 if food_target != null else 1.0))
 	position = position.move_toward(destination, movement_speed * delta)
 	position = position.clamp(bounds.position, bounds.end)
 	if absf(movement.x) > 3.0:
@@ -116,6 +132,8 @@ func _process(delta: float) -> void:
 			growth.record_meal(profile, profile.prey_growth_credit, genome.growth_multiplier())
 		prey_target = null
 		choose_destination()
+	if alien_target != null and position.distance_to(alien_target.position) < 42.0:
+		attack_alien(alien_target)
 	if survival.advance(hunger, delta, profile.starvation_grace):
 		die("Starved")
 	queue_redraw()
@@ -188,3 +206,12 @@ func apply_genome(fill_health: bool = false) -> void:
 
 func swim_speed() -> float:
 	return profile.swim_speed * genome.speed_multiplier()
+
+func can_fight_alien() -> bool:
+	return profile.alien_defense_stage >= 0 and growth.stage >= profile.alien_defense_stage and not dead
+
+func attack_alien(alien: TankAlien) -> void:
+	if not can_fight_alien() or alien_attack_left > 0.0 or not is_instance_valid(alien) or alien.dead:
+		return
+	alien_attack_left = 3.0
+	alien.hit(position)

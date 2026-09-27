@@ -93,6 +93,28 @@ func run() -> void:
 	predator.hunger = 0.8
 	predator._process(0.1)
 	check(not adult.dead, "adult guppies are too large for piranhas to eat")
+	predator.growth.stage = 1
+	check(not predator.can_fight_alien(), "Teen piranhas cannot defend against aliens")
+	predator.growth.stage = 2
+	check(predator.can_fight_alien(), "Adult piranhas can defend against aliens")
+	var defending_alien := TankAlien.new()
+	defending_alien.bounds = tank.swim_bounds
+	tank.add_child(defending_alien)
+	defending_alien.set_process(false)
+	defending_alien.position = predator.position
+	var alien_health: int = defending_alien.health
+	defending_alien._process(0.1)
+	check(not predator.dead and defending_alien.health == alien_health - 1, "adult piranha bites an alien on contact and survives")
+	while not defending_alien.dead:
+		predator.alien_attack_left = 0.0
+		predator.attack_alien(defending_alien)
+	check(defending_alien.dead, "repeated piranha bites can defeat an alien")
+	defending_alien.free()
+	var neutral_metabolism: float = FishGenome.hunger_multiplier_for(0.5)
+	var prey_interval: float = predator.profile.prey_nutrition / (predator.profile.hunger_rate_at(2) * neutral_metabolism)
+	check(prey_interval > 300.0 and prey_interval < 360.0 and predator.profile.hunger_rate_at(1) > predator.profile.hunger_rate_at(2), "Adult piranhas need roughly one prey every five to six minutes while juveniles grow at normal feeding pace")
+	predator.hunger = 1.0
+	check("prey" in FishInspector.trait_rows(predator)[1].value and "PIRANHA NEEDS PREY" in TankCare.warnings([predator], 0, false), "Adult piranha care and traits clearly show its prey-only diet")
 	var mixed := FishBreeding.new()
 	mixed.chance = 1.0
 	var births := {"count": 0}
@@ -127,7 +149,7 @@ func run() -> void:
 	just_piranha.asset_levels.idle_duration = 4
 	var away: Dictionary = OfflineProgress.advance(just_piranha, 100.0)
 	var metabolism: float = FishGenome.phenotype_from_data(just_piranha.fish[0].genome, "metabolism")
-	check(away.data.fish.size() == 1 and is_equal_approx(float(away.data.fish[0].hunger), 10.0 / 105.0 * FishGenome.hunger_multiplier_for(metabolism)), "away care uses piranha hunger rate and does not simulate hunting")
+	check(away.data.fish.size() == 1 and is_equal_approx(float(away.data.fish[0].hunger), 10.0 / 120.0 * FishGenome.hunger_multiplier_for(metabolism)), "juvenile piranhas keep a normal feeding pace while away")
 	just_piranha.fish[0].stage = 2
 	just_piranha.fish[0].hunger = 0.75
 	just_piranha.food = [{"tier": 0, "life": 14.0, "x": 550, "y": 350}]

@@ -26,9 +26,9 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	var outline := Color("3c3741")
-	var back := color.darkened(0.38)
-	var belly := color.lightened(0.23)
+	var outline := Color("60454b")
+	var back := color.darkened(0.22)
+	var belly := color.lightened(0.16)
 	# A short, high tail and deep, blunt head distinguish it from the slim guppy.
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, -1), Vector2(-45, -16 + tail), Vector2(-42, 0 + tail), Vector2(-45, 16 + tail)]), outline)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-29, -1), Vector2(-42, -11 + tail), Vector2(-40, 0 + tail), Vector2(-42, 11 + tail)]), back)
@@ -85,7 +85,7 @@ static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retra
 		canvas.draw_circle(Vector2(x + 1, -23), 1.8, Color("203748"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_seahorse(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
+static func draw_seahorse(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0, charge: float = 0.0) -> void:
 	var color := Color("aa9de0")
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	var tail := PackedVector2Array()
@@ -104,6 +104,15 @@ static func draw_seahorse(canvas: CanvasItem, at: Vector2, size: float = 1.0, ph
 	canvas.draw_circle(Vector2(16, -33), 2.5, Color("203748"))
 	for i in range(3):
 		canvas.draw_line(Vector2(-4, i * 7 - 5), Vector2(8, i * 7 - 5), Color("ddd0f3"), 2, true)
+	# Five crest lights fill from tail to head as the next pellet charges.
+	for i in range(5):
+		var crest_root := Vector2(-13.0 + i * 2.0, 1.0 - i * 7.0)
+		var crest_tip := crest_root + Vector2(-9.0, -4.0)
+		var fill: float = clampf(charge * 5.0 - float(i), 0.0, 1.0)
+		var crest_color := Color("6e7095").lerp(Color("b7f7dc"), fill)
+		canvas.draw_colored_polygon(PackedVector2Array([crest_root, crest_tip, crest_root + Vector2(1.0, -5.0)]), crest_color)
+		if fill >= 0.99:
+			canvas.draw_circle(crest_tip, 2.0 + 0.4 * sin(phase * 5.0 + i), Color("d9ffef", 0.55))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_urchin(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
@@ -147,8 +156,8 @@ static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phas
 	# when it crawls to the right.
 	canvas.draw_set_transform(at, 0.0, Vector2(-size, size))
 	var shell := Color("f48a78")
-	var shell_dark := Color("9d4e59")
-	var shell_light := Color("ffbd69")
+	var shell_dark := Color("b65e61")
+	var shell_light := Color("ffac73")
 	# A broad triangular shell front, plump body, and curled abdomen follow the
 	# reference's shrimp silhouette without introducing a separate mouth.
 	canvas.draw_colored_polygon(PackedVector2Array([

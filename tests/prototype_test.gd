@@ -185,12 +185,14 @@ func run() -> void:
 	check(shrimp != null and shrimp.move_speed == 30.0 and shrimp.digestion_duration == 12.0, "new cleanup shrimp begins with modest speed and a long digestion pause")
 	check(puffer != null and puffer.move_speed == 45.0 and puffer.curiosity == 0.30, "new bubble puffer starts slow and selectively curious")
 	check(seahorse != null and seahorse.feed_interval == 18.0 and seahorse.feed_tier == 0, "new seahorse starts with deliberate Basic-feed production")
+	seahorse.feed_left = seahorse.feed_interval * 0.5
+	check(is_equal_approx(seahorse.charge_progress(), 0.5), "seahorse crest shows half charge midway through its cycle")
 	for specimen in get_nodes_in_group("fish"):
 		specimen.hunger = 0.0
 	seahorse.feed_left = 0.0
 	var food_before_ready: int = get_nodes_in_group("food").size()
 	seahorse._process(0.1)
-	check(seahorse.feed_left == 0.0 and get_nodes_in_group("food").size() == food_before_ready, "ready seahorse holds its pellet while no fish needs food")
+	check(seahorse.feed_left == 0.0 and seahorse.charge_progress() == 1.0 and get_nodes_in_group("food").size() == food_before_ready, "ready seahorse holds its fully lit crest until a fish needs food")
 	var hungry_specimen = get_nodes_in_group("fish")[0]
 	hungry_specimen.hunger = hungry_specimen.profile.hungry_threshold
 	seahorse._process(0.1)
@@ -201,7 +203,7 @@ func run() -> void:
 	check(tank.shop_secondary_button.visible and tank.shop_sell_button.visible, "owned seahorse exposes rate, pellet quality, and sale controls")
 	balance = tank.economy.money
 	tank.activate_shop_item()
-	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 60, "seahorse production interval upgrades independently")
+	check(tank.assets.levels.seahorse_interval == 1 and seahorse.feed_interval == 14.0 and tank.economy.money == balance - 40, "seahorse production interval upgrades independently")
 	balance = tank.economy.money
 	tank.activate_shop_secondary()
 	check(tank.assets.levels.seahorse_feed == 1 and seahorse.feed_tier == 1 and tank.economy.money == balance - 150, "seahorse pellet quality upgrades to Premium")

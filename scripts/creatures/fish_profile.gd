@@ -31,6 +31,7 @@ extends Resource
 @export var prey_nutrition: float = 0.78
 @export var prey_growth_credit: int = 2
 @export var prey_detection_radius: float = 520.0
+@export var alien_defense_stage: int = -1
 
 static func for_species(id: String) -> FishProfile:
 	var profile := FishProfile.new()
@@ -38,7 +39,8 @@ static func for_species(id: String) -> FishProfile:
 		profile.species_id = "piranha"
 		profile.species_name = "Piranha"
 		profile.swim_speed = 78.0
-		profile.hunger_rate = 1.0 / 105.0
+		profile.hunger_rate = 1.0 / 420.0
+		profile.starvation_grace = 90.0
 		profile.coin_interval = 28.0
 		profile.coin_value = 2
 		profile.body_color = Color("dd6c63")
@@ -50,10 +52,15 @@ static func for_species(id: String) -> FishProfile:
 		profile.prey_species_id = "starter_fish"
 		profile.max_prey_stage = 1
 		profile.hunter_stage = 2
+		profile.prey_nutrition = 0.85
+		profile.alien_defense_stage = 2
 	return profile
 
 func eats_pellets_at(stage: int) -> bool:
 	return prey_species_id.is_empty() or stage < hunter_stage
+
+func hunger_rate_at(stage: int) -> float:
+	return 1.0 / 120.0 if not prey_species_id.is_empty() and stage < hunter_stage else hunger_rate
 
 func reward_is_diamond(stage: int) -> bool:
 	return stage >= diamond_stage or (not prey_species_id.is_empty() and stage >= hunter_stage)

@@ -59,7 +59,10 @@ func _process(delta: float) -> void:
 	if target != null:
 		position = position.move_toward(target.position, chase_speed * delta).clamp(bounds.position, bounds.end)
 		if position.distance_to(target.position) < 38.0 and attack_left <= 0.0:
-			target.die("Alien attack")
+			if target.can_fight_alien():
+				target.attack_alien(self)
+			else:
+				target.die("Alien attack")
 			attack_left = 2.0
 	queue_redraw()
 

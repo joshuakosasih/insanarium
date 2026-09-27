@@ -122,7 +122,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		for fish in fish_list:
 			var fish_profile: FishProfile = profiles.get(str(fish.get("species_id", "starter_fish")), profile)
 			var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
-			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + fish_profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) * dt)
+			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * FishGenome.hunger_multiplier_for(metabolism) * dt)
 			fish.life.age = float(fish.life.age) + dt
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
 			hungry = hungry or (fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold)

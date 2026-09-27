@@ -52,6 +52,14 @@ func capture() -> void:
 		guppy.scale = Vector2.ONE * guppy.visual_size
 		guppy.position = Vector2(675, 340)
 		guppy.queue_redraw()
+	if "--seahorse-charge" in OS.get_cmdline_user_args():
+		var seahorse := SeahorsePet.new()
+		seahorse.anchor = Vector2(540, 340)
+		seahorse.presentation_scale = 1.65
+		tank.add_child(seahorse)
+		seahorse.set_process(false)
+		seahorse.feed_left = seahorse.feed_interval * 0.5
+		seahorse.queue_redraw()
 	if "--warning" in OS.get_cmdline_user_args():
 		tank.invasions.begin_warning()
 	if "--alien" in OS.get_cmdline_user_args():
