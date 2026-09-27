@@ -120,6 +120,22 @@ func capture() -> void:
 		var revealed_fish = get_nodes_in_group("fish")[0]
 		tank.show_fish_reveal(revealed_fish, "NEW FISH PURCHASED")
 		tank.acquisition_celebration.finish_now()
+	if "--roles" in OS.get_cmdline_user_args():
+		var normal: AquariumFish = get_nodes_in_group("fish")[0]
+		var brood: AquariumFish = get_nodes_in_group("fish")[1]
+		var fry: AquariumFish = tank.spawn_fish(false, "Feeder fry", "feeder_guppy")
+		var specimens := [normal, brood, fry]
+		for index in range(specimens.size()):
+			var specimen: AquariumFish = specimens[index]
+			specimen.set_process(false)
+			specimen.growth.stage = 1 if specimen == fry else 2
+			specimen.visual_size = specimen.profile.growth_sizes[specimen.growth.stage] * specimen.presentation_scale
+			specimen.scale = Vector2.ONE * specimen.visual_size
+			specimen.position = Vector2(390 + index * 190, 390)
+			specimen.broodstock = specimen == brood
+			if specimen == brood:
+				specimen.brood_left = 9999.0
+			specimen.queue_redraw()
 	if "--tank" in OS.get_cmdline_user_args():
 		tank.acquisition_queue.clear()
 		tank.active_acquisition.clear()

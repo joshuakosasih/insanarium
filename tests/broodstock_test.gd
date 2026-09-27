@@ -41,6 +41,8 @@ func run() -> void:
 	fry.set_process(false)
 	check(get_nodes_in_group("fish").size() == before_fry + 1 and fry.profile.species_id == "feeder_guppy" and fry.sex == AquariumFish.Sex.ASEXUAL and adult.life.id in fry.life.parent_ids, "one broodstock produces sterile feeder fry alone")
 	check(fry.sell_value() == 3 and fry.profile.produces_only_waste and fry.profile.max_growth_stage == 1, "feeder fry have no coin path and low sale value")
+	check(fry.profile.growth_sizes[1] == adult.profile.growth_sizes[1] and fry.profile.body_color != adult.profile.body_color, "feeder fry reach normal Teen size with a distinct base color")
+	check(FishRevealPanel.capture(adult, "TEST").guppy_role == "broodstock" and FishRevealPanel.capture(fry, "TEST").guppy_role == "feeder", "fish reveal keeps the live role markings")
 	var breeding := FishBreeding.new()
 	breeding.chance = 1.0
 	breeding.check_left = 0.0

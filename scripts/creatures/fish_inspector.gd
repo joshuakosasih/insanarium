@@ -28,7 +28,7 @@ static func describe(fish: AquariumFish) -> String:
 		readiness = "Cooldown: " + duration(fish.breeding_left)
 	var birth: String = "Unknown" if life.birth_sim_time < 0 else duration(life.birth_sim_time) + " tank time"
 	var output_kind: String = "waste only" if fish.broodstock or fish.profile.produces_only_waste else "coin/waste"
-	return "%s · %s\n%s · %s · %s\nAge: %s\nOrigin: %s\nBorn/introduced: %s\nParents: %s\nHealth: %d/%d · Hunger: %d%%\nMeals: %d · Growth credits: %.1f\nOutput: %.1fs · %s\nBreeding: %s\nSale value: $%d" % [life.id, fish.profile.species_name,
+	return "%s · %s\n%s · %s · %s\nAge: %s\nOrigin: %s\nBorn/introduced: %s\nParents: %s\nHealth: %d/%d · Hunger: %d%%\nMeals: %d · Growth credits: %.1f\nOutput: %.1fs · %s\nBreeding: %s\nSale value: $%d" % [life.id, "Broodstock Guppy" if fish.broodstock else fish.profile.species_name,
 		fish.profile.growth_names[fish.growth.stage], AquariumFish.SEX_NAMES[fish.sex], FishMutation.NAMES[fish.mutation.variant],
 		age_summary, life.origin, birth, parents, roundi(fish.health.current), roundi(fish.health.maximum), roundi(fish.hunger * 100), fish.growth.meals, fish.growth.growth_credit,
 		fish.genome.output_interval(fish.profile.coin_interval), output_kind, readiness, fish.sell_value()]

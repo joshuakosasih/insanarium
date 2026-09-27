@@ -497,9 +497,8 @@ func update_inspection() -> void:
 		var rows := FishInspector.trait_rows(selected_fish)
 		for index in range(inspector_trait_bars.size()):
 			inspector_trait_bars[index].configure(rows[index])
-		inspect_label.text = "%s · %s · %s" % [FishMutation.NAMES[selected_fish.mutation.variant], selected_fish.profile.growth_names[selected_fish.growth.stage], AquariumFish.SEX_NAMES[selected_fish.sex]]
-		if selected_fish.broodstock:
-			inspect_label.text += " · Broodstock"
+		var role_name: String = "Broodstock guppy" if selected_fish.broodstock else ("Feeder fry" if selected_fish.profile.species_id == "feeder_guppy" else selected_fish.profile.species_name)
+		inspect_label.text = "%s · %s · %s" % [role_name, selected_fish.profile.growth_names[selected_fish.growth.stage], AquariumFish.SEX_NAMES[selected_fish.sex]]
 		sell_button.text = "Sell fish  $%d" % selected_fish.sell_value()
 	else:
 		inspect_label.text = "Click a fish to inspect its sale value"

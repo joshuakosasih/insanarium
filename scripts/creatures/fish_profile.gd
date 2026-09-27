@@ -65,7 +65,7 @@ static func for_species(id: String) -> FishProfile:
 		profile.body_color = Color("a7d8b5")
 		profile.hunger_rate = 1.0 / 240.0
 		profile.starvation_grace = 120.0
-		profile.growth_sizes = PackedFloat32Array([0.42, 0.66, 0.66, 0.66, 0.66])
+		profile.growth_sizes = PackedFloat32Array([0.45, 0.70, 0.70, 0.70, 0.70])
 		profile.max_growth_stage = 1
 		profile.maximum_lifespan = 900.0
 		profile.produces_only_waste = true
