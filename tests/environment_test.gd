@@ -64,6 +64,8 @@ func run() -> void:
 	tank.economy.credit(500)
 	tank.purchase_asset("sponge")
 	check(tank.assets.owned.sponge and get_nodes_in_group("pets").any(func(pet: Node) -> bool: return pet is CleaningSpongePet), "milestone unlocks a stationary breathing sponge")
+	var sponge: CleaningSpongePet = get_nodes_in_group("pets").filter(func(pet: Node) -> bool: return pet is CleaningSpongePet)[0]
+	check(sponge.z_index == 0 and sponge.get_index() == 0 and sponge.position.x < tank.tank_rect.get_center().x and absf(sponge.position.y + 12.0 * sponge.scale.y - (tank.tank_rect.end.y - 22.0)) < 2.0, "sponge rests on the left substrate behind tank life")
 	tank.environment.cleanliness = 50.0
 	tank._process(10.0)
 	check(tank.environment.cleanliness > 50.0, "owned sponge cleans water during active simulation")

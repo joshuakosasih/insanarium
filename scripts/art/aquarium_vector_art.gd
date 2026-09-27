@@ -161,17 +161,29 @@ static func draw_puffer(canvas: CanvasItem, at: Vector2, size: float = 1.0, infl
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_sponge(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
+	# A low, soft sea-cucumber silhouette. Breathing expands upward from a fixed base.
+	var breath: float = 1.0 + 0.025 * sin(phase * 2.1)
+	canvas.draw_set_transform(at + Vector2(0, 12.0 * (1.0 - breath)), 0.0, Vector2(breath, breath) * size)
+	canvas.draw_colored_polygon(PackedVector2Array([
+		Vector2(-50, 10), Vector2(-51, 2), Vector2(-47, -6), Vector2(-39, -11),
+		Vector2(-30, -15), Vector2(-20, -18), Vector2(-9, -17), Vector2(0, -20),
+		Vector2(11, -18), Vector2(22, -19), Vector2(33, -15), Vector2(43, -10),
+		Vector2(50, -3), Vector2(51, 6), Vector2(46, 12), Vector2(-46, 12)
+	]), Color("a77738"))
+	canvas.draw_colored_polygon(PackedVector2Array([
+		Vector2(-47, 7), Vector2(-47, -1), Vector2(-40, -8), Vector2(-31, -12),
+		Vector2(-20, -15), Vector2(-9, -14), Vector2(0, -17), Vector2(11, -15),
+		Vector2(22, -16), Vector2(32, -12), Vector2(42, -7), Vector2(47, 0),
+		Vector2(46, 6), Vector2(39, 9), Vector2(-40, 9)
+	]), Color("e9b75e"))
+	canvas.draw_polyline(PackedVector2Array([Vector2(-36, -7), Vector2(-23, -12), Vector2(-8, -12), Vector2(3, -15), Vector2(19, -13), Vector2(31, -10)]), Color("f4ce79"), 3.0, true)
+	for pore in [Vector2(-35, 0), Vector2(-22, -5), Vector2(-10, 2), Vector2(5, -7), Vector2(18, 2), Vector2(32, -2)]:
+		canvas.draw_circle(pore, 2.0, Color("b9853f"))
+		canvas.draw_circle(pore + Vector2(-0.6, -0.7), 0.8, Color("f8d88b"))
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	var breath: float = 1.0 + 0.05 * sin(phase * 2.1)
-	canvas.draw_set_transform(at, 0.0, Vector2(breath, 1.0 / breath) * size)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-24, 17), Vector2(-25, -22), Vector2(-16, -28), Vector2(-8, -23), Vector2(0, -30), Vector2(10, -25), Vector2(20, -29), Vector2(24, -20), Vector2(23, 17)]), Color("527d72"))
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-21, 14), Vector2(-21, -19), Vector2(-15, -24), Vector2(-7, -18), Vector2(1, -26), Vector2(9, -20), Vector2(18, -25), Vector2(20, -17), Vector2(20, 14)]), Color("91b998"))
-	for pore in [Vector2(-12, -12), Vector2(9, -14), Vector2(-1, 4), Vector2(13, 6), Vector2(-13, 9)]:
-		canvas.draw_circle(pore, 3.5, Color("476e66"))
-	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	for i in range(3):
-		var rise: float = fposmod(phase * (7.0 + i) + i * 18.0, 42.0)
-		canvas.draw_arc(Vector2(-8 + i * 8, -29 - rise), 2.5 + i * 0.6, 0.0, TAU, 12, Color(0.7, 0.95, 0.94, 0.5 * (1.0 - rise / 42.0)), 1.2, true)
+	for i in range(2):
+		var rise: float = fposmod(phase * (6.0 + i) + i * 14.0, 34.0)
+		canvas.draw_arc(Vector2(-9 + i * 18, -19 - rise), 2.0 + i * 0.6, 0.0, TAU, 12, Color(0.7, 0.95, 0.94, 0.45 * (1.0 - rise / 34.0)), 1.2, true)
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:

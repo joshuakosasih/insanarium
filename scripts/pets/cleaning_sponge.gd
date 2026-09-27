@@ -7,7 +7,8 @@ var presentation_scale: float = 1.0
 func _ready() -> void:
 	add_to_group("pets")
 	scale = Vector2.ONE * presentation_scale
-	z_index = 3
+	# Its sibling order places it over the painted habitat and behind tank life.
+	z_index = 0
 
 func _process(delta: float) -> void:
 	phase += delta * ActivityPace.multiplier
