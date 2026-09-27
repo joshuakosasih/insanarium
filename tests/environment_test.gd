@@ -43,7 +43,7 @@ func run() -> void:
 	var pellet = tank.spawn_food(Vector2(450, 400), tank.feeds[0])
 	pellet.set_process(false)
 	var before_spoil: float = tank.environment.cleanliness
-	pellet._process(15.0)
+	pellet._process(30.0)
 	check(tank.environment.cleanliness == before_spoil - TankEnvironment.SPOILED_PELLET_POLLUTION, "expired food pollutes the water")
 	var before_bioload: float = tank.environment.cleanliness
 	tank.environment.advance(100.0, 2, 0)
@@ -59,6 +59,16 @@ func run() -> void:
 	var money_after_clean: float = tank.economy.money
 	tank.purchase_full_clean()
 	check(tank.economy.money == money_after_clean, "full clean cannot charge an already pristine tank")
+	check(not tank.asset_requirement("sponge").is_empty(), "breathing sponge stays locked before the population milestone")
+	tank.population_goal_complete = true
+	tank.economy.credit(500)
+	tank.purchase_asset("sponge")
+	check(tank.assets.owned.sponge and get_nodes_in_group("pets").any(func(pet: Node) -> bool: return pet is CleaningSpongePet), "milestone unlocks a stationary breathing sponge")
+	tank.environment.cleanliness = 50.0
+	tank._process(10.0)
+	check(tank.environment.cleanliness > 50.0, "owned sponge cleans water during active simulation")
+	var sponge_save: Dictionary = tank.snapshot()
+	check(not BackupValidation.parse(JSON.stringify(sponge_save)).is_empty() and sponge_save.owned.sponge, "sponge ownership survives backup validation")
 	var health := FishHealth.new()
 	health.current = 50.0
 	health.advance(100.0, 80.0)

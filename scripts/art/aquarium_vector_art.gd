@@ -160,6 +160,20 @@ static func draw_puffer(canvas: CanvasItem, at: Vector2, size: float = 1.0, infl
 	canvas.draw_circle(Vector2(5, 9), 1.8, color.darkened(0.25))
 	canvas.draw_set_transform(Vector2.ZERO)
 
+static func draw_sponge(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
+	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+	var breath: float = 1.0 + 0.05 * sin(phase * 2.1)
+	canvas.draw_set_transform(at, 0.0, Vector2(breath, 1.0 / breath) * size)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-24, 17), Vector2(-25, -22), Vector2(-16, -28), Vector2(-8, -23), Vector2(0, -30), Vector2(10, -25), Vector2(20, -29), Vector2(24, -20), Vector2(23, 17)]), Color("527d72"))
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-21, 14), Vector2(-21, -19), Vector2(-15, -24), Vector2(-7, -18), Vector2(1, -26), Vector2(9, -20), Vector2(18, -25), Vector2(20, -17), Vector2(20, 14)]), Color("91b998"))
+	for pore in [Vector2(-12, -12), Vector2(9, -14), Vector2(-1, 4), Vector2(13, 6), Vector2(-13, 9)]:
+		canvas.draw_circle(pore, 3.5, Color("476e66"))
+	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+	for i in range(3):
+		var rise: float = fposmod(phase * (7.0 + i) + i * 18.0, 42.0)
+		canvas.draw_arc(Vector2(-8 + i * 8, -29 - rise), 2.5 + i * 0.6, 0.0, TAU, 12, Color(0.7, 0.95, 0.94, 0.5 * (1.0 - rise / 42.0)), 1.2, true)
+	canvas.draw_set_transform(Vector2.ZERO)
+
 static func draw_shrimp(canvas: CanvasItem, at: Vector2, size: float = 1.0, phase: float = 0.0) -> void:
 	# Face left like the reference; the live pet mirrors this whole silhouette
 	# when it crawls to the right.

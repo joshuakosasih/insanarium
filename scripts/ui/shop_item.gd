@@ -28,4 +28,5 @@ static func catalog() -> Array[ShopItemDefinition]:
 		ShopItemDefinition.new("puffer", "Bubble puffer", "HELPER", "Unlocked by any Income Bubbles upgrade. May chase bubbles during active play.", "puffer"),
 		ShopItemDefinition.new("diamond_value", "Diamonds", "UPGRADE", "Unlocked by any Fish Coins upgrade. Improve diamond floor lifetime and value independently.", "diamond"),
 		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies and defend against aliens.", "piranha"),
-		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum")]
+		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum"),
+		ShopItemDefinition.new("sponge", "Breathing sponge", "HELPER", "Unlocked by the 15-fish milestone. Slowly cleans water while breathing in place.", "sponge")]

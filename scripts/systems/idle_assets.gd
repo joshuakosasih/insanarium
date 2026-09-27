@@ -1,7 +1,9 @@
 class_name IdleAssets
 extends RefCounted
 ## Owned automation and stocked pellet tiers. Purchases are once per tank.
-const PRICES := {"snail": 50, "shrimp": 75, "seahorse": 125, "puffer": 175, "feeder": 100}
+const PRICES := {"snail": 50, "shrimp": 75, "seahorse": 125, "puffer": 175, "feeder": 100, "sponge": 350}
+const SPONGE_RATES := [0.025, 0.04, 0.06, 0.085, 0.12]
+const SPONGE_UPGRADE_PRICES := [180, 450, 1125, 2800]
 const UPGRADE_PRICES := [40, 100, 250, 625]
 const SNAIL_UPGRADE_PRICES := [30, 75, 190, 475]
 # The snail's largest gains arrive first, then taper toward its practical cap.
@@ -33,8 +35,8 @@ const MAX_UPGRADE_LEVEL: int = 4
 const FEEDER_CAPACITIES := [50, 100, 150, 200]
 const FEEDER_CAPACITY_PRICES := [100, 250, 625]
 const LEGACY_MAX_RESERVE: int = 1000
-var owned: Dictionary = {"snail": false, "shrimp": false, "seahorse": false, "puffer": false, "feeder": false}
-var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "shrimp_speed": 0, "shrimp_digestion": 0, "seahorse_interval": 0, "seahorse_feed": 0, "feeder_capacity": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "diamond_lifetime": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
+var owned: Dictionary = {"snail": false, "shrimp": false, "seahorse": false, "puffer": false, "feeder": false, "sponge": false}
+var levels: Dictionary = {"sponge_breath": 0, "snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "shrimp_speed": 0, "shrimp_digestion": 0, "seahorse_interval": 0, "seahorse_feed": 0, "feeder_capacity": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "diamond_lifetime": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
 var reserve: Array[int] = []
 var feeder_left: float = 2.0
 
@@ -55,6 +57,8 @@ func upgrade_price(track: String) -> int:
 		return 0
 	if track.begins_with("seahorse_") and not owned.seahorse:
 		return 0
+	if track == "sponge_breath" and not owned.sponge:
+		return 0
 	if track == "feeder_capacity" and not owned.feeder:
 		return 0
 	var level: int = int(levels[track])
@@ -70,6 +74,8 @@ func upgrade_price(track: String) -> int:
 		return SEAHORSE_INTERVAL_PRICES[level]
 	if track == "seahorse_feed":
 		return SEAHORSE_FEED_PRICES[level]
+	if track == "sponge_breath":
+		return SPONGE_UPGRADE_PRICES[level]
 	if track == "feeder_capacity":
 		return FEEDER_CAPACITY_PRICES[level]
 	if track.begins_with("bubble_"):
@@ -103,6 +109,7 @@ func pet_tracks(kind: String) -> Array[String]:
 		"snail": ["snail_speed", "snail_stamina", "snail_sleep"],
 		"shrimp": ["shrimp_speed", "shrimp_digestion"],
 		"seahorse": ["seahorse_interval", "seahorse_feed"],
+		"sponge": ["sponge_breath"],
 		"puffer": ["puffer_speed", "puffer_curiosity"]}
 	var result: Array[String] = []
 	for track in tracks.get(kind, []):
@@ -130,6 +137,8 @@ func sell_pet(kind: String, economy: Economy) -> int:
 	return value
 
 func upgrade_price_at(track: String, level: int) -> int:
+	if track == "sponge_breath":
+		return SPONGE_UPGRADE_PRICES[level]
 	if track.begins_with("snail_"):
 		return SNAIL_UPGRADE_PRICES[level]
 	if track.begins_with("shrimp_"):
@@ -165,6 +174,9 @@ func shrimp_digestion() -> float:
 
 func seahorse_interval() -> float:
 	return SEAHORSE_INTERVALS[clampi(int(levels.seahorse_interval), 0, SEAHORSE_INTERVALS.size() - 1)]
+
+func sponge_clean_rate() -> float:
+	return SPONGE_RATES[clampi(int(levels.sponge_breath), 0, MAX_UPGRADE_LEVEL)]
 
 func capacity() -> int:
 	return FEEDER_CAPACITIES[clampi(int(levels.feeder_capacity), 0, track_max_level("feeder_capacity"))]

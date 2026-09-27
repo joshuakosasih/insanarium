@@ -14,7 +14,8 @@ static func assess(data: Dictionary) -> Dictionary:
 		if fish_profile.eats_pellets_at(int(fish.get("stage", 0))):
 			demand += fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
 	var seahorse_level: int = clampi(int(data.get("asset_levels", {}).get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)
-	var seahorse_supply: float = 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level] if data.owned.seahorse else 0.0
+	# One pellet per new hunger episode; the cooldown is only an upper bound.
+	var seahorse_supply: float = minf(demand, 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level]) if data.owned.seahorse else 0.0
 	var supply: float = (0.5 if data.owned.feeder and not data.reserve.is_empty() else 0.0) + seahorse_supply
 	return {"count": data.fish.size(), "stock": data.reserve.size(),
 		"demand": demand * 60.0, "supply": supply * 60.0,

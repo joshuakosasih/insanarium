@@ -62,7 +62,7 @@ func run() -> void:
 	tank._unhandled_input(synthetic_mouse)
 	check(tapped_bubble.claimed and tank.economy.money == before_bubble_tap + 1.0 and get_nodes_in_group("food").is_empty(), "a mobile bubble tap resolves once without also dropping food")
 	check(get_nodes_in_group("fish").size() == 2 and get_nodes_in_group("pets").is_empty(), "two normal fish and no free pets")
-	check(not tank.shop_panel.visible and tank.shop_cards.size() == 13, "shop starts closed with reusable product cards")
+	check(not tank.shop_panel.visible and tank.shop_cards.size() == 14, "shop starts closed with reusable product cards")
 	check(tank.shop_cards.fish.discovered and not tank.shop_cards.snail.discovered and not tank.shop_cards.shrimp.discovered and not tank.shop_cards.feed.discovered and not tank.shop_cards.coins.discovered and not tank.shop_cards.diamond_value.discovered, "unowned pets and untouched upgrades begin as shop silhouettes")
 	check(tank.shop_scroll.scroll_deadzone == 8, "shop catalog uses a short touch-drag threshold")
 	check(tank.shop_cards.snail.icon_preview.icon_kind == "snail" and tank.shop_cards.snail.icon_preview.material != null, "hidden products reuse their exact artwork through a grayscale material")
@@ -197,6 +197,14 @@ func run() -> void:
 	hungry_specimen.hunger = hungry_specimen.profile.hungry_threshold
 	seahorse._process(0.1)
 	check(seahorse.feed_left == seahorse.feed_interval and get_nodes_in_group("food").size() == food_before_ready + 1, "ready seahorse feeds immediately when hunger appears")
+	seahorse._process(seahorse.feed_interval + 0.1)
+	check(get_nodes_in_group("food").size() == food_before_ready + 1 and seahorse.feed_left == 0.0, "one ongoing hunger episode gets one seahorse pellet")
+	var second_hungry: AquariumFish = get_nodes_in_group("fish")[1]
+	second_hungry.hunger = second_hungry.profile.hungry_threshold
+	seahorse._process(0.1)
+	check(get_nodes_in_group("food").size() == food_before_ready + 2, "ready seahorse serves a different hungry fish")
+	get_nodes_in_group("food")[-1].free()
+	second_hungry.hunger = 0.0
 	get_nodes_in_group("food")[-1].free()
 	hungry_specimen.hunger = 0.0
 	tank.select_shop_item("seahorse")
@@ -242,6 +250,7 @@ func run() -> void:
 	shrimp.digestion_left = 0.0
 	var doomed_pellet = tank.spawn_food(Vector2(shrimp.position.x, shrimp.floor_y), tank.feeds[0])
 	doomed_pellet.position.y = doomed_pellet.floor_y
+	doomed_pellet.settled = true
 	doomed_pellet.lifetime = 3.0
 	shrimp._process(0.01)
 	check(doomed_pellet.consumed and doomed_pellet.is_queued_for_deletion(), "cleanup shrimp rescues a floor pellet shortly before it would pollute the tank")

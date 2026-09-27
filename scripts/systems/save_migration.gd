@@ -7,7 +7,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	var registry := LifeRegistry.new()
 	registry.next_id = maxi(1, int(data.get("next_fish_id", 1)))
 	for item in data.get("fish", []):
-		if not str(item.get("species_id", "starter_fish")) in ["starter_fish", "piranha", "feeder_guppy"]:
+		if not item.has("species_id") or not str(item.get("species_id", "starter_fish")) in ["starter_fish", "piranha", "feeder_guppy"]:
 			item["species_id"] = "starter_fish"
 		if item.species_id == "feeder_guppy":
 			item["mutation"] = 0
@@ -41,6 +41,11 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	data["cleanliness"] = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	data["population_goal_complete"] = bool(data.get("population_goal_complete", false))
 	data["piranha_unlocked"] = bool(data.get("piranha_unlocked", false)) or bool(data.population_goal_complete) or data.get("fish", []).size() >= 10
+	var served: Array = []
+	for fish_id in data.get("seahorse_served", []):
+		if fish_id is String and fish_id.length() <= 64 and not fish_id in served and served.size() < 50:
+			served.append(fish_id)
+	data["seahorse_served"] = served
 	var sex_bag := FishSexBag.new()
 	sex_bag.from_data(data.get("guppy_sex_bag", []))
 	data["guppy_sex_bag"] = sex_bag.to_data()
@@ -53,6 +58,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	# The early bubble collector was a sea urchin. Preserve that purchase as the replacement puffer.
 	owned["puffer"] = bool(owned.get("puffer", false)) or bool(owned.get("urchin", false))
 	owned["shrimp"] = bool(owned.get("shrimp", false))
+	owned["sponge"] = bool(owned.get("sponge", false))
 	owned.erase("urchin")
 	data["owned"] = owned
 	if not data.has("puffer_x") and data.has("urchin_x"):
@@ -71,6 +77,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	levels["puffer_curiosity"] = clampi(int(levels.get("puffer_curiosity", 0)), 0, 4)
 	levels["shrimp_speed"] = clampi(int(levels.get("shrimp_speed", 0)), 0, 4)
 	levels["shrimp_digestion"] = clampi(int(levels.get("shrimp_digestion", 0)), 0, 4)
+	levels["sponge_breath"] = clampi(int(levels.get("sponge_breath", 0)), 0, 4)
 	levels["seahorse_interval"] = clampi(int(levels.get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)
 	levels["feeder_capacity"] = clampi(int(levels.get("feeder_capacity", 0)), 0, IdleAssets.FEEDER_CAPACITIES.size() - 1)
 	levels["seahorse_feed"] = clampi(int(levels.get("seahorse_feed", 0)), 0, 2)
@@ -91,6 +98,8 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	if not owned.get("shrimp", false):
 		levels.shrimp_speed = 0
 		levels.shrimp_digestion = 0
+	if not owned.get("sponge", false):
+		levels.sponge_breath = 0
 	if not owned.get("seahorse", false):
 		levels.seahorse_interval = 0
 		levels.seahorse_feed = 0

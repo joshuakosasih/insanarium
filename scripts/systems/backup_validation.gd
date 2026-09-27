@@ -37,7 +37,7 @@ static func parse(text: String) -> Dictionary:
 	for key in ["snail", "seahorse", "feeder"]:
 		if not data.owned.get(key) is bool:
 			return {}
-	for optional_pet in ["urchin", "puffer", "shrimp"]:
+	for optional_pet in ["urchin", "puffer", "shrimp", "sponge"]:
 		if data.owned.has(optional_pet) and not data.owned[optional_pet] is bool:
 			return {}
 	if data.has("population_goal_complete") and not data.population_goal_complete is bool:
@@ -67,7 +67,7 @@ static func parse(text: String) -> Dictionary:
 			if not integer_in_range(data.asset_levels.snail, 0, 3) or bool(data.owned.snail) != (int(data.asset_levels.snail) > 0):
 				return {}
 		else:
-			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "feeder_capacity", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
+			for track in ["snail_speed", "snail_stamina", "snail_sleep", "shrimp_speed", "shrimp_digestion", "sponge_breath", "feeder_capacity", "puffer_speed", "puffer_curiosity", "coin_lifetime", "coin_value", "diamond_value", "diamond_lifetime", "idle_duration", "bubble_capacity", "bubble_value"]:
 				if not integer_in_range(data.asset_levels.get(track, 0), 0, 4):
 					return {}
 			if not integer_in_range(data.asset_levels.get("seahorse_interval", 0), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1):
@@ -79,6 +79,8 @@ static func parse(text: String) -> Dictionary:
 			if not bool(data.owned.get("puffer", data.owned.get("urchin", false))) and (int(data.asset_levels.get("puffer_speed", 0)) > 0 or int(data.asset_levels.get("puffer_curiosity", 0)) > 0):
 				return {}
 			if not bool(data.owned.get("shrimp", false)) and (int(data.asset_levels.get("shrimp_speed", 0)) > 0 or int(data.asset_levels.get("shrimp_digestion", 0)) > 0):
+				return {}
+			if not bool(data.owned.get("sponge", false)) and int(data.asset_levels.get("sponge_breath", 0)) > 0:
 				return {}
 			if not bool(data.owned.get("seahorse", false)) and (int(data.asset_levels.get("seahorse_interval", 0)) > 0 or int(data.asset_levels.get("seahorse_feed", 0)) > 0):
 				return {}
@@ -146,6 +148,15 @@ static func parse(text: String) -> Dictionary:
 	for coin in data.coins:
 		if coin.has("grounded") and not coin.grounded is bool:
 			return {}
+	for pellet in data.food:
+		if pellet.has("settled") and not pellet.settled is bool:
+			return {}
+	if data.has("seahorse_served"):
+		if not data.seahorse_served is Array or data.seahorse_served.size() > 50:
+			return {}
+		for fish_id in data.seahorse_served:
+			if not fish_id is String or fish_id.length() > 64:
+				return {}
 	for key in ["saved_at", "simulation_elapsed", "next_fish_id", "breeding_check", "feeder_left", "seahorse_left", "snail_x", "snail_stamina", "snail_sleep", "snail_collection_progress", "urchin_x", "urchin_path", "urchin_decision", "urchin_pause", "puffer_x", "puffer_y", "puffer_destination_x", "puffer_destination_y", "puffer_wander", "puffer_puff"]:
 		if not number(data.get(key, 0), 0, 1000000000000):
 			return {}

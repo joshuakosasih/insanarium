@@ -29,8 +29,9 @@ func run() -> void:
 	for i in range(44):
 		growth.record_meal(fish.profile, 3)
 	check(growth.stage == 3, "upgraded feed cannot bypass diamond meal minimum")
+	fish.profile.diamond_growth_chance = 1.0
 	growth.record_meal(fish.profile)
-	check(growth.stage == 4, "seventy-five meals become diamond")
+	check(growth.stage == 4, "seventy-five meals permit a successful diamond growth roll")
 	growth.stage = 2
 	growth.meals = 7
 	growth.growth_credit = 7

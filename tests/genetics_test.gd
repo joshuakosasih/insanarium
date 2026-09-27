@@ -51,7 +51,7 @@ func run() -> void:
 	root.add_child(fish)
 	var description := FishInspector.describe(fish)
 	var rows := FishInspector.trait_rows(fish)
-	check(description.contains("Natural breed cycle") and rows.size() == 5 and rows[0].title == "Vitality" and rows[1].title == "Metabolism" and rows[2].title == "Agility" and rows[3].title == "Productivity" and rows[4].title == "Fertility", "inspector exposes five readable gameplay traits")
+	check(description.contains("Breeding:") and rows.size() == 5 and rows[0].title == "Vitality" and rows[1].title == "Metabolism" and rows[2].title == "Agility" and rows[3].title == "Productivity" and rows[4].title == "Fertility", "inspector exposes five readable gameplay traits")
 	check(not fish.wears_crown(), "non-Diamond fish do not wear a crown")
 	fish.growth.stage = fish.profile.diamond_stage
 	check(fish.wears_crown() and FishRevealPanel.capture(fish, "TEST").crowned, "Diamond fish wear their crown in the tank and reveal card")

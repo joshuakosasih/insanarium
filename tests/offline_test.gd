@@ -31,6 +31,20 @@ func run() -> void:
 	check(result.report.simulated == 20.0 and result.report.earned + result.report.waste == 5, "ten-percent elapsed time and deterministic fish output")
 	check(result.data.money == data.money and result.data.coins.size() + result.data.waste.size() == 5, "outputs become collectible coins or visible waste")
 	check(result.data.cleanliness < data.cleanliness, "offline population and waste reduce cleanliness")
+	var sponge_case: Dictionary = data.duplicate(true)
+	sponge_case.fish = []
+	sponge_case.food = []
+	sponge_case.waste = []
+	sponge_case.coins = []
+	sponge_case.cleanliness = 50.0
+	sponge_case.owned.sponge = true
+	var sponge_result := OfflineProgress.advance(sponge_case, 1100.0)
+	check(sponge_result.data.cleanliness > 50.0 and sponge_result.data.cleanliness < 51.0, "breathing sponge gradually cleans water during offline catch-up")
+	var falling_food: Dictionary = sponge_case.duplicate(true)
+	falling_food.owned.sponge = false
+	falling_food.food = [{"x": 500, "y": 615, "tier": 0, "life": 14.0, "settled": false}]
+	var landed_food := OfflineProgress.advance(falling_food, 1010.0)
+	check(landed_food.data.food.size() == 1 and landed_food.data.food[0].settled and is_equal_approx(float(landed_food.data.food[0].life), 14.0), "offline pellet countdown begins only on landing")
 	check(is_equal_approx(result.data.fish[0].life.age, data.fish[0].life.age + 20.0), "offline age uses simulation time")
 	var aging: Dictionary = data.duplicate(true)
 	aging.fish = [aging.fish[0]]

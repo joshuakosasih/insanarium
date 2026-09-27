@@ -21,7 +21,7 @@ func run() -> void:
 	var catalog_ids: Array[String] = []
 	for item in ShopItemDefinition.catalog():
 		catalog_ids.append(item.id)
-	check(catalog_ids.slice(0, 4) == ["fish", "feed", "bubbles", "idle_duration"] and catalog_ids.find("piranha") > catalog_ids.find("diamond_value") and catalog_ids[-1] == "serum", "shop starts with everyday progression and places predators later")
+	check(catalog_ids.slice(0, 4) == ["fish", "feed", "bubbles", "idle_duration"] and catalog_ids.find("piranha") > catalog_ids.find("diamond_value") and catalog_ids[-1] == "sponge", "shop starts with everyday progression and places late-game helpers later")
 	check(not tank.shop_cards.has("stock"), "pellet stock is no longer a separate shop card")
 	tank.select_shop_item("feeder")
 	tank.activate_shop_item()
@@ -49,7 +49,7 @@ func run() -> void:
 	var pellet: FishFood = tank.spawn_feeder_food(hungry, 0)
 	pellet.set_process(false)
 	var fall_time: float = (pellet.floor_y - pellet.position.y) / FishFood.FALL_SPEED
-	check(is_equal_approx(pellet.position.x, hungry.position.x) and pellet.position.y < hungry.position.y and pellet.lifetime > fall_time + 13.9, "auto-feeder drops above fish with enough time to reach the floor")
+	check(is_equal_approx(pellet.position.x, hungry.position.x) and pellet.position.y < hungry.position.y and is_equal_approx(pellet.lifetime, 14.0), "auto-feeder drops above fish with a full floor lifetime")
 	pellet._process(fall_time)
 	check(is_equal_approx(pellet.position.y, pellet.floor_y) and pellet.lifetime >= 13.9 and not pellet.is_queued_for_deletion(), "feeder pellet reaches the floor with its full shelf life")
 	var seahorse := IdleAssets.new()

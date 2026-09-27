@@ -5,7 +5,7 @@ const VectorArt = preload("res://scripts/art/aquarium_vector_art.gd")
 signal waste_eaten(waste: FishWaste)
 signal pellet_eaten(at: Vector2)
 const CONTACT_DISTANCE: float = 18.0
-const PELLET_RESCUE_TIME: float = 6.0
+const PELLET_RESCUE_TIME: float = 10.0
 @export var move_speed: float = 30.0
 @export var digestion_duration: float = 12.0
 var digestion_left: float = 0.0
@@ -39,8 +39,8 @@ func _process(delta: float) -> void:
 		digestion_left = maxf(0.0, digestion_left - delta)
 		queue_redraw()
 		return
-	if not valid_target():
-		target = nearest_cleanup_target()
+	# Reconsider every frame so an urgent pellet can interrupt a long waste trip.
+	target = nearest_cleanup_target()
 	if target != null:
 		destination_x = target.position.x
 		move_horizontally(delta)
@@ -60,24 +60,26 @@ func valid_target() -> bool:
 	if target is FishWaste:
 		return target.settled
 	if target is FishFood:
-		return not target.consumed and target.lifetime <= PELLET_RESCUE_TIME and target.position.y >= target.floor_y - 2.0
+		return not target.consumed and target.settled and target.lifetime <= PELLET_RESCUE_TIME
 	return false
 
 func nearest_cleanup_target() -> Node2D:
 	var nearest: Node2D
-	var nearest_distance: float = INF
+	var best_score: float = INF
 	for waste in get_tree().get_nodes_in_group("waste"):
 		if waste.settled and not waste.is_queued_for_deletion():
-			var distance: float = absf(waste.position.x - position.x)
-			if distance < nearest_distance:
+			var score: float = absf(waste.position.x - position.x) / move_speed + 3.0
+			if score < best_score:
 				nearest = waste
-				nearest_distance = distance
+				best_score = score
 	for food in get_tree().get_nodes_in_group("food"):
-		if not food.consumed and food.lifetime <= PELLET_RESCUE_TIME and food.position.y >= food.floor_y - 2.0:
-			var distance: float = absf(food.position.x - position.x)
-			if distance < nearest_distance:
+		if not food.consumed and food.settled and food.lifetime <= PELLET_RESCUE_TIME and not food.is_queued_for_deletion():
+			var travel: float = maxf(0.0, absf(food.position.x - position.x) - CONTACT_DISTANCE) / move_speed
+			# Prefer food that will spoil soon, but only if we can reach it.
+			var score: float = travel + maxf(0.0, food.lifetime - travel) * 0.25
+			if travel < food.lifetime and score < best_score:
 				nearest = food
-				nearest_distance = distance
+				best_score = score
 	return nearest
 
 func move_horizontally(delta: float) -> void:

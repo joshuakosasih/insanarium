@@ -7,7 +7,9 @@ signal feed_produced(at: Vector2, tier: int)
 var feed_left: float = 18.0
 var feed_tier: int = 0
 var phase: float = 0.0
-var anchor := Vector2(180, 320)
+var anchor := Vector2(570, 320)
+var roam_width: float = 245.0
+var served_hungry_ids: Array[String] = []
 var presentation_scale: float = 1.0
 
 func _ready() -> void:
@@ -29,14 +31,22 @@ func charge_progress() -> float:
 func _process(delta: float) -> void:
 	delta *= ActivityPace.multiplier
 	phase += delta
-	position = anchor + Vector2(sin(phase * 0.4) * 35, sin(phase * 1.4) * 12)
+	position = anchor + Vector2(sin(phase * 0.16) * roam_width, sin(phase * 0.58) * 22)
 	feed_left = maxf(0.0, feed_left - delta)
-	if feed_left <= 0.0:
-		for fish in get_tree().get_nodes_in_group("fish"):
-			if fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold:
-				feed_produced.emit(position + Vector2(34, -22), feed_tier)
-				feed_left = feed_interval
-				break
+	var hungry_ids: Array[String] = []
+	var candidate: AquariumFish
+	for fish in get_tree().get_nodes_in_group("fish"):
+		if fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold and fish.health.current > 0.0:
+			hungry_ids.append(fish.life.id)
+			if candidate == null and not fish.life.id in served_hungry_ids:
+				candidate = fish
+	for i in range(served_hungry_ids.size() - 1, -1, -1):
+		if not served_hungry_ids[i] in hungry_ids:
+			served_hungry_ids.remove_at(i)
+	if feed_left <= 0.0 and candidate != null and get_tree().get_nodes_in_group("food").size() < 80:
+		feed_produced.emit(position + Vector2(34, -22), feed_tier)
+		served_hungry_ids.append(candidate.life.id)
+		feed_left = feed_interval
 	queue_redraw()
 
 func _draw() -> void:

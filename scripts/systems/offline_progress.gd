@@ -39,6 +39,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	var seahorse_interval: float = IdleAssets.SEAHORSE_INTERVALS[clampi(int(asset_levels.get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)]
 	var seahorse_tier: int = IdleAssets.SEAHORSE_FEED_TIERS[clampi(int(asset_levels.get("seahorse_feed", 0)), 0, IdleAssets.SEAHORSE_FEED_TIERS.size() - 1)]
 	var seahorse: float = clampf(float(data.get("seahorse_left", seahorse_interval)), 0.0, seahorse_interval)
+	var seahorse_served: Array = data.get("seahorse_served", []).duplicate()
+	var sponge_rate: float = IdleAssets.SPONGE_RATES[clampi(int(asset_levels.get("sponge_breath", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)] if bool(owned.get("sponge", false)) else 0.0
 	var snail_progress: float = clampf(float(data.get("snail_collection_progress", 0.0)), 0.0, 0.999)
 	var snail_speed: float = IdleAssets.SNAIL_SPEEDS[clampi(int(asset_levels.get("snail_speed", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
 	var snail_stamina: float = IdleAssets.SNAIL_STAMINAS[clampi(int(asset_levels.get("snail_stamina", 0)), 0, IdleAssets.MAX_UPGRADE_LEVEL)]
@@ -58,8 +60,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	while remaining > 0.000001:
 		var dt: float = minf(1.0, remaining)
 		remaining -= dt
-		var pet_count: int = int(bool(owned.get("snail", false))) + int(bool(owned.get("shrimp", false))) + int(bool(owned.get("seahorse", false))) + int(bool(owned.get("puffer", false)))
-		cleanliness = maxf(0.0, cleanliness - dt * ((fish_list.size() + pet_count) * TankEnvironment.BIOLOAD_PER_CREATURE + waste.size() * TankEnvironment.WASTE_PER_SECOND))
+		var pet_count: int = int(bool(owned.get("snail", false))) + int(bool(owned.get("shrimp", false))) + int(bool(owned.get("seahorse", false))) + int(bool(owned.get("puffer", false))) + int(bool(owned.get("sponge", false)))
+		cleanliness = clampf(cleanliness + dt * (sponge_rate - (fish_list.size() + pet_count) * TankEnvironment.BIOLOAD_PER_CREATURE - waste.size() * TankEnvironment.WASTE_PER_SECOND), 0.0, TankEnvironment.MAX_CLEANLINESS)
 		for waste_item in waste:
 			if bool(waste_item.get("settled", float(waste_item.get("y", 642)) >= 642.0)):
 				waste_item.settled = true
@@ -97,8 +99,15 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		else:
 			snail_progress = minf(snail_progress, 0.999)
 		for pellet in food:
-			pellet.life = float(pellet.get("life", 14.0)) - dt
-			pellet.y = minf(640.0, float(pellet.get("y", 350.0)) + FishFood.FALL_SPEED * dt)
+			if bool(pellet.get("settled", float(pellet.get("y", 350.0)) >= 640.0)):
+				pellet.settled = true
+				pellet.life = float(pellet.get("life", 14.0)) - dt
+			else:
+				var fall_time: float = maxf(0.0, 640.0 - float(pellet.get("y", 350.0))) / FishFood.FALL_SPEED
+				pellet.y = minf(640.0, float(pellet.get("y", 350.0)) + FishFood.FALL_SPEED * dt)
+				if pellet.y >= 640.0:
+					pellet.settled = true
+					pellet.life = float(pellet.get("life", 14.0)) - maxf(0.0, dt - fall_time)
 		var settled_waste: Array = waste.filter(func(item: Dictionary) -> bool: return bool(item.get("settled", false)))
 		var endangered_food: Array = food.filter(func(pellet: Dictionary) -> bool:
 			return float(pellet.get("y", 350.0)) >= 640.0 and float(pellet.get("life", 14.0)) > 0.0 and float(pellet.get("life", 14.0)) <= CleanupShrimpPet.PELLET_RESCUE_TIME)
@@ -125,13 +134,19 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				cleanliness = maxf(0.0, cleanliness - TankEnvironment.SPOILED_PELLET_POLLUTION)
 				report.spoiled += 1
 		var hungry: bool = false
+		var hungry_ids: Array[String] = []
 		for fish in fish_list:
 			var fish_profile: FishProfile = profiles.get(str(fish.get("species_id", "starter_fish")), profile)
 			var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
 			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * FishGenome.hunger_multiplier_for(metabolism) * dt)
 			fish.life.age = float(fish.life.age) + dt
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
-			hungry = hungry or (fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold)
+			if fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold:
+				hungry = true
+				hungry_ids.append(str(fish.life.id))
+		for i in range(seahorse_served.size() - 1, -1, -1):
+			if not str(seahorse_served[i]) in hungry_ids:
+				seahorse_served.remove_at(i)
 		# Serum broodstock keep their own clock; each can support at most two live fry.
 		var new_fry: Array = []
 		for parent in fish_list:
@@ -178,14 +193,17 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		if feeder <= 0.0:
 			feeder = 2.0
 			if owned.get("feeder", false) and hungry and not reserve.is_empty() and food.size() < 80:
-				food.append({"tier": reserve.pop_front(), "life": 14.0 + (640.0 - 205.0) / FishFood.FALL_SPEED, "x": 550, "y": 205})
+				food.append({"tier": reserve.pop_front(), "life": 14.0, "x": 550, "y": 205, "settled": false})
 				report.stock_used += 1
 				if reserve.is_empty():
 					report.stock_empty_at = elapsed - remaining
-		if seahorse <= 0.0:
-			if owned.get("seahorse", false) and hungry and food.size() < 80:
-				food.append({"tier": seahorse_tier, "life": 14.0, "x": 200, "y": 320})
-				seahorse = seahorse_interval
+		if seahorse <= 0.0 and owned.get("seahorse", false) and food.size() < 80:
+			for fish_id in hungry_ids:
+				if not fish_id in seahorse_served:
+					food.append({"tier": seahorse_tier, "life": 14.0, "x": 550, "y": 320, "settled": false})
+					seahorse_served.append(fish_id)
+					seahorse = seahorse_interval
+					break
 		# Abstract availability: hungry fish can reach pellets; prioritize greatest need.
 		fish_list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.hunger > b.hunger)
 		var survivors: Array = []
@@ -276,6 +294,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 	data.reserve = reserve
 	data.feeder_left = feeder
 	data.seahorse_left = seahorse
+	data.seahorse_served = seahorse_served
 	data.snail_collection_progress = snail_progress
 	data.shrimp_cleanup_progress = shrimp_progress
 	data.money = snappedf(float(data.get("money", 0)) + report.collected, 0.01)

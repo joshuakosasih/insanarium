@@ -84,7 +84,8 @@ Capacity uses each fish species' hunger and eating thresholds, accounting for nu
 | --- | --- | --- |
 | Snail | $50 | Crawls to settled rewards and collects them, including diamonds |
 | Cleanup Shrimp | $75 | Forages for settled waste and pellets that are close to spoiling |
-| Seahorse | $125 | Holds a free Basic pellet after an 18-second cooldown until a fish becomes hungry; five crest lights show charge |
+| Seahorse | $125 | Serves each new hunger episode once, limited by cooldown; five crest lights show charge |
+| Breathing Sponge | $350 | Unlocks after the 15-fish milestone and gradually cleans water |
 | Bubble Puffer | $175 | Wanders freely and may chase and pop bubbles during active play |
 | Auto-feeder | $100 | Drops stocked pellets from the water's surface above the hungriest fish, at most once every 2 seconds |
 
@@ -92,11 +93,15 @@ The snail begins at 16 pixels per second with 10 seconds of movement stamina. Ex
 
 The Bubble Puffer has separate Speed and Curiosity tracks. Speed progresses through 45, 60, 78, 100, and 125 pixels per second. Curiosity gives each available bubble a 30%, 45%, 60%, 80%, then 100% chance to become its chase target. Rejected bubbles remain for manual clicking. Puffer and Fish Coin Lifetime tracks cost $40, $100, $250, then $625. Existing sea-urchin purchases automatically migrate to a base-level Bubble Puffer; existing three-level snail saves map to compensating speed and stamina levels, with the new sleep track starting at level one.
 
-The Cleanup Shrimp is a single utility pet rather than breeding livestock. It wanders along the substrate, seeks settled fish waste, and can intercept a floor pellet during its final six seconds before spoilage. Eating waste restores 0.35 cleanliness, less than the 0.75 restored by manual removal, and every meal starts a digestion pause. Speed progresses through 30, 45, 62, 82, and 108 pixels per second; digestion falls through 12, 8, 5, 2, and 0.5 seconds. Both tracks cost $20, $60, $180, then $540. It contributes normal pet biological load, so it reduces maintenance without replacing full cleaning. Away progress estimates its cleanup rate from both upgrades and reports waste eaten and pellets rescued.
+The Cleanup Shrimp is a single utility pet rather than breeding livestock. It wanders along the substrate, seeks settled fish waste, and can intercept a floor pellet during its final ten seconds before spoilage. Eating waste restores 0.35 cleanliness, less than the 0.75 restored by manual removal, and every meal starts a digestion pause. Speed progresses through 30, 45, 62, 82, and 108 pixels per second; digestion falls through 12, 8, 5, 2, and 0.5 seconds. Both tracks cost $20, $60, $180, then $540. It contributes normal pet biological load, so it reduces maintenance without replacing full cleaning. Away progress estimates its cleanup rate from both upgrades and reports waste eaten and pellets rescued.
 
 No pets or machine are granted free. Each can be purchased once. Unowned helpers and equipment use the exact same procedural artwork as their discovered versions, rendered as a single solid dark silhouette with internal colors and lines hidden. Upgrade artwork is also hidden until the first level is purchased, turning the initial purchase into a small discovery; restored ownership and levels reveal the correct colors immediately. Pet positions and upgrade tracks persist in local saves. Any pet can be sold from the upper-left of its shop detail card for half of its purchase and upgrade investment. A confirmation protects against accidental taps; selling removes the pet and resets its upgrade tracks. The Auto-feeder card has both **Stock +20** and capacity upgrades. Reserve limits progress through 50, 100, 150, and 200 pellets for $100, $250, and $625. Paid stock from older saves above the new cap remains usable; refills resume once it falls below capacity. Refills cost the current pellet price. Partial refills charge only for available space. Stocked pellets preserve the tier paid for, even after upgrading manual feed. Dispensing stock never charges a second time. The machine pauses when no fish are hungry or the reserve is empty; it cannot feed without stock.
 
-The seahorse begins with an 18-second production cooldown. Once ready, it holds the free Basic pellet until a pellet-eating fish is hungry, then releases it immediately and starts the next cooldown. Five crest lights fill through the cooldown and stay lit while it waits. Production interval upgrades shorten this through 14, 11, 8, 6, 4, 3, 2, and finally 1 second for $25, $50, $100, $200, $400, $800, $1,600, and $3,200. A separate pellet track upgrades its output to Premium for $150 and Deluxe for $500. The seahorse stays awake; sleeping remains the snail's distinct behavior.
+The seahorse begins with an 18-second production cooldown and slowly roams across the tank. Once ready, it releases one free Basic pellet for each new hunger episode and starts the next cooldown. A fish that stays hungry does not trigger repeated pellets; different newly hungry fish can each be served at most once per cooldown. Five crest lights fill through the cooldown and stay lit while it waits. Production interval upgrades shorten this through 14, 11, 8, 6, 4, 3, 2, and finally 1 second for $25, $50, $100, $200, $400, $800, $1,600, and $3,200. A separate pellet track upgrades its output to Premium for $150 and Deluxe for $500. The seahorse stays awake; sleeping remains the snail's distinct behavior. At maximum rate it can serve at most one newly hungry fish per simulation second. The 10× admin speed makes that appear ten times faster in real time.
+
+The Breathing Sponge unlocks after the 15-fish population milestone. It sits near the substrate and pulses gently, passively restoring 0.025 cleanliness per simulation second for $350. Four Breath upgrades raise this to 0.04, 0.06, 0.085, and 0.12 per second for $180, $450, $1,125, and $2,800. It also cleans during bounded away-time catch-up. Waste still needs the shrimp or manual collection.
+
+All pellets fall before their 14-second spoil timer starts, including manual, Seahorse, and Auto-feeder pellets. The shrimp seeks settled waste and rescues settled pellets in their final ten seconds, prioritizing reachable pellets at risk of spoiling.
 
 ## Alien challenges
 
@@ -141,7 +146,7 @@ Visit `http://localhost:8000`. The server only serves static files; it is not a 
 - `scripts/art/aquarium_vector_art.gd`: shared procedural silhouettes used by live entities and shop cards.
 - `scripts/ui/`: reusable shop item definitions and illustrated card controls.
 - `scripts/ui/acquisition_celebration.gd`: queued fish and pet discovery animation shared by purchases and births.
-- `scripts/pets/`: independent snail, seahorse, and Bubble Puffer behaviors.
+- `scripts/pets/`: independent snail, shrimp, seahorse, sponge, and Bubble Puffer behaviors.
 - `scripts/systems/activity_pace.gd`: shared focus-driven simulation clock.
 - `scripts/systems/breeding.gd`: mating eligibility, cooldowns, and population limits.
 - `scripts/systems/idle_assets.gd`: owned pets/machine, stocked pellets, and geometric pet, bubble, coin, and Away Time upgrade tracks.
