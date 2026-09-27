@@ -20,7 +20,7 @@ static func parse(text: String) -> Dictionary:
 	for key in ["fish", "food", "coins", "reserve"]:
 		if not data.get(key) is Array:
 			return {}
-	if data.fish.size() > 50 or data.food.size() > 80 or data.coins.size() > 150 or data.reserve.size() > IdleAssets.FEEDER_CAPACITIES[-1]:
+	if data.fish.size() > 50 or data.food.size() > 80 or data.coins.size() > 150 or data.reserve.size() > IdleAssets.LEGACY_MAX_RESERVE:
 		return {}
 	if data.has("waste"):
 		if not data.waste is Array or data.waste.size() > 100:
@@ -84,9 +84,7 @@ static func parse(text: String) -> Dictionary:
 				return {}
 			if not bool(data.owned.get("feeder", false)) and int(data.asset_levels.get("feeder_capacity", 0)) > 0:
 				return {}
-			var feeder_level: int = int(data.asset_levels.get("feeder_capacity", 0))
-			if data.reserve.size() > IdleAssets.FEEDER_CAPACITIES[feeder_level]:
-				return {}
+			# Older saves can have paid stock above the new cap. Keep it until used.
 	for tier in data.reserve:
 		if not number(tier, 0, 2):
 			return {}

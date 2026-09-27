@@ -11,7 +11,7 @@ const SNAIL_SLEEPS := [20.0, 11.0, 7.0, 5.0, 4.0]
 const PUFFER_SPEEDS := [45.0, 60.0, 78.0, 100.0, 125.0]
 const PUFFER_CURIOSITIES := [0.30, 0.45, 0.60, 0.80, 1.0]
 const SHRIMP_SPEEDS := [30.0, 45.0, 62.0, 82.0, 108.0]
-const SHRIMP_DIGESTION := [12.0, 8.0, 5.0, 3.5, 2.0]
+const SHRIMP_DIGESTION := [12.0, 8.0, 5.0, 2.0, 0.5]
 const SHRIMP_UPGRADE_PRICES := [20, 60, 180, 540]
 const SEAHORSE_INTERVALS := [18.0, 14.0, 11.0, 8.0, 6.0, 4.0, 3.0, 2.0, 1.0]
 const SEAHORSE_INTERVAL_PRICES := [25, 50, 100, 200, 400, 800, 1600, 3200]
@@ -30,13 +30,13 @@ const DIAMOND_LIFETIME_PRICES := [50, 150, 450, 1350]
 const IDLE_UPGRADE_PRICES := [50, 150, 450, 1350]
 const BUBBLE_UPGRADE_PRICES := [30, 90, 270, 810]
 const MAX_UPGRADE_LEVEL: int = 4
-const FEEDER_CAPACITIES := [200, 300, 450, 700, 1000]
-const FEEDER_CAPACITY_PRICES := [100, 250, 625, 1560]
+const FEEDER_CAPACITIES := [50, 100, 150, 200]
+const FEEDER_CAPACITY_PRICES := [100, 250, 625]
+const LEGACY_MAX_RESERVE: int = 1000
 var owned: Dictionary = {"snail": false, "shrimp": false, "seahorse": false, "puffer": false, "feeder": false}
 var levels: Dictionary = {"snail_speed": 0, "snail_stamina": 0, "snail_sleep": 0, "shrimp_speed": 0, "shrimp_digestion": 0, "seahorse_interval": 0, "seahorse_feed": 0, "feeder_capacity": 0, "puffer_speed": 0, "puffer_curiosity": 0, "coin_lifetime": 0, "coin_value": 0, "diamond_value": 0, "diamond_lifetime": 0, "idle_duration": 0, "bubble_capacity": 0, "bubble_value": 0}
 var reserve: Array[int] = []
 var feeder_left: float = 2.0
-const CAPACITY: int = 200
 
 func purchase(kind: String, economy: Economy) -> bool:
 	if not PRICES.has(kind) or owned[kind] or not economy.spend(PRICES[kind]):
@@ -94,6 +94,8 @@ func track_max_level(track: String) -> int:
 		return SEAHORSE_FEED_TIERS.size() - 1
 	if track == "seahorse_interval":
 		return SEAHORSE_INTERVALS.size() - 1
+	if track == "feeder_capacity":
+		return FEEDER_CAPACITIES.size() - 1
 	return MAX_UPGRADE_LEVEL
 
 func pet_tracks(kind: String) -> Array[String]:
@@ -165,7 +167,7 @@ func seahorse_interval() -> float:
 	return SEAHORSE_INTERVALS[clampi(int(levels.seahorse_interval), 0, SEAHORSE_INTERVALS.size() - 1)]
 
 func capacity() -> int:
-	return FEEDER_CAPACITIES[clampi(int(levels.feeder_capacity), 0, MAX_UPGRADE_LEVEL)]
+	return FEEDER_CAPACITIES[clampi(int(levels.feeder_capacity), 0, track_max_level("feeder_capacity"))]
 
 func seahorse_feed_tier() -> int:
 	return SEAHORSE_FEED_TIERS[clampi(int(levels.seahorse_feed), 0, SEAHORSE_FEED_TIERS.size() - 1)]
@@ -206,7 +208,7 @@ func bubble_multiplier() -> float:
 func restock(tier: int, feeds: Array[FeedProfile], economy: Economy) -> bool:
 	if not owned.feeder or tier < 0 or tier >= feeds.size():
 		return false
-	var count: int = mini(20, capacity() - reserve.size())
+	var count: int = maxi(0, mini(20, capacity() - reserve.size()))
 	if count <= 0 or not economy.spend(count * feeds[tier].price):
 		return false
 	for i in range(count):

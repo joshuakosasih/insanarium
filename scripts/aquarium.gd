@@ -458,8 +458,8 @@ func update_count() -> void:
 		population_goal_complete = true
 		if offline_ready:
 			audio.play("growth")
-			show_feedback(tank_rect.get_center(), "Population goal complete!")
-	count_label.text = "%02d FISH · GOAL COMPLETE" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.POPULATION_GOAL]
+			show_feedback(tank_rect.get_center(), "Tank 2 unlocked!")
+	count_label.text = "%02d FISH · TANK 2 UNLOCKED" % count if population_goal_complete else "%02d FISH · GOAL %d" % [count, breeding.POPULATION_GOAL]
 	update_money(economy.money)
 	if is_instance_valid(shop_panel):
 		refresh_shop()
@@ -1206,11 +1206,14 @@ func refresh_shop() -> void:
 	for pellet_card_id in ["feed"]:
 		if shop_cards.has(pellet_card_id):
 			shop_cards[pellet_card_id].set_pellet_preview(feed.color, feed.growth_credit)
-	var stock_count: int = mini(20, assets.capacity() - assets.reserve.size())
+	var stock_count: int = maxi(0, mini(20, assets.capacity() - assets.reserve.size()))
 	var fish_count: int = get_tree().get_nodes_in_group("fish").size()
 	var current_fish_price: int = Economy.fish_price(fish_count)
 	var piranha_count: int = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha").size()
 	var current_piranha_price: int = Economy.piranha_price(piranha_count)
+	var feeder_status: String = "$%d" % assets.PRICES.feeder
+	if assets.owned.feeder:
+		feeder_status = "%d old stock · Lv. %d" % [assets.reserve.size(), int(assets.levels.feeder_capacity) + 1] if assets.reserve.size() > assets.capacity() else "%d/%d stock · Lv. %d" % [assets.reserve.size(), assets.capacity(), int(assets.levels.feeder_capacity) + 1]
 	var statuses := {
 		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, breeding.CAPACITY],
 		"piranha": "$%d · %d owned" % [current_piranha_price, piranha_count] if piranha_unlocked else "Locked · 10 fish",
@@ -1219,7 +1222,7 @@ func refresh_shop() -> void:
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
 		"seahorse": "$%d" % assets.PRICES.seahorse if not assets.owned.seahorse else "Rate %d · Feed %d" % [int(assets.levels.seahorse_interval) + 1, int(assets.levels.seahorse_feed) + 1],
 		"puffer": "$%d" % assets.PRICES.puffer if not assets.owned.puffer else "Speed %d · Curiosity %d" % [int(assets.levels.puffer_speed) + 1, int(assets.levels.puffer_curiosity) + 1],
-		"feeder": "%d/%d stock · Lv. %d" % [assets.reserve.size(), assets.capacity(), int(assets.levels.feeder_capacity) + 1] if assets.owned.feeder else "$%d" % assets.PRICES.feeder,
+		"feeder": feeder_status,
 		"feed": "%s · MAX" % feed.title if feed_upgrades.next_price() == 0 else "%s to %s · $%d" % [feed.title, feeds[feed_upgrades.unlocked_tier + 1].title, feed_upgrades.next_price()],
 		"coins": "Life %d · Value %d" % [int(assets.levels.coin_lifetime) + 1, int(assets.levels.coin_value) + 1],
 		"diamond_value": "Life %d · Value %d" % [int(assets.levels.diamond_lifetime) + 1, int(assets.levels.diamond_value) + 1],
@@ -1377,7 +1380,10 @@ func refresh_shop() -> void:
 			else:
 				action_price = assets.upgrade_price("feeder_capacity")
 				unavailable = action_price == 0
-				shop_detail_state.text = "Stock: %d/%d · Current feed: %s\nNext refill: %d pellets for $%d\nDispenses at most once every 2s when needed." % [assets.reserve.size(), assets.capacity(), feed.title, stock_count, stock_count * feed.price]
+				if assets.reserve.size() > assets.capacity():
+					shop_detail_state.text = "Old paid stock: %d · New cap: %d\nUse this stock before buying more.\nDispenses at most once every 2s when needed." % [assets.reserve.size(), assets.capacity()]
+				else:
+					shop_detail_state.text = "Stock: %d/%d · Current feed: %s\nNext refill: %d pellets for $%d\nDispenses at most once every 2s when needed." % [assets.reserve.size(), assets.capacity(), feed.title, stock_count, stock_count * feed.price]
 				shop_action_button.position = Vector2(24, 350)
 				shop_action_button.size = Vector2(160, 58)
 				shop_action_button.text = "Capacity MAX" if unavailable else "Capacity +1  $%d" % action_price
@@ -1874,7 +1880,7 @@ func restore(data: Dictionary) -> void:
 			pet.position.x = clampf(float(data.get("shrimp_x", 700)), pet.horizontal_bounds.x, pet.horizontal_bounds.y)
 			pet.position.y = pet.floor_y
 			pet.digestion_left = clampf(float(data.get("shrimp_digestion", 0)), 0, pet.digestion_duration)
-	for tier in data.get("reserve", []).slice(0, assets.capacity()):
+	for tier in data.get("reserve", []).slice(0, assets.LEGACY_MAX_RESERVE):
 		assets.reserve.append(clampi(int(tier), 0, 2))
 	for item in data.get("fish", []).slice(0, 50):
 		var fish := spawn_fish(true, "Purchased", str(item.get("species_id", "starter_fish")))

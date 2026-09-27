@@ -17,15 +17,15 @@ func _init(item_id: String, item_title: String, item_category: String, item_desc
 static func catalog() -> Array[ShopItemDefinition]:
 	return [
 		ShopItemDefinition.new("fish", "Baby guppy", "LIVESTOCK", "Add a guppy to the aquarium.", "fish"),
-		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies and defend against aliens.", "piranha"),
-		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum"),
-		ShopItemDefinition.new("snail", "Snail", "HELPER", "Collects coins along the tank floor, but must sleep after spending its stamina.", "snail"),
-		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Unlocked by an Auto-feeder or Seahorse. Forages for settled waste and expiring pellets.", "shrimp"),
-		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Unlocked by Premium feed. Produces free pellets when fish are hungry.", "seahorse"),
-		ShopItemDefinition.new("puffer", "Bubble puffer", "HELPER", "Unlocked by any Income Bubbles upgrade. May chase bubbles during active play.", "puffer"),
-		ShopItemDefinition.new("feeder", "Auto-feeder", "EQUIPMENT", "Drops purchased pellets from the water surface toward hungry fish. Expand its capacity and refill its stock here.", "feeder"),
 		ShopItemDefinition.new("feed", "Feed quality", "UPGRADE", "Permanently replace manual feed with the next quality tier.", "feed"),
-		ShopItemDefinition.new("coins", "Fish coins", "UPGRADE", "Improve the floor lifetime and value of ordinary coins produced by fish.", "coin"),
-		ShopItemDefinition.new("diamond_value", "Diamonds", "UPGRADE", "Unlocked by any Fish Coins upgrade. Improve diamond floor lifetime and value independently.", "diamond"),
+		ShopItemDefinition.new("bubbles", "Income bubbles", "UPGRADE", "Increase the number of simultaneous bubbles and the value of every pop.", "bubble"),
 		ShopItemDefinition.new("idle_duration", "Away time", "UPGRADE", "Unlock and extend the real time simulated after leaving the aquarium.", "clock"),
-		ShopItemDefinition.new("bubbles", "Income bubbles", "UPGRADE", "Increase the number of simultaneous bubbles and the value of every pop.", "bubble")]
+		ShopItemDefinition.new("snail", "Snail", "HELPER", "Collects coins along the tank floor, but must sleep after spending its stamina.", "snail"),
+		ShopItemDefinition.new("feeder", "Auto-feeder", "EQUIPMENT", "Drops purchased pellets from the water surface toward hungry fish. Expand its capacity and refill its stock here.", "feeder"),
+		ShopItemDefinition.new("coins", "Fish coins", "UPGRADE", "Improve the floor lifetime and value of ordinary coins produced by fish.", "coin"),
+		ShopItemDefinition.new("seahorse", "Seahorse", "HELPER", "Unlocked by Premium feed. Produces free pellets when fish are hungry.", "seahorse"),
+		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Unlocked by an Auto-feeder or Seahorse. Forages for settled waste and expiring pellets.", "shrimp"),
+		ShopItemDefinition.new("puffer", "Bubble puffer", "HELPER", "Unlocked by any Income Bubbles upgrade. May chase bubbles during active play.", "puffer"),
+		ShopItemDefinition.new("diamond_value", "Diamonds", "UPGRADE", "Unlocked by any Fish Coins upgrade. Improve diamond floor lifetime and value independently.", "diamond"),
+		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies and defend against aliens.", "piranha"),
+		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum")]
