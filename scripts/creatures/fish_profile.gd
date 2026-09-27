@@ -3,7 +3,7 @@ extends Resource
 ## Species data, separate from the creature's runtime state.
 @export var species_id: String = "starter_fish"
 @export var species_name: String = "Guppy"
-@export var swim_speed: float = 72.0
+@export var swim_speed: float = 55.0
 @export var hunger_rate: float = 1.0 / 120.0
 @export var hungry_threshold: float = 0.42
 @export var detection_radius: float = 1000.0
@@ -19,13 +19,14 @@ extends Resource
 
 @export var minimum_meals: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 75])
 @export var diamond_stage: int = 4
+@export var diamond_growth_chance: float = 0.20
 
 @export var starvation_grace: float = 45.0
 
 # Empty prey_species_id means this species never hunts other fish.
 @export var prey_species_id: String = ""
 @export var max_prey_stage: int = -1
-@export var hunter_stage: int = 1
+@export var hunter_stage: int = 2
 @export var predation_hunger: float = 0.62
 @export var prey_nutrition: float = 0.78
 @export var prey_growth_credit: int = 2
@@ -36,15 +37,28 @@ static func for_species(id: String) -> FishProfile:
 	if id == "piranha":
 		profile.species_id = "piranha"
 		profile.species_name = "Piranha"
-		profile.swim_speed = 105.0
+		profile.swim_speed = 78.0
 		profile.hunger_rate = 1.0 / 105.0
 		profile.coin_interval = 28.0
 		profile.coin_value = 2
 		profile.body_color = Color("dd6c63")
 		profile.growth_meals = PackedInt32Array([0, 2, 10, 30, 75])
-		profile.growth_sizes = PackedFloat32Array([0.50, 0.78, 1.08, 1.25, 1.40])
+		profile.growth_sizes = PackedFloat32Array([0.65, 0.92, 1.25, 1.45, 1.60])
+		profile.growth_rewards = PackedInt32Array([0, 4, 8, 12, 20])
 		profile.growth_names = PackedStringArray(["Baby", "Teen", "Adult", "Prime", "Diamond"])
+		profile.diamond_growth_chance = 1.0
 		profile.prey_species_id = "starter_fish"
 		profile.max_prey_stage = 1
 		profile.hunter_stage = 2
 	return profile
+
+func eats_pellets_at(stage: int) -> bool:
+	return prey_species_id.is_empty() or stage < hunter_stage
+
+func reward_is_diamond(stage: int) -> bool:
+	return stage >= diamond_stage or (not prey_species_id.is_empty() and stage >= hunter_stage)
+
+func reward_grade(stage: int) -> int:
+	if not prey_species_id.is_empty() and stage >= 1:
+		return 4 if reward_is_diamond(stage) else 3
+	return stage

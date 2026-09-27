@@ -29,7 +29,7 @@ func _process(delta: float) -> void:
 	feed_left = maxf(0.0, feed_left - delta)
 	if feed_left <= 0.0:
 		for fish in get_tree().get_nodes_in_group("fish"):
-			if fish.hunger >= fish.profile.hungry_threshold:
+			if fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold:
 				feed_produced.emit(position + Vector2(34, -22), feed_tier)
 				feed_left = feed_interval
 				break

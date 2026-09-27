@@ -65,10 +65,12 @@ func _process(delta: float) -> void:
 			if randf() > genome.coin_chance():
 				waste_produced.emit(output_at)
 			else:
-				coin_produced.emit(output_at, current_coin_value(), growth.stage >= profile.diamond_stage, growth.stage)
+				coin_produced.emit(output_at, current_coin_value(), profile.reward_is_diamond(growth.stage), profile.reward_grade(growth.stage))
 	if not is_instance_valid(food_target) or food_target.is_queued_for_deletion():
 		food_target = null
-	if hunger >= profile.hungry_threshold and food_target == null:
+	if not profile.eats_pellets_at(growth.stage):
+		food_target = null
+	if profile.eats_pellets_at(growth.stage) and hunger >= profile.hungry_threshold and food_target == null:
 		var nearest: float = profile.detection_radius
 		for item in get_tree().get_nodes_in_group("food"):
 			if item.consumed or item.is_queued_for_deletion():

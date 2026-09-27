@@ -26,28 +26,36 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	var outline := color.darkened(0.42)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-20, 0), Vector2(-41, -16 + tail), Vector2(-38, 16 + tail)]), outline)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, -3), Vector2(-36, -13 + tail), Vector2(-34, 12 + tail)]), color.darkened(0.12))
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, -9), Vector2(-12, -23), Vector2(-4, -15), Vector2(4, -26), Vector2(13, -14)]), outline)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-15, 10), Vector2(-9, 22), Vector2(-3, 12)]), outline)
-	canvas.draw_set_transform(at, 0.0, Vector2(1.5, 0.88) * size)
-	canvas.draw_circle(Vector2.ZERO, 20.0, outline)
-	canvas.draw_circle(Vector2(1, -1), 18.0, color)
-	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(6, 4), Vector2(24, 3), Vector2(31, 10), Vector2(22, 16), Vector2(9, 12)]), Color("ffe1bc"))
-	canvas.draw_line(Vector2(10, 5), Vector2(29, 8), outline, 2.0, true)
+	var outline := Color("3c3741")
+	var back := color.darkened(0.38)
+	var belly := color.lightened(0.23)
+	# A short, high tail and deep, blunt head distinguish it from the slim guppy.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, -1), Vector2(-45, -16 + tail), Vector2(-42, 0 + tail), Vector2(-45, 16 + tail)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-29, -1), Vector2(-42, -11 + tail), Vector2(-40, 0 + tail), Vector2(-42, 11 + tail)]), back)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-14, -17), Vector2(-12, -34), Vector2(-4, -26), Vector2(4, -38), Vector2(12, -26), Vector2(19, -18)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-15, 15), Vector2(-8, 30), Vector2(0, 20), Vector2(11, 19)]), outline)
+	var body := PackedVector2Array([Vector2(-31, -5), Vector2(-27, -20), Vector2(-14, -28), Vector2(4, -29), Vector2(21, -24), Vector2(32, -12), Vector2(35, -1), Vector2(27, 13), Vector2(12, 24), Vector2(-9, 24), Vector2(-25, 14)])
+	canvas.draw_colored_polygon(body, outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-27, -5), Vector2(-23, -18), Vector2(-11, -24), Vector2(5, -25), Vector2(20, -20), Vector2(30, -11), Vector2(32, 0), Vector2(25, 11), Vector2(10, 20), Vector2(-9, 20), Vector2(-22, 11)]), back)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-23, 3), Vector2(-13, 8), Vector2(3, 7), Vector2(19, 0), Vector2(31, -3), Vector2(29, 10), Vector2(12, 20), Vector2(-9, 20), Vector2(-22, 11)]), color)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, 10), Vector2(-2, 13), Vector2(17, 7), Vector2(29, 7), Vector2(12, 19), Vector2(-9, 19)]), belly)
+	# The hinged lower jaw projects past the head and carries tiny visible teeth.
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(16, 9), Vector2(31, 5), Vector2(39, 10), Vector2(31, 19), Vector2(19, 18)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(19, 11), Vector2(32, 8), Vector2(36, 11), Vector2(30, 17), Vector2(20, 16)]), belly)
+	canvas.draw_line(Vector2(17, 8), Vector2(36, 8), outline, 2.0, true)
 	for i in range(3):
-		var tooth_x: float = 16.0 + i * 4.0
-		canvas.draw_colored_polygon(PackedVector2Array([Vector2(tooth_x, 6), Vector2(tooth_x + 3, 7), Vector2(tooth_x + 1.5, 10)]), Color("fff8e9"))
-	canvas.draw_circle(Vector2(13, -7), 6.0, Color("fff1d7"))
+		var tooth_x: float = 22.0 + i * 4.0
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(tooth_x, 8), Vector2(tooth_x + 3, 8), Vector2(tooth_x + 1.5, 11)]), Color("fff8e9"))
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-10, 5), Vector2(-19, 20), Vector2(-5, 13), Vector2(1, 4)]), color.darkened(0.18))
+	canvas.draw_circle(Vector2(20, -12), 8.0, Color("f5d47d"))
 	if dead:
-		canvas.draw_line(Vector2(10, -10), Vector2(17, -4), outline, 2.0, true)
-		canvas.draw_line(Vector2(10, -4), Vector2(17, -10), outline, 2.0, true)
+		canvas.draw_line(Vector2(16, -16), Vector2(24, -8), outline, 2.0, true)
+		canvas.draw_line(Vector2(16, -8), Vector2(24, -16), outline, 2.0, true)
 	else:
-		canvas.draw_circle(Vector2(15, -7), 3.2, Color("172934"))
+		canvas.draw_circle(Vector2(22, -12), 4.2, Color("172934"))
+		canvas.draw_circle(Vector2(23, -14), 1.4, Color("fffaf0"))
 	if crowned:
-		canvas.draw_colored_polygon(PackedVector2Array([Vector2(4, -16), Vector2(3, -24), Vector2(8, -20), Vector2(12, -27), Vector2(16, -20), Vector2(20, -24), Vector2(19, -16)]), Color("57b9ec"))
+		canvas.draw_colored_polygon(PackedVector2Array([Vector2(8, -24), Vector2(7, -31), Vector2(11, -28), Vector2(15, -34), Vector2(18, -28), Vector2(22, -31), Vector2(21, -23)]), Color("57b9ec"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:

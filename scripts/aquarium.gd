@@ -664,7 +664,7 @@ func _process(delta: float) -> void:
 		assets.feeder_left = 2.0
 		var hungriest: AquariumFish
 		for fish in get_tree().get_nodes_in_group("fish"):
-			if fish.hunger >= fish.profile.hungry_threshold and (hungriest == null or fish.hunger > hungriest.hunger):
+			if fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold and (hungriest == null or fish.hunger > hungriest.hunger):
 				hungriest = fish
 		if hungriest != null and not assets.reserve.is_empty() and get_tree().get_nodes_in_group("food").size() < 80:
 			spawn_food(hungriest.position + Vector2(0, -12), feeds[assets.reserve.pop_front()])
@@ -689,7 +689,7 @@ func debug_autoplay_step() -> void:
 	for waste in get_tree().get_nodes_in_group("waste"):
 		clean_waste(waste)
 	var hungry: Array = get_tree().get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool:
-		return not fish.dead and fish.hunger >= fish.profile.hungry_threshold)
+		return not fish.dead and fish.profile.eats_pellets_at(fish.growth.stage) and fish.hunger >= fish.profile.hungry_threshold)
 	if not hungry.is_empty() and get_tree().get_nodes_in_group("food").size() < mini(hungry.size(), 8):
 		var hungriest: AquariumFish = hungry[0]
 		for fish in hungry:
@@ -1146,12 +1146,12 @@ func refresh_shop() -> void:
 		"fish":
 			action_price = current_fish_price
 			unavailable = fish_count >= breeding.CAPACITY
-			shop_detail_state.text = "Population %d/%d\nEach bag of 9 guppies has 3 male, 3 female, 3 asexual." % [fish_count, breeding.CAPACITY]
+			shop_detail_state.text = "Population %d/%d" % [fish_count, breeding.CAPACITY]
 			shop_action_button.text = "Buy guppy  $%d" % action_price
 		"piranha":
 			action_price = current_piranha_price
 			unavailable = fish_count >= breeding.CAPACITY or not piranha_unlocked
-			shop_detail_state.text = "Population %d/%d · %d piranhas\nBabies eat pellets. Hungry Adults can hunt Baby and Teen guppies when pellets run out." % [fish_count, breeding.CAPACITY, piranha_count]
+			shop_detail_state.text = "Population %d/%d · %d piranhas\nBabies and Teens eat pellets. Adults hunt Baby and Teen guppies." % [fish_count, breeding.CAPACITY, piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
 		"snail":
 			if not assets.owned.snail:
@@ -1651,6 +1651,7 @@ func snapshot() -> Dictionary:
 			"sex": fish.sex, "breeding_left": fish.breeding_left,
 			"starving": fish.survival.starving_for, "meals": fish.growth.meals,
 			"credit": fish.growth.growth_credit, "stage": fish.growth.stage,
+			"diamond_trial_done": fish.growth.diamond_trial_done,
 			"mutation": fish.mutation.variant, "coin_left": fish.coin_left})
 	var rewards: Array = []
 	for coin in get_tree().get_nodes_in_group("coins"):
@@ -1762,6 +1763,7 @@ func restore(data: Dictionary) -> void:
 		fish.growth.meals = maxi(0, int(item.get("meals", 0)))
 		fish.growth.growth_credit = maxf(0.0, float(item.get("credit", 0)))
 		fish.growth.stage = clampi(int(item.get("stage", 0)), 0, 4)
+		fish.growth.diamond_trial_done = bool(item.get("diamond_trial_done", fish.growth.stage >= fish.profile.diamond_stage))
 		fish.mutation.variant = clampi(int(item.get("mutation", 0)), 0, 3)
 		fish.visual_size = fish.profile.growth_sizes[fish.growth.stage]
 		fish.scale = Vector2.ONE * fish.visual_size

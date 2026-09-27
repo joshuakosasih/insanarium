@@ -125,7 +125,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			fish.hunger = minf(1.0, float(fish.get("hunger", 0)) + fish_profile.hunger_rate * FishGenome.hunger_multiplier_for(metabolism) * dt)
 			fish.life.age = float(fish.life.age) + dt
 			fish.breeding_left = maxf(0.0, float(fish.get("breeding_left", 0)) - dt)
-			hungry = hungry or fish.hunger >= fish_profile.hungry_threshold
+			hungry = hungry or (fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold)
 		feeder -= dt
 		seahorse = maxf(0.0, seahorse - dt)
 		if feeder <= 0.0:
@@ -165,7 +165,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				if report.first_water_loss_at < 0.0:
 					report.first_water_loss_at = elapsed - remaining
 				continue
-			if fish.hunger >= fish_profile.hungry_threshold and not food.is_empty():
+			if fish_profile.eats_pellets_at(int(fish.get("stage", 0))) and fish.hunger >= fish_profile.hungry_threshold and not food.is_empty():
 				var pellet: Dictionary = food.pop_front()
 				var feed: FeedProfile = feeds[clampi(int(pellet.tier), 0, 2)]
 				fish.hunger = maxf(0.0, fish.hunger - feed.nutrition)
@@ -176,6 +176,13 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				var old_stage: int = int(fish.get("stage", 0))
 				for stage in range(fish_profile.growth_meals.size()):
 					if fish.credit >= fish_profile.growth_meals[stage] and fish.meals >= fish_profile.minimum_meals[stage]:
+						if stage == fish_profile.diamond_stage and int(fish.get("stage", 0)) < stage:
+							if not bool(fish.get("diamond_trial_done", false)):
+								fish.diamond_trial_done = true
+								if rng.randf() >= fish_profile.diamond_growth_chance:
+									continue
+							else:
+								continue
 						fish.stage = maxi(int(fish.get("stage", 0)), stage)
 				if int(fish.stage) > old_stage:
 					report.growth += 1
@@ -200,11 +207,11 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 					if waste.size() < 100:
 						waste.append({"x": fish.get("x", 550), "y": 642, "settled": true, "life": FishWaste.FLOOR_LIFETIME})
 				else:
-					var is_diamond: bool = output_stage == fish_profile.diamond_stage
+					var is_diamond: bool = fish_profile.reward_is_diamond(output_stage)
 					var value: int = fish_profile.coin_value * fish_profile.growth_rewards[output_stage] * (diamond_multiplier if is_diamond else coin_multiplier)
 					report.earned += value
 					if rewards.size() < 150:
-						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": is_diamond, "grade": output_stage, "life": diamond_lifetime if is_diamond else coin_lifetime, "grounded": true})
+						rewards.append({"x": fish.get("x", 550), "y": 650, "value": value, "diamond": is_diamond, "grade": fish_profile.reward_grade(output_stage), "life": diamond_lifetime if is_diamond else coin_lifetime, "grounded": true})
 					else:
 						rewards[0].value = int(rewards[0].value) + value
 			survivors.append(fish)

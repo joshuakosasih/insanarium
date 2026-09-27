@@ -23,6 +23,19 @@ func run() -> void:
 	for i in range(5):
 		draws.append(int(restored_bag.draw()))
 	check(draws.count(0) == 3 and draws.count(1) == 3 and draws.count(2) == 3 and restored_bag.to_data().is_empty(), "each nine-draw bag contains exactly three of each guppy sex")
+	var no_diamond := FishProfile.new()
+	no_diamond.diamond_growth_chance = 0.0
+	var royal_growth := FishGrowth.new()
+	for i in range(75):
+		royal_growth.record_meal(no_diamond)
+	check(royal_growth.stage == 3 and royal_growth.diamond_trial_done, "guppy can remain Royal after its diamond chance")
+	no_diamond.diamond_growth_chance = 1.0
+	royal_growth.record_meal(no_diamond)
+	check(royal_growth.stage == 3, "a failed diamond chance is not retried on later meals")
+	var guaranteed_diamond := FishGrowth.new()
+	for i in range(75):
+		guaranteed_diamond.record_meal(no_diamond)
+	check(guaranteed_diamond.stage == 4, "a successful diamond chance advances growth")
 	var tank = load("res://scenes/aquarium.tscn").instantiate()
 	root.add_child(tank)
 	tank.set_process(false)
@@ -51,6 +64,7 @@ func run() -> void:
 	predator.set_process(false)
 	check(predator.profile.species_id == "piranha" and predator.growth.stage == 0 and tank.economy.money == balance - first_piranha_price and Economy.piranha_price(1) > first_piranha_price, "the shop buys a baby piranha at a species price that rises")
 	check(predator.profile.body_color != starters[0].profile.body_color and tank.acquisition_celebration.icon_kind == "piranha", "piranha has its own vector appearance and reveal")
+	check(predator.profile.growth_sizes[2] > starters[0].profile.growth_sizes[2] and predator.swim_speed() > 0.0, "adult piranha is larger than an adult guppy")
 	predator.hunger = 0.8
 	predator.position = Vector2(500, 350)
 	var baby: AquariumFish = starters[0]
@@ -69,11 +83,10 @@ func run() -> void:
 	baby.growth.stage = 1
 	var decoy: FishFood = tank.spawn_food(Vector2(590, 350), tank.feeds[0])
 	predator._process(0.1)
-	check(not baby.dead and predator.food_target == decoy and predator.prey_target == null, "available pellets distract a hungry adult from young guppies")
+	check(baby.dead and not decoy.consumed and predator.food_target == null and predator.growth.meals == 2, "adult piranha ignores pellets and hunts a young guppy")
 	decoy.free()
-	predator.food_target = null
-	predator._process(0.1)
-	check(baby.dead and baby.is_queued_for_deletion() and predator.hunger < 0.8 and predator.growth.meals == 2, "hungry adult piranha eats a Teen guppy and gains nutrition")
+	check(baby.is_queued_for_deletion() and predator.hunger < 0.8, "hunting feeds the adult piranha")
+	check(predator.profile.reward_grade(1) == 3 and not predator.profile.reward_is_diamond(1) and predator.profile.reward_is_diamond(2) and predator.profile.growth_rewards[2] * predator.profile.coin_value > FishProfile.new().growth_rewards[4], "teen piranhas make gold and adults make a stronger diamond")
 	var adult: AquariumFish = starters[1]
 	adult.growth.stage = 2
 	adult.position = predator.position + Vector2(10, 0)
@@ -101,7 +114,7 @@ func run() -> void:
 	var offspring: AquariumFish = get_nodes_in_group("fish")[-1]
 	check(offspring.profile.species_id == "piranha" and offspring.growth.stage == 0 and offspring.life.parent_ids == PackedStringArray([predator.life.id, piranha_mother.life.id]), "piranha offspring inherits its species and parent identities")
 	var data: Dictionary = tank.snapshot()
-	check(data.piranha_unlocked and data.has("guppy_sex_bag") and data.fish.any(func(fish: Dictionary) -> bool: return fish.species_id == "piranha"), "save includes the permanent unlock, marble bag, and piranha species")
+	check(data.piranha_unlocked and data.has("guppy_sex_bag") and data.fish.any(func(fish: Dictionary) -> bool: return fish.species_id == "piranha") and data.fish.all(func(fish: Dictionary) -> bool: return fish.has("diamond_trial_done")), "save includes species and growth-roll state")
 	check(not BackupValidation.parse(JSON.stringify(data)).is_empty(), "mixed-species backup validates")
 	var just_piranha: Dictionary = data.duplicate(true)
 	just_piranha.fish = data.fish.filter(func(fish: Dictionary) -> bool: return fish.species_id == "piranha").slice(0, 1)
@@ -115,6 +128,11 @@ func run() -> void:
 	var away: Dictionary = OfflineProgress.advance(just_piranha, 100.0)
 	var metabolism: float = FishGenome.phenotype_from_data(just_piranha.fish[0].genome, "metabolism")
 	check(away.data.fish.size() == 1 and is_equal_approx(float(away.data.fish[0].hunger), 10.0 / 105.0 * FishGenome.hunger_multiplier_for(metabolism)), "away care uses piranha hunger rate and does not simulate hunting")
+	just_piranha.fish[0].stage = 2
+	just_piranha.fish[0].hunger = 0.75
+	just_piranha.food = [{"tier": 0, "life": 14.0, "x": 550, "y": 350}]
+	away = OfflineProgress.advance(just_piranha, 100.0)
+	check(away.report.fed == 0 and away.data.fish.size() == 1 and away.data.fish[0].hunger > 0.75, "adult piranha does not consume pellets during away calculation")
 	tank.queue_free()
 	await process_frame
 	var restored = load("res://scenes/aquarium.tscn").instantiate()
