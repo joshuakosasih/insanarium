@@ -29,11 +29,9 @@ static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, r
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	if role == "broodstock":
-		# A violet shoulder sash and round aqua serum seal remain clear on any mutation color.
+		# A violet shoulder sash remains clear on any mutation color.
 		canvas.draw_colored_polygon(PackedVector2Array([Vector2(-17, -14), Vector2(-11, -17), Vector2(0, 14), Vector2(-7, 15)]), Color("694f96"))
 		canvas.draw_line(Vector2(-15, -13), Vector2(-4, 12), Color("d7b5fb"), 2.5, true)
-		canvas.draw_circle(Vector2(-7, -5), 5.5, Color("214d69"))
-		canvas.draw_circle(Vector2(-7, -5), 3.5, Color("8ef0e0"))
 	else:
 		# A single muted patch identifies feeder fry without making them ornamental.
 		canvas.draw_circle(Vector2(-10, 1), 4.0, Color("83998e"))
