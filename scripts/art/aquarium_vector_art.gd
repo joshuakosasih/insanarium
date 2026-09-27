@@ -35,10 +35,8 @@ static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, r
 		canvas.draw_circle(Vector2(-7, -5), 5.5, Color("214d69"))
 		canvas.draw_circle(Vector2(-7, -5), 3.5, Color("8ef0e0"))
 	else:
-		# Two short dark bars and a gold tail band identify sterile feeder fry at Teen size.
-		canvas.draw_line(Vector2(-15, -11), Vector2(-12, 11), Color("245c68"), 3.5, true)
-		canvas.draw_line(Vector2(-5, -12), Vector2(-2, 11), Color("245c68"), 3.5, true)
-		canvas.draw_line(Vector2(-35, -8), Vector2(-33, 9), Color("ffe0a3"), 3.0, true)
+		# A single muted patch identifies feeder fry without making them ornamental.
+		canvas.draw_circle(Vector2(-10, 1), 4.0, Color("83998e"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:

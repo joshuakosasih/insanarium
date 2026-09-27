@@ -62,7 +62,7 @@ static func for_species(id: String) -> FishProfile:
 	elif id == "feeder_guppy":
 		profile.species_id = "feeder_guppy"
 		profile.species_name = "Feeder Fry"
-		profile.body_color = Color("a7d8b5")
+		profile.body_color = Color("b8c5b7")
 		profile.hunger_rate = 1.0 / 240.0
 		profile.starvation_grace = 120.0
 		profile.growth_sizes = PackedFloat32Array([0.45, 0.70, 0.70, 0.70, 0.70])
