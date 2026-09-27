@@ -106,6 +106,11 @@ var food_cooldown: float = 0.0
 var snail_collection_progress: float = 0.0
 var shrimp_cleanup_progress: float = 0.0
 var environment := TankEnvironment.new()
+var displayed_cleanliness: int = -1
+var displayed_water_condition: String = ""
+var rendered_cleanliness_quarters: int = -1
+var clean_button_available: bool = false
+var clean_button_state_known: bool = false
 var last_pointer_position := Vector2(-10000, -10000)
 var last_pointer_msec: int = -1000
 var menu_paused: bool = false
@@ -462,15 +467,32 @@ func update_count() -> void:
 func update_cleanliness() -> void:
 	if not is_instance_valid(cleanliness_label):
 		return
-	cleanliness_label.text = "WATER %d%% · %s" % [roundi(environment.cleanliness), environment.condition()]
-	cleanliness_label.add_theme_color_override("font_color", environment.color())
+	var rounded: int = roundi(environment.cleanliness)
+	var condition: String = environment.condition()
+	if rounded != displayed_cleanliness or condition != displayed_water_condition:
+		cleanliness_label.text = "WATER %d%% · %s" % [rounded, condition]
+		if condition != displayed_water_condition:
+			cleanliness_label.add_theme_color_override("font_color", environment.color())
+		displayed_cleanliness = rounded
+		displayed_water_condition = condition
 	if is_instance_valid(clean_button):
 		var clean_enough: bool = environment.cleanliness > TankEnvironment.FULL_CLEAN_THRESHOLD
-		clean_button.text = "Water is clean" if clean_enough else "Full clean  $%d" % int(TankEnvironment.FULL_CLEAN_COST)
-		clean_button.disabled = clean_enough or economy.money < TankEnvironment.FULL_CLEAN_COST
-	if is_instance_valid(water_overlay):
-		water_overlay.set_cleanliness(environment.cleanliness)
-	queue_redraw()
+		var available: bool = not clean_enough and economy.money >= TankEnvironment.FULL_CLEAN_COST
+		if not clean_button_state_known or available != clean_button_available:
+			clean_button.disabled = not available
+			clean_button_available = available
+			clean_button_state_known = true
+		var button_text: String = "Water is clean" if clean_enough else "Full clean  $%d" % int(TankEnvironment.FULL_CLEAN_COST)
+		if clean_button.text != button_text:
+			clean_button.text = button_text
+	# Water haze changes imperceptibly within a quarter percent; avoid rebuilding
+	# all aquarium draw commands for every tiny biological-load step.
+	var visual_step: int = floori(environment.cleanliness * 4.0)
+	if visual_step != rendered_cleanliness_quarters:
+		rendered_cleanliness_quarters = visual_step
+		if is_instance_valid(water_overlay):
+			water_overlay.set_cleanliness(environment.cleanliness)
+		queue_redraw()
 
 func purchase_full_clean() -> void:
 	if environment.cleanliness > TankEnvironment.FULL_CLEAN_THRESHOLD:
