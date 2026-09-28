@@ -147,7 +147,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 		for i in range(seahorse_served.size() - 1, -1, -1):
 			if not str(seahorse_served[i]) in hungry_ids:
 				seahorse_served.remove_at(i)
-		# Serum broodstock keep their own clock; each can support at most two live fry.
+		# Serum broodstock keep their own clock and saved per-fish booster state.
 		var new_fry: Array = []
 		for parent in fish_list:
 			if not bool(parent.get("broodstock", false)):
@@ -159,13 +159,13 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 			for candidate in fish_list + new_fry:
 				if str(candidate.get("species_id", "")) == "feeder_guppy" and str(parent.life.id) in candidate.get("life", {}).get("parents", []):
 					live_fry += 1
-			if live_fry >= FishBroodstock.MAX_LIVE_FRY:
+			if live_fry >= FishBroodstock.live_limit_for(bool(parent.get("brood_boosted", false))):
 				continue
 			var fry_genome: Dictionary = parent.get("genome", {}).duplicate(true)
 			var fry_life := {"id": "F%06d" % next_fish_id, "parents": [str(parent.life.id)], "age": 0.0, "born_at": float(data.get("simulation_elapsed", 0)) + elapsed - remaining, "age_known": true, "origin": "Feeder fry"}
 			next_fish_id += 1
-			new_fry.append({"x": parent.get("x", 550), "y": parent.get("y", 350), "hunger": 0.1, "health": FishGenome.max_health_for(FishGenome.phenotype_from_data(fry_genome, "vitality")), "genome": fry_genome, "life": fry_life, "species_id": "feeder_guppy", "sex": 2, "breeding_left": 0.0, "broodstock": false, "brood_left": 0.0, "starving": 0.0, "meals": 0, "credit": 0.0, "stage": 0, "diamond_trial_done": false, "mutation": 0, "coin_left": 20.0})
-			parent.brood_left = FishBroodstock.interval_for(FishGenome.phenotype_from_data(parent.get("genome", {}), "fertility"))
+			new_fry.append({"x": parent.get("x", 550), "y": parent.get("y", 350), "hunger": 0.1, "health": FishGenome.max_health_for(FishGenome.phenotype_from_data(fry_genome, "vitality")), "genome": fry_genome, "life": fry_life, "species_id": "feeder_guppy", "sex": 2, "breeding_left": 0.0, "broodstock": false, "brood_boosted": false, "brood_left": 0.0, "starving": 0.0, "meals": 0, "credit": 0.0, "stage": 0, "diamond_trial_done": false, "mutation": 0, "coin_left": 20.0})
+			parent.brood_left = FishBroodstock.interval_for(FishGenome.phenotype_from_data(parent.get("genome", {}), "fertility"), bool(parent.get("brood_boosted", false)))
 			report.brood_fry += 1
 		fish_list.append_array(new_fry)
 		var eaten_ids: Dictionary = {}

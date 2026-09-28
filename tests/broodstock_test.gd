@@ -42,7 +42,7 @@ func run() -> void:
 	check(get_nodes_in_group("fish").size() == before_fry + 1 and fry.profile.species_id == "feeder_guppy" and fry.sex == AquariumFish.Sex.ASEXUAL and adult.life.id in fry.life.parent_ids, "one broodstock produces sterile feeder fry alone")
 	check(fry.sell_value() == 3 and fry.profile.produces_only_waste and fry.profile.max_growth_stage == 1, "feeder fry have no coin path and low sale value")
 	check(fry.profile.growth_sizes[1] == adult.profile.growth_sizes[1] and fry.profile.body_color != adult.profile.body_color, "feeder fry reach normal Teen size with a distinct base color")
-	check(FishRevealPanel.capture(adult, "TEST").guppy_role == "broodstock" and FishRevealPanel.capture(fry, "TEST").color == fry.profile.body_color, "fish reveal keeps the sash and pale feeder color")
+	check(FishRevealPanel.capture(adult, "TEST").guppy_role == "broodstock" and FishRevealPanel.capture(fry, "TEST").color == fry.profile.body_color, "fish reveal keeps the flower mark and pale feeder color")
 	var breeding := FishBreeding.new()
 	breeding.chance = 1.0
 	breeding.check_left = 0.0
@@ -58,6 +58,16 @@ func run() -> void:
 	adult.brood_left = 0.0
 	tank.advance_broodstock(0.1)
 	check(FishBroodstock.live_fry_for(adult.life.id, get_nodes_in_group("fish")) == 2, "live feeder fry are capped per broodstock")
+	before = tank.economy.money
+	tank.purchase_booster_serum()
+	check(tank.booster_doses == 1 and tank.economy.money == before - FishBroodstock.BOOSTER_PRICE, "shop sells a separate breeder booster dose")
+	tank.selected_fish = adult
+	tank.inject_selected()
+	check(adult.brood_boosted and tank.booster_doses == 0 and FishBroodstock.interval_for(adult.genome.fertility_value(), true) < FishBroodstock.interval_for(adult.genome.fertility_value()), "booster permanently shortens this breeder's interval")
+	for i in range(3):
+		adult.brood_left = 0.0
+		tank.advance_broodstock(0.1)
+	check(FishBroodstock.live_fry_for(adult.life.id, get_nodes_in_group("fish")) == 4 and "max 4 live" in FishInspector.describe(adult), "boosted breeder supports four live fry, then stops")
 	var hunter := AquariumFish.new()
 	hunter.profile = FishProfile.for_species("piranha")
 	hunter.growth.stage = 2
@@ -100,6 +110,6 @@ func run() -> void:
 			restored_brood += 1
 		if fish.profile.species_id == "feeder_guppy":
 			restored_fry += 1
-	check(restored_brood == 1 and restored_fry == 2, "save and restore keep broodstock and feeder fry")
+	check(restored_brood == 1 and restored_fry == 4 and get_nodes_in_group("fish").any(func(fish: AquariumFish) -> bool: return fish.get_parent() == reloaded and fish.brood_boosted), "save and restore keep boosted broodstock and feeder fry")
 	print("Broodstock failures: ", failures)
 	quit(1 if failures else 0)

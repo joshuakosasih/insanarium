@@ -19,7 +19,7 @@ static func describe(fish: AquariumFish) -> String:
 	if fish.sex == AquariumFish.Sex.ASEXUAL:
 		readiness = "Asexual — does not breed"
 	if fish.broodstock:
-		readiness = "Solo feeder fry in %s · max 2 live" % duration(fish.brood_left)
+		readiness = "Solo feeder fry in %s · max %d live%s" % [duration(fish.brood_left), FishBroodstock.live_limit_for(fish.brood_boosted), " · boosted" if fish.brood_boosted else ""]
 	elif fish.growth.stage < 2:
 		readiness = "Needs adult growth stage"
 	elif fish.hunger >= fish.profile.hungry_threshold:
@@ -43,7 +43,7 @@ static func trait_rows(fish: AquariumFish) -> Array[Dictionary]:
 	var lifespan: float = minf(FishAging.lifespan_for(fish.genome), profile.maximum_lifespan)
 	var breed_seconds: int = roundi(fish.genome.breeding_cooldown())
 	if fish.broodstock:
-		breed_seconds = roundi(FishBroodstock.interval_for(fish.genome.fertility_value()))
+		breed_seconds = roundi(FishBroodstock.interval_for(fish.genome.fertility_value(), fish.brood_boosted))
 	return [
 		{"title": "Vitality", "value": "%d HP · %.1fh" % [roundi(fish.health.maximum), lifespan / 3600.0], "progress": fish.genome.vitality_value()},
 		{"title": "Metabolism", "value": "%ds %s · ×%.2f" % [roundi(food_endurance), "prey" if hunts_prey else "food", fish.genome.growth_multiplier()], "progress": fish.genome.metabolism_value()},

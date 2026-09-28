@@ -14,6 +14,7 @@ var breeding_left: float = 0.0
 var mutation := FishMutation.new()
 var genome := FishGenome.new()
 var broodstock: bool = false
+var brood_boosted: bool = false
 var brood_left: float = 0.0
 var survival := FishSurvival.new()
 var health := FishHealth.new()
@@ -92,19 +93,36 @@ func _process(delta: float) -> void:
 	elif prey_target == null:
 		prey_target = FishPredation.nearest(self, get_tree().get_nodes_in_group("fish"))
 	alien_target = null
-	if can_fight_alien():
-		var nearest_alien: float = 520.0
-		for candidate in get_tree().get_nodes_in_group("invaders"):
-			if candidate is TankAlien and not candidate.dead and not candidate.is_queued_for_deletion():
-				var gap: float = position.distance_to(candidate.position)
-				if gap < nearest_alien:
-					nearest_alien = gap
-					alien_target = candidate
+	var feared_alien: TankAlien
+	var nearest_alien: float = 520.0
+	for candidate in get_tree().get_nodes_in_group("invaders"):
+		if not candidate is TankAlien or candidate.dead or candidate.is_queued_for_deletion():
+			continue
+		var gap: float = position.distance_to(candidate.position)
+		if profile.species_id == "piranha" and candidate.threatens_piranhas and gap < 210.0:
+			feared_alien = candidate
+		elif can_fight_alien() and not candidate.threatens_piranhas and gap < nearest_alien:
+			nearest_alien = gap
+			alien_target = candidate
 	if alien_target != null:
 		prey_target = null
 	wander_left -= delta
-	if alien_target != null:
-		destination = alien_target.position
+	if feared_alien != null:
+		alien_target = null
+		prey_target = null
+		food_target = null
+		var escape: Vector2 = position - feared_alien.position
+		if escape.length_squared() < 0.01:
+			escape = Vector2(facing, -0.4)
+		destination = (position + escape.normalized() * 220.0).clamp(bounds.position, bounds.end)
+		if destination.distance_to(position) < 15.0:
+			destination = (position + escape.normalized().rotated(PI * 0.5) * 150.0).clamp(bounds.position, bounds.end)
+	elif alien_target != null:
+		# Circle at biting distance rather than swimming through the alien's center.
+		var away_from_alien: Vector2 = position - alien_target.position
+		if away_from_alien.length_squared() < 0.01:
+			away_from_alien = Vector2(-facing, -0.25)
+		destination = (alien_target.position + away_from_alien.normalized() * 57.0).clamp(bounds.position, bounds.end)
 	elif food_target != null:
 		destination = food_target.position
 	elif prey_target != null:
@@ -112,7 +130,7 @@ func _process(delta: float) -> void:
 	elif wander_left <= 0.0 or position.distance_to(destination) < 12.0:
 		choose_destination()
 	var movement: Vector2 = destination - position
-	var movement_speed: float = swim_speed() * (1.35 if alien_target != null or prey_target != null else (1.5 if food_target != null else 1.0))
+	var movement_speed: float = swim_speed() * (1.7 if feared_alien != null else (1.35 if alien_target != null or prey_target != null else (1.5 if food_target != null else 1.0)))
 	position = position.move_toward(destination, movement_speed * delta)
 	position = position.clamp(bounds.position, bounds.end)
 	if absf(movement.x) > 3.0:
@@ -137,7 +155,7 @@ func _process(delta: float) -> void:
 			prey_eaten.emit(bite_at)
 		prey_target = null
 		choose_destination()
-	if alien_target != null and position.distance_to(alien_target.position) < 42.0:
+	if alien_target != null and position.distance_to(alien_target.position) < 62.0:
 		attack_alien(alien_target)
 	if survival.advance(hunger, delta, profile.starvation_grace):
 		die("Starved")
@@ -222,5 +240,5 @@ func can_fight_alien() -> bool:
 func attack_alien(alien: TankAlien) -> void:
 	if not can_fight_alien() or alien_attack_left > 0.0 or not is_instance_valid(alien) or alien.dead:
 		return
-	alien_attack_left = 3.0
+	alien_attack_left = 1.25 if growth.stage == 2 else (0.85 if growth.stage == 3 else 0.6)
 	alien.hit(position)

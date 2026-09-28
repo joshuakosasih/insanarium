@@ -12,6 +12,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 		if item.species_id == "feeder_guppy":
 			item["mutation"] = 0
 		item["broodstock"] = bool(item.get("broodstock", false)) and item.species_id == "starter_fish"
+		item["brood_boosted"] = bool(item.get("brood_boosted", false)) and item.broodstock
 		item["brood_left"] = clampf(float(item.get("brood_left", 0)), 0.0, 270.0) if item.broodstock else 0.0
 		if source_version < 3:
 			var old_stage: int = clampi(int(item.get("stage", 0)), 0, 3)
@@ -38,6 +39,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 	data["next_fish_id"] = registry.next_id
 	data["simulation_elapsed"] = maxf(0.0, float(data.get("simulation_elapsed", 0)))
 	data["serum_doses"] = clampi(int(data.get("serum_doses", 0)), 0, 10)
+	data["booster_doses"] = clampi(int(data.get("booster_doses", 0)), 0, 10)
 	data["cleanliness"] = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)
 	data["population_goal_complete"] = bool(data.get("population_goal_complete", false))
 	data["piranha_unlocked"] = bool(data.get("piranha_unlocked", false)) or bool(data.population_goal_complete) or data.get("fish", []).size() >= 10

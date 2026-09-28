@@ -11,6 +11,7 @@ var active: TankAlien
 var running: bool = true
 var bounds := Rect2(98, 218, 956, 410)
 var presentation_scale: float = 1.0
+var tank_index: int = 1
 
 func _ready() -> void:
 	z_index = 9
@@ -48,6 +49,7 @@ func spawn_now(use_warning_location: bool = false) -> void:
 	if not use_warning_location:
 		spawn_at = Vector2(bounds.position.x if randf() < 0.5 else bounds.end.x, randf_range(bounds.position.y + 27.0, bounds.end.y - 48.0))
 	active = TankAlien.new()
+	active.threatens_piranhas = tank_index == 2
 	active.scale = Vector2.ONE * presentation_scale
 	active.bounds = bounds
 	active.position = spawn_at
@@ -73,6 +75,6 @@ func _draw() -> void:
 		draw_arc(spawn_at, radius, 0, TAU, 48, Color("ff9ca7"), 3, true)
 		draw_line(spawn_at - Vector2(16, 0), spawn_at + Vector2(16, 0), Color("ff9ca7"), 2)
 		draw_line(spawn_at - Vector2(0, 16), spawn_at + Vector2(0, 16), Color("ff9ca7"), 2)
-		draw_string(ThemeDB.fallback_font, Vector2(310, 194), "INVADER IN %ds — watch the marked entry!" % ceili(warning_left), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("ffacb5"))
+		draw_string(ThemeDB.fallback_font, Vector2(310, 194), ("HUNTER IN %ds — protect your piranhas!" if tank_index == 2 else "INVADER IN %ds — watch the marked entry!") % ceili(warning_left), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("ffacb5"))
 	elif is_instance_valid(active) and running:
-		draw_string(ThemeDB.fallback_font, Vector2(305, 194), "Click the alien! Hits push it away from your click.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("ffacb5"))
+		draw_string(ThemeDB.fallback_font, Vector2(305, 194), "Click the hunter! Piranhas flee it." if tank_index == 2 else "Click the alien! Hits push it away from your click.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("ffacb5"))

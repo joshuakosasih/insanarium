@@ -27,7 +27,7 @@ static func catalog() -> Array[ShopItemDefinition]:
 		ShopItemDefinition.new("shrimp", "Cleanup shrimp", "HELPER", "Unlocked by an Auto-feeder or Seahorse. Forages for settled waste and expiring pellets.", "shrimp"),
 		ShopItemDefinition.new("puffer", "Bubble puffer", "HELPER", "Unlocked by any Income Bubbles upgrade. May chase bubbles during active play.", "puffer"),
 		ShopItemDefinition.new("diamond_value", "Diamonds", "UPGRADE", "Unlocked by any Fish Coins upgrade. Improve diamond floor lifetime and value independently.", "diamond"),
-		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies and defend against aliens.", "piranha"),
-		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Inject an Adult guppy to make a solo broodstock. It stops producing coins and periodically makes small, sterile feeder fry for piranhas.", "serum"),
+		ShopItemDefinition.new("piranha", "Baby piranha", "LIVESTOCK", "Unlocked after reaching 10 fish. Juveniles eat pellets; Adults hunt young guppies, defend against Tank 1 aliens, and flee Tank 2 hunters.", "piranha"),
+		ShopItemDefinition.new("serum", "Broodstock serum", "SUPPLY", "Base serum converts an Adult guppy into a solo breeder. Booster serum makes one breeder produce feeder fry faster and support more live fry.", "serum"),
 		ShopItemDefinition.new("sponge", "Breathing sponge", "HELPER", "Unlocked by the 15-fish milestone. Slowly cleans water while breathing in place.", "sponge"),
 		ShopItemDefinition.new("tank2", "Tank 2", "HABITAT", "A larger habitat for up to 25 fish. Move guppies and broodstock here; buy piranhas and feeder fry here.", "tank")]

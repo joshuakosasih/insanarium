@@ -17,6 +17,8 @@ static func parse(text: String) -> Dictionary:
 		return {}
 	if not integer_in_range(data.get("serum_doses", 0), 0, 10):
 		return {}
+	if not integer_in_range(data.get("booster_doses", 0), 0, 10):
+		return {}
 	for key in ["fish", "food", "coins", "reserve"]:
 		if not data.get(key) is Array:
 			return {}
@@ -97,6 +99,8 @@ static func parse(text: String) -> Dictionary:
 			return {}
 		if fish.has("broodstock") and not fish.broodstock is bool:
 			return {}
+		if fish.has("brood_boosted") and (not fish.brood_boosted is bool or (fish.brood_boosted and not bool(fish.get("broodstock", false)))):
+			return {}
 		if bool(fish.get("broodstock", false)) and str(fish.get("species_id", "starter_fish")) != "starter_fish":
 			return {}
 		if not number(fish.get("brood_left", 0), 0, 270):
@@ -173,6 +177,8 @@ static func parse(text: String) -> Dictionary:
 				return {}
 		elif int(data.get("active_tank", 1)) != 1:
 			return {}
+	if data.has("fish_transfers_used") and not integer_in_range(data.fish_transfers_used, 0, 1000000000):
+		return {}
 	return data
 
 static func number(value: Variant, low: float, high: float) -> bool:

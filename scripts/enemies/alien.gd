@@ -10,10 +10,14 @@ var knockback := Vector2.ZERO
 var hit_flash: float = 0.0
 var attack_left: float = 0.0
 var dead: bool = false
+var threatens_piranhas: bool = false
 var wander_destination := Vector2.ZERO
 var wander_left: float = 0.0
 
 func _ready() -> void:
+	if threatens_piranhas:
+		max_health = 16
+		chase_speed = 112.0
 	health = max_health
 	z_index = 10
 	add_to_group("invaders")
@@ -43,7 +47,7 @@ func hit(at: Vector2) -> void:
 func contains_point(tank_point: Vector2) -> bool:
 	# Include the health bar and side arms so every visible part consumes the tap.
 	var local_point := (tank_point - position) / scale
-	return Rect2(-52, -64, 104, 108).has_point(local_point)
+	return (Rect2(-64, -70, 128, 120) if threatens_piranhas else Rect2(-52, -64, 104, 108)).has_point(local_point)
 
 func _process(delta: float) -> void:
 	delta *= ActivityPace.multiplier
@@ -57,7 +61,7 @@ func _process(delta: float) -> void:
 	var target: AquariumFish
 	var nearest: float = INF
 	for fish in get_tree().get_nodes_in_group("fish"):
-		if fish.dead or fish.is_queued_for_deletion() or fish.can_fight_alien():
+		if fish.dead or fish.is_queued_for_deletion() or (fish.can_fight_alien() and not threatens_piranhas):
 			continue
 		var distance: float = position.distance_to(fish.position)
 		if distance < nearest:
@@ -76,6 +80,9 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	if threatens_piranhas:
+		draw_hunter()
+		return
 	var blue := Color("76b7e1") if hit_flash <= 0.0 else Color("e0f7ff")
 	var head := PackedVector2Array([Vector2(-36, -20), Vector2(-30, -34), Vector2(-18, -29), Vector2(-13, -41), Vector2(-3, -36), Vector2(3, -36), Vector2(13, -41), Vector2(18, -29), Vector2(30, -34), Vector2(36, -20), Vector2(36, 25), Vector2(24, 35), Vector2(-24, 35), Vector2(-36, 25)])
 	draw_colored_polygon(head, blue)
@@ -87,3 +94,18 @@ func _draw() -> void:
 	draw_polyline(PackedVector2Array([Vector2(-27, 15), Vector2(-14, 15), Vector2(-14, 22), Vector2(14, 22), Vector2(14, 15), Vector2(27, 15)]), Color("f4fbff"), 5, true)
 	for i in range(max_health):
 		draw_rect(Rect2(-35 + i * 9, -55, 7, 5), Color("f28d9f") if i < health else Color("344958"))
+
+func draw_hunter() -> void:
+	var shell := Color("ad6cbb") if hit_flash <= 0.0 else Color("f5ddff")
+	var dark := Color("503c68")
+	var fins := PackedVector2Array([Vector2(-43, -7), Vector2(-59, -23), Vector2(-48, 8), Vector2(-57, 28), Vector2(-29, 19), Vector2(0, 35), Vector2(29, 19), Vector2(57, 28), Vector2(48, 8), Vector2(59, -23), Vector2(43, -7)])
+	draw_colored_polygon(fins, dark)
+	draw_circle(Vector2.ZERO, 36, dark)
+	draw_circle(Vector2.ZERO, 31, shell)
+	draw_colored_polygon(PackedVector2Array([Vector2(-30, -25), Vector2(-21, -51), Vector2(-7, -29), Vector2(0, -55), Vector2(8, -29), Vector2(24, -51), Vector2(29, -22)]), dark)
+	for x in [-18.0, 0.0, 18.0]:
+		draw_circle(Vector2(x, -8), 9, Color("f8eafd"))
+		draw_circle(Vector2(x, -7), 4, Color("4d304f"))
+	draw_arc(Vector2(0, 8), 18, 0.2, PI - 0.2, 20, Color("4d304f"), 4.0, true)
+	for i in range(max_health):
+		draw_rect(Rect2(-40 + i * 5, -64, 4, 5), Color("e9b0dc") if i < health else Color("344958"))
