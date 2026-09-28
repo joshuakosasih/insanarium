@@ -99,7 +99,7 @@ func _draw() -> void:
 	else:
 		VectorArt.draw_fish(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned)
 		if not guppy_role.is_empty():
-			VectorArt.draw_guppy_role_mark(self, Vector2(size.x * 0.5, 142), 1.7, guppy_role)
+			VectorArt.draw_guppy_role_mark(self, Vector2(size.x * 0.5, 142), 1.7, guppy_role, crowned)
 	draw_string(ThemeDB.fallback_font, Vector2(24, 188), "DIRECT TRAITS", HORIZONTAL_ALIGNMENT_CENTER, size.x - 48, 12, Color("83a9b7"))
 
 func make_label(value: String, at: Vector2, font_size: int, color: Color) -> Label:

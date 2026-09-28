@@ -24,14 +24,15 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_circle(Vector2(13, -16), 1.3, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String) -> void:
+static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false) -> void:
 	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	# Anchor the lower petal at the same body edge as the diamond crown.
-	for petal in [Vector2(-13, -21), Vector2(-11, -25), Vector2(-6, -25), Vector2(-4, -21), Vector2(-9, -18)]:
-		canvas.draw_circle(petal, 3.8, Color("c99bea"))
-	canvas.draw_circle(Vector2(-9, -21), 3.2, Color("ffe18a"))
+	# Sit on the head; move just left when a diamond crown shares that spot.
+	var flower_x: float = -1.0 if crowned else 11.0
+	for petal in [Vector2(-4, -21), Vector2(-2, -25), Vector2(2, -25), Vector2(4, -21), Vector2(0, -18)]:
+		canvas.draw_circle(petal + Vector2(flower_x, 0), 3.8, Color("c99bea"))
+	canvas.draw_circle(Vector2(flower_x, -21), 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
