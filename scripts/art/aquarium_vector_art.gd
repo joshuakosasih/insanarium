@@ -28,11 +28,10 @@ static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, r
 	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	# A small flower sits behind the head, away from the diamond crown.
-	canvas.draw_line(Vector2(-17, -19), Vector2(-17, -31), Color("5b9c6c"), 2.0, true)
-	for petal in [Vector2(-22, -34), Vector2(-18, -39), Vector2(-12, -37), Vector2(-11, -31), Vector2(-17, -28)]:
-		canvas.draw_circle(petal, 4.6, Color("c99bea"))
-	canvas.draw_circle(Vector2(-16, -34), 4.0, Color("ffe18a"))
+	# Anchor the lower petal at the same body edge as the diamond crown.
+	for petal in [Vector2(-13, -21), Vector2(-11, -25), Vector2(-6, -25), Vector2(-4, -21), Vector2(-9, -18)]:
+		canvas.draw_circle(petal, 3.8, Color("c99bea"))
+	canvas.draw_circle(Vector2(-9, -21), 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
