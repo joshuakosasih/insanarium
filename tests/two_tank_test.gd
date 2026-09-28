@@ -48,12 +48,28 @@ func run() -> void:
 	tank.select_shop_item("piranha")
 	tank.activate_shop_item()
 	check(tank.economy.money == wallet - 250 and tank.total_piranhas() == 1, "Tank 2 sells baby piranhas")
-	tank.invasions.spawn_now()
+	tank.invasions.upcoming_hunter = true
+	tank.invasions.spawn_at = Vector2(500, 350)
+	tank.invasions.spawn_now(true)
 	check(is_instance_valid(tank.invasions.active) and tank.invasions.active.threatens_piranhas and tank.invasions.active.health == 16, "Tank 2 spawns the stronger piranha-hunting alien")
 	var hunter: TankAlien = tank.invasions.active
 	while not hunter.dead:
 		hunter.hit(hunter.position)
 	check(get_nodes_in_group("coins").any(func(coin: TankCoin) -> bool: return coin.diamond and coin.value == 40), "Tank 2 hunter drops a stronger diamond")
+	tank.invasions.upcoming_hunter = false
+	tank.invasions.spawn_at = Vector2(500, 350)
+	tank.invasions.spawn_now(true)
+	var blue_alien: TankAlien = tank.invasions.active
+	var defender: AquariumFish = get_nodes_in_group("fish").filter(func(fish: AquariumFish) -> bool: return fish.profile.species_id == "piranha")[0]
+	defender.growth.stage = 2
+	defender.position = blue_alien.position + Vector2(50, 0)
+	var blue_health: int = blue_alien.health
+	defender.alien_attack_left = 0.0
+	defender._process(0.1)
+	check(not blue_alien.threatens_piranhas and blue_alien.health == blue_health - 1, "Tank 2 also gets the blue alien and adult piranhas attack it")
+	while not blue_alien.dead:
+		blue_alien.hit(blue_alien.position)
+	check(get_nodes_in_group("coins").any(func(coin: TankCoin) -> bool: return coin.diamond and coin.value == 20), "blue alien keeps its original diamond payout in Tank 2")
 	tank.environment.cleanliness = 64.0
 	tank.switch_tank(1)
 	check(tank.active_tank == 1 and tank.shop_cards.fish.display_title == "Baby guppy" and tank.shop_cards.serum.visible and tank.total_piranhas() == 1, "Tank 1 keeps its shop and counts piranhas in both tanks")

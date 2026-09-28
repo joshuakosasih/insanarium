@@ -292,7 +292,7 @@ func _ready() -> void:
 	invasions.presentation_scale = PET_PRESENTATION_SCALE
 	invasions.bounds = Rect2(swim_bounds.position + Vector2(13, 21), swim_bounds.size - Vector2(26, 33))
 	invasions.alien_defeated.connect(func(at: Vector2) -> void:
-		spawn_coin(at, assets.reward_value(40 if active_tank == 2 else 20, true), true, 4)
+		spawn_coin(at, assets.reward_value(40 if invasions.last_defeated_hunter else 20, true), true, 4)
 		audio.set_danger_music(false))
 	invasions.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(invasions)
@@ -1504,7 +1504,7 @@ func refresh_shop() -> void:
 		"piranha":
 			action_price = current_piranha_price
 			unavailable = fish_count >= tank_capacity() or not piranha_unlocked
-			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies and %s." % [fish_count, tank_capacity(), piranha_count, "flee Tank 2 hunters" if active_tank == 2 else "bite aliens"]
+			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies, bite blue aliens, and flee purple hunters." % [fish_count, tank_capacity(), piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
 		"tank2":
 			action_price = SECOND_TANK_PRICE

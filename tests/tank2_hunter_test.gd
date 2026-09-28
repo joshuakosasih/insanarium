@@ -10,6 +10,17 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
+	var director := InvasionDirector.new()
+	director.tank_index = 2
+	root.add_child(director)
+	director.set_process(false)
+	var hunter_draws: int = 0
+	for i in range(3):
+		if director.draw_next_hunter():
+			hunter_draws += 1
+	check(hunter_draws == 1, "each three-encounter Tank 2 bag contains two blue aliens and one hunter")
+	director.tank_index = 1
+	check(not director.draw_next_hunter(), "Tank 1 only draws the original blue alien")
 	var habitat := Node2D.new()
 	root.add_child(habitat)
 	var piranha := AquariumFish.new()

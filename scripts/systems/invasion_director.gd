@@ -12,6 +12,9 @@ var running: bool = true
 var bounds := Rect2(98, 218, 956, 410)
 var presentation_scale: float = 1.0
 var tank_index: int = 1
+var tank_two_bag: Array[bool] = []
+var upcoming_hunter: bool = false
+var last_defeated_hunter: bool = false
 
 func _ready() -> void:
 	z_index = 9
@@ -20,10 +23,19 @@ func _ready() -> void:
 func schedule_next() -> void:
 	wait_left = randf_range(90.0, 150.0)
 
+func draw_next_hunter() -> bool:
+	if tank_index != 2:
+		return false
+	if tank_two_bag.is_empty():
+		tank_two_bag = [false, false, true]
+		tank_two_bag.shuffle()
+	return tank_two_bag.pop_back()
+
 func begin_warning() -> void:
 	if not running or warning_left > 0.0 or is_instance_valid(active):
 		return
 	spawn_at = Vector2(bounds.position.x if randf() < 0.5 else bounds.end.x, randf_range(bounds.position.y + 27, bounds.end.y - 48))
+	upcoming_hunter = draw_next_hunter()
 	warning_left = warning_duration
 	warning_started.emit()
 	queue_redraw()
@@ -48,8 +60,9 @@ func spawn_now(use_warning_location: bool = false) -> void:
 	warning_left = 0.0
 	if not use_warning_location:
 		spawn_at = Vector2(bounds.position.x if randf() < 0.5 else bounds.end.x, randf_range(bounds.position.y + 27.0, bounds.end.y - 48.0))
+		upcoming_hunter = draw_next_hunter()
 	active = TankAlien.new()
-	active.threatens_piranhas = tank_index == 2
+	active.threatens_piranhas = upcoming_hunter and tank_index == 2
 	active.scale = Vector2.ONE * presentation_scale
 	active.bounds = bounds
 	active.position = spawn_at
@@ -58,6 +71,7 @@ func spawn_now(use_warning_location: bool = false) -> void:
 	queue_redraw()
 
 func _on_defeated(at: Vector2) -> void:
+	last_defeated_hunter = is_instance_valid(active) and active.threatens_piranhas
 	active = null
 	schedule_next()
 	alien_defeated.emit(at)
@@ -72,9 +86,10 @@ func stop() -> void:
 func _draw() -> void:
 	if warning_left > 0.0:
 		var radius: float = 39.0 + sin(warning_left * 8.0) * 5.0
-		draw_arc(spawn_at, radius, 0, TAU, 48, Color("ff9ca7"), 3, true)
-		draw_line(spawn_at - Vector2(16, 0), spawn_at + Vector2(16, 0), Color("ff9ca7"), 2)
-		draw_line(spawn_at - Vector2(0, 16), spawn_at + Vector2(0, 16), Color("ff9ca7"), 2)
-		draw_string(ThemeDB.fallback_font, Vector2(310, 194), ("HUNTER IN %ds — protect your piranhas!" if tank_index == 2 else "INVADER IN %ds — watch the marked entry!") % ceili(warning_left), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("ffacb5"))
+		var warning_color := Color("df9bff") if upcoming_hunter else Color("ff9ca7")
+		draw_arc(spawn_at, radius, 0, TAU, 48, warning_color, 3, true)
+		draw_line(spawn_at - Vector2(16, 0), spawn_at + Vector2(16, 0), warning_color, 2)
+		draw_line(spawn_at - Vector2(0, 16), spawn_at + Vector2(0, 16), warning_color, 2)
+		draw_string(ThemeDB.fallback_font, Vector2(310, 194), ("HUNTER IN %ds — protect your piranhas!" if upcoming_hunter else "INVADER IN %ds — watch the marked entry!") % ceili(warning_left), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, warning_color)
 	elif is_instance_valid(active) and running:
-		draw_string(ThemeDB.fallback_font, Vector2(305, 194), "Click the hunter! Piranhas flee it." if tank_index == 2 else "Click the alien! Hits push it away from your click.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("ffacb5"))
+		draw_string(ThemeDB.fallback_font, Vector2(305, 194), "Click the hunter! Piranhas flee it." if active.threatens_piranhas else "Click the alien! Piranhas can help defend.", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("ffacb5"))
