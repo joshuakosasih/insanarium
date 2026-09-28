@@ -211,12 +211,15 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, 33, 0, TAU, 40, Color("d4f0df"), 1.5, true)
 	var color: Color = profile.body_color if mutation.variant == 0 or profile.species_id == "feeder_guppy" else mutation.COLORS[mutation.variant]
 	var tail: float = sin(phase) * 4.0
+	var vitality := genome.vitality_value()
+	var agility := genome.speed_value()
+	var productivity := 0.0 if broodstock or profile.produces_only_waste else genome.allocation_value()
 	if profile.species_id == "piranha":
-		VectorArt.draw_piranha(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
+		VectorArt.draw_piranha(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown(), vitality, agility, productivity)
 	else:
-		VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown())
+		VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown(), vitality, agility, productivity)
 		if broodstock:
-			VectorArt.draw_guppy_role_mark(self, Vector2.ZERO, 1.0, "broodstock", wears_crown())
+			VectorArt.draw_guppy_role_mark(self, Vector2.ZERO, 1.0, "broodstock", wears_crown(), vitality)
 	if not dead and hunger >= profile.hungry_threshold:
 		draw_circle(Vector2(0, -34), 5, Color("ff657f") if hunger >= 1.0 else Color("ffa86b"))
 	if not dead and hunger >= 1.0:

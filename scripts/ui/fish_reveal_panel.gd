@@ -17,6 +17,9 @@ var fish_color: Color = Color("f6be73")
 var species_id: String = "starter_fish"
 var crowned: bool = false
 var guppy_role: String = ""
+var vitality: float = 0.5
+var agility: float = 0.5
+var productivity: float = 0.5
 
 func _ready() -> void:
 	size = Vector2(552, 590)
@@ -54,6 +57,9 @@ func present(data: Dictionary) -> void:
 	species_id = str(data.get("species_id", "starter_fish"))
 	crowned = bool(data.get("crowned", false))
 	guppy_role = str(data.get("guppy_role", ""))
+	vitality = float(data.get("vitality", 0.5))
+	agility = float(data.get("agility", 0.5))
+	productivity = float(data.get("productivity", 0.5))
 	heading_label.text = str(data.heading)
 	identity_label.text = str(data.identity)
 	details_label.text = str(data.details)
@@ -91,15 +97,16 @@ static func capture(fish: AquariumFish, heading: String, parents: Array = []) ->
 	return {"heading": heading, "id": fish.life.id, "species_id": fish.profile.species_id, "guppy_role": "broodstock" if fish.broodstock else "",
 		"identity": "%s · %s\n%s · %s · %s" % [fish.life.id, fish.profile.species_name, AquariumFish.SEX_NAMES[fish.sex], fish.profile.growth_names[fish.growth.stage], FishMutation.NAMES[fish.mutation.variant]],
 		"details": "Output %.1fs · Water resilience ×%.2f" % [fish.genome.output_interval(fish.profile.coin_interval), fish.genome.constitution()],
-		"comparison": comparison, "rows": rows, "color": fish.profile.body_color if fish.mutation.variant == 0 or fish.profile.species_id == "feeder_guppy" else FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown()}
+		"comparison": comparison, "rows": rows, "color": fish.profile.body_color if fish.mutation.variant == 0 or fish.profile.species_id == "feeder_guppy" else FishMutation.COLORS[fish.mutation.variant], "crowned": fish.wears_crown(),
+		"vitality": fish.genome.vitality_value(), "agility": fish.genome.speed_value(), "productivity": 0.0 if fish.broodstock or fish.profile.produces_only_waste else fish.genome.allocation_value()}
 
 func _draw() -> void:
 	if species_id == "piranha":
-		VectorArt.draw_piranha(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned)
+		VectorArt.draw_piranha(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned, vitality, agility, productivity)
 	else:
-		VectorArt.draw_fish(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned)
+		VectorArt.draw_fish(self, Vector2(size.x * 0.5, 142), 1.7, fish_color, 0.0, false, crowned, vitality, agility, productivity)
 		if not guppy_role.is_empty():
-			VectorArt.draw_guppy_role_mark(self, Vector2(size.x * 0.5, 142), 1.7, guppy_role, crowned)
+			VectorArt.draw_guppy_role_mark(self, Vector2(size.x * 0.5, 142), 1.7, guppy_role, crowned, vitality)
 	draw_string(ThemeDB.fallback_font, Vector2(24, 188), "DIRECT TRAITS", HORIZONTAL_ALIGNMENT_CENTER, size.x - 48, 12, Color("83a9b7"))
 
 func make_label(value: String, at: Vector2, font_size: int, color: Color) -> Label:

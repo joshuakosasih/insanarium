@@ -2,14 +2,19 @@ class_name AquariumVectorArt
 extends RefCounted
 ## Shared procedural silhouettes used by both live entities and shop previews.
 
-static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
+static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5) -> void:
+	var body_height := lerpf(0.60, 1.12, clampf(vitality, 0.0, 1.0))
+	var tail_length := lerpf(36.0, 50.0, clampf(agility, 0.0, 1.0))
+	var tail_spread := lerpf(11.0, 25.0, clampf(agility, 0.0, 1.0))
+	var crown_offset := (0.85 - body_height) * 19.0
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-20, 0), Vector2(-41, -17 + tail), Vector2(-38, 18 + tail)]), color.darkened(0.16))
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-10, -12), Vector2(-6, -25), Vector2(12, -12)]), color.darkened(0.12))
-	canvas.draw_set_transform(at, 0.0, Vector2(1.45, 0.85) * size)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-20, 0), Vector2(-tail_length, -tail_spread + tail), Vector2(-tail_length + 3, tail_spread + tail)]), color.darkened(0.16))
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-10, -12), Vector2(-6, -lerpf(19.0, 32.0, agility)), Vector2(12, -12)]), color.darkened(0.12))
+	canvas.draw_set_transform(at, 0.0, Vector2(1.45, body_height) * size)
 	canvas.draw_circle(Vector2.ZERO, 19, color)
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	canvas.draw_arc(Vector2(-2, 0), 10, -1.1, 1.1, 16, color.darkened(0.28), 2, true)
+	draw_productivity_scales(canvas, color, productivity, false)
 	canvas.draw_circle(Vector2(16, -5), 6, Color("fff9e8"))
 	if dead:
 		canvas.draw_line(Vector2(13, -8), Vector2(20, -1), Color("173348"), 2, true)
@@ -18,38 +23,44 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_circle(Vector2(18, -5), 3, Color("173348"))
 	if crowned:
 		# A compact crown sits on the head instead of floating above the body.
-		var crown := PackedVector2Array([Vector2(7, -14), Vector2(6, -22), Vector2(10, -18), Vector2(13, -25), Vector2(16, -18), Vector2(20, -22), Vector2(19, -14)])
+		var crown := PackedVector2Array([Vector2(7, -14 + crown_offset), Vector2(6, -22 + crown_offset), Vector2(10, -18 + crown_offset), Vector2(13, -25 + crown_offset), Vector2(16, -18 + crown_offset), Vector2(20, -22 + crown_offset), Vector2(19, -14 + crown_offset)])
 		canvas.draw_colored_polygon(crown, Color("57b9ec"))
 		canvas.draw_polyline(PackedVector2Array([crown[0], crown[1], crown[2], crown[3], crown[4], crown[5], crown[6], crown[0]]), Color("1f6f9d"), 1.0, true)
-		canvas.draw_circle(Vector2(13, -16), 1.3, Color("d5f5ff"))
+		canvas.draw_circle(Vector2(13, -16 + crown_offset), 1.3, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false) -> void:
+static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false, vitality: float = 0.5) -> void:
 	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	# Sit on the head; move just left when a diamond crown shares that spot.
 	var flower_x: float = -1.0 if crowned else 11.0
+	var flower_y: float = (0.85 - lerpf(0.60, 1.12, clampf(vitality, 0.0, 1.0))) * 19.0
 	for petal in [Vector2(-4, -16), Vector2(-2, -20), Vector2(2, -20), Vector2(4, -16), Vector2(0, -13)]:
-		canvas.draw_circle(petal + Vector2(flower_x, 0), 3.8, Color("c99bea"))
-	canvas.draw_circle(Vector2(flower_x, -16), 3.2, Color("ffe18a"))
+		canvas.draw_circle(petal + Vector2(flower_x, flower_y), 3.8, Color("c99bea"))
+	canvas.draw_circle(Vector2(flower_x, -16 + flower_y), 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
-	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
+static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5) -> void:
+	var body_height := lerpf(0.82, 1.18, clampf(vitality, 0.0, 1.0))
+	var tail_reach := lerpf(40.0, 52.0, clampf(agility, 0.0, 1.0))
+	var tail_height := lerpf(11.0, 21.0, clampf(agility, 0.0, 1.0))
+	var dorsal_peak := lerpf(30.0, 46.0, clampf(agility, 0.0, 1.0))
+	canvas.draw_set_transform(at, 0.0, Vector2(1.0, body_height) * size)
 	var outline := Color("60454b")
 	var back := color.darkened(0.22)
 	var belly := color.lightened(0.16)
 	# A short, high tail and deep, blunt head distinguish it from the slim guppy.
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, -1), Vector2(-45, -16 + tail), Vector2(-42, 0 + tail), Vector2(-45, 16 + tail)]), outline)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-29, -1), Vector2(-42, -11 + tail), Vector2(-40, 0 + tail), Vector2(-42, 11 + tail)]), back)
-	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-14, -17), Vector2(-12, -34), Vector2(-4, -26), Vector2(4, -38), Vector2(12, -26), Vector2(19, -18)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-25, -1), Vector2(-tail_reach, -tail_height + tail), Vector2(-tail_reach + 3, tail), Vector2(-tail_reach, tail_height + tail)]), outline)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-29, -1), Vector2(-tail_reach + 3, -tail_height * 0.7 + tail), Vector2(-tail_reach + 5, tail), Vector2(-tail_reach + 3, tail_height * 0.7 + tail)]), back)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-14, -17), Vector2(-12, -dorsal_peak + 4), Vector2(-4, -26), Vector2(4, -dorsal_peak), Vector2(12, -26), Vector2(19, -18)]), outline)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-15, 15), Vector2(-8, 30), Vector2(0, 20), Vector2(11, 19)]), outline)
 	var body := PackedVector2Array([Vector2(-31, -5), Vector2(-27, -20), Vector2(-14, -28), Vector2(4, -29), Vector2(21, -24), Vector2(32, -12), Vector2(35, -1), Vector2(27, 13), Vector2(12, 24), Vector2(-9, 24), Vector2(-25, 14)])
 	canvas.draw_colored_polygon(body, outline)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-27, -5), Vector2(-23, -18), Vector2(-11, -24), Vector2(5, -25), Vector2(20, -20), Vector2(30, -11), Vector2(32, 0), Vector2(25, 11), Vector2(10, 20), Vector2(-9, 20), Vector2(-22, 11)]), back)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-23, 3), Vector2(-13, 8), Vector2(3, 7), Vector2(19, 0), Vector2(31, -3), Vector2(29, 10), Vector2(12, 20), Vector2(-9, 20), Vector2(-22, 11)]), color)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, 10), Vector2(-2, 13), Vector2(17, 7), Vector2(29, 7), Vector2(12, 19), Vector2(-9, 19)]), belly)
+	draw_productivity_scales(canvas, color, productivity, true)
 	# The hinged lower jaw projects past the head and carries tiny visible teeth.
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(16, 9), Vector2(31, 5), Vector2(39, 10), Vector2(31, 19), Vector2(19, 18)]), outline)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(19, 11), Vector2(32, 8), Vector2(36, 11), Vector2(30, 17), Vector2(20, 16)]), belly)
@@ -68,6 +79,13 @@ static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Co
 	if crowned:
 		canvas.draw_colored_polygon(PackedVector2Array([Vector2(8, -24), Vector2(7, -31), Vector2(11, -28), Vector2(15, -34), Vector2(18, -28), Vector2(22, -31), Vector2(21, -23)]), Color("57b9ec"))
 	canvas.draw_set_transform(Vector2.ZERO)
+
+static func draw_productivity_scales(canvas: CanvasItem, color: Color, productivity: float, piranha: bool) -> void:
+	var marks := [Vector2(-15, -7), Vector2(-7, -9), Vector2(1, -8), Vector2(-13, 2), Vector2(-5, 3), Vector2(3, 2)] if piranha else [Vector2(-14, -6), Vector2(-6, -7), Vector2(2, -6), Vector2(-13, 3), Vector2(-5, 4), Vector2(3, 3)]
+	var count := clampi(roundi(clampf(productivity, 0.0, 1.0) * marks.size()), 0, marks.size())
+	var scale_color := color.lerp(Color("fff0b3"), 0.70)
+	for index in range(count):
+		canvas.draw_circle(marks[index], 2.0 if piranha else 1.7, scale_color)
 
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
