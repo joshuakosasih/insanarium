@@ -39,7 +39,7 @@ func run() -> void:
 	tank.switch_tank(2)
 	check(tank.active_tank == 2 and tank.tank_capacity() == 25 and tank.tank_rect.size.x > tank.STARTER_TANK_WIDTH, "Tank 2 has a larger habitat and 25-fish cap")
 	check(get_nodes_in_group("fish").size() == 1 and get_nodes_in_group("fish")[0].life.id == fish_id and get_nodes_in_group("fish")[0].brood_boosted and get_nodes_in_group("fish")[0].genome.speed[0] > 0.8, "transferred genome and breeder booster survive scene restoration")
-	check(tank.shop_cards.fish.display_title == "Feeder fry" and not tank.shop_cards.serum.visible and tank.shop_cards.piranha.visible, "Tank 2 replaces guppy and serum sales with feeder fry and piranhas")
+	check(tank.shop_cards.fish.display_title == "Feeder fry" and tank.shop_cards.serum.display_title == "Breeder booster" and tank.shop_cards.piranha.visible, "Tank 2 replaces guppy and base serum sales with feeder fry and breeder booster")
 	wallet = tank.economy.money
 	tank.select_shop_item("fish")
 	tank.activate_shop_item()

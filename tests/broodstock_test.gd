@@ -31,9 +31,24 @@ func run() -> void:
 	tank.selected_fish = adult
 	tank.inject_selected()
 	check(adult.broodstock and tank.serum_doses == 0 and adult.brood_left > 0.0, "selected Adult guppy consumes one dose")
+	adult.growth.stage = 3
+	adult.growth.meals = 74
+	adult.growth.growth_credit = 74.0
+	var final_pellet: FishFood = tank.spawn_food(adult.position, tank.feeds[0])
+	adult.hunger = 0.6
+	adult.food_target = final_pellet
+	adult._process(0.1)
+	check(final_pellet.consumed and adult.growth.stage == 3 and not adult.growth.diamond_trial_done and not adult.wears_crown(), "broodstock stay Royal and skip the Diamond growth roll after eating")
+	var diamond_candidate: AquariumFish = get_nodes_in_group("fish")[1]
+	diamond_candidate.growth.stage = 4
+	check(not FishBroodstock.can_convert(diamond_candidate), "Diamond guppies cannot be converted into broodstock")
+	diamond_candidate.growth.stage = 0
 	check("waste only" in FishInspector.describe(adult), "inspector shows broodstock output")
 	var snap: Dictionary = tank.snapshot()
 	check(int(snap.serum_doses) == 0 and bool(snap.fish[0].broodstock), "broodstock state is saved")
+	var old_diamond_broodstock: Dictionary = snap.duplicate(true)
+	old_diamond_broodstock.fish[0].stage = 4
+	check(SaveMigration.upgrade(old_diamond_broodstock).fish[0].stage == 3, "older Diamond broodstock saves normalize to Royal")
 	var before_fry: int = get_nodes_in_group("fish").size()
 	adult.brood_left = 0.0
 	tank.advance_broodstock(0.1)
@@ -58,16 +73,6 @@ func run() -> void:
 	adult.brood_left = 0.0
 	tank.advance_broodstock(0.1)
 	check(FishBroodstock.live_fry_for(adult.life.id, get_nodes_in_group("fish")) == 2, "live feeder fry are capped per broodstock")
-	before = tank.economy.money
-	tank.purchase_booster_serum()
-	check(tank.booster_doses == 1 and tank.economy.money == before - FishBroodstock.BOOSTER_PRICE, "shop sells a separate breeder booster dose")
-	tank.selected_fish = adult
-	tank.inject_selected()
-	check(adult.brood_boosted and tank.booster_doses == 0 and FishBroodstock.interval_for(adult.genome.fertility_value(), true) < FishBroodstock.interval_for(adult.genome.fertility_value()), "booster permanently shortens this breeder's interval")
-	for i in range(3):
-		adult.brood_left = 0.0
-		tank.advance_broodstock(0.1)
-	check(FishBroodstock.live_fry_for(adult.life.id, get_nodes_in_group("fish")) == 4 and "max 4 live" in FishInspector.describe(adult), "boosted breeder supports four live fry, then stops")
 	var hunter := AquariumFish.new()
 	hunter.profile = FishProfile.for_species("piranha")
 	hunter.growth.stage = 2
@@ -85,14 +90,20 @@ func run() -> void:
 	for item in offline_source.fish:
 		if bool(item.get("broodstock", false)):
 			item.brood_left = 0.0
-			item.hunger = 0.0
+			item.hunger = 0.5
+			item.stage = 3
+			item.meals = 74
+			item.credit = 74.0
+			item.diamond_trial_done = false
 		else:
 			item.hunger = 0.8
 		item.coin_left = 1000.0
+	offline_source.food = [{"x": 500.0, "y": 640.0, "tier": 0, "life": 14.0, "settled": true}]
 	offline_source.asset_levels.idle_duration = 4
 	offline_source.saved_at = 1000.0
 	var offline_result: Dictionary = OfflineProgress.advance(offline_source, 1100.0)
 	check(offline_result.report.brood_fry >= 1 and offline_result.report.preyed >= 1, "away estimate produces feeder fry and lets Adult piranhas eat them")
+	check(offline_result.data.fish.any(func(item: Dictionary) -> bool: return bool(item.get("broodstock", false)) and int(item.stage) == 3 and int(item.meals) >= 75 and not bool(item.diamond_trial_done)), "offline meals do not promote broodstock to Diamond")
 	var reloaded = load("res://scenes/aquarium.tscn").instantiate()
 	root.add_child(reloaded)
 	reloaded.set_process(false)
@@ -110,6 +121,6 @@ func run() -> void:
 			restored_brood += 1
 		if fish.profile.species_id == "feeder_guppy":
 			restored_fry += 1
-	check(restored_brood == 1 and restored_fry == 4 and get_nodes_in_group("fish").any(func(fish: AquariumFish) -> bool: return fish.get_parent() == reloaded and fish.brood_boosted), "save and restore keep boosted broodstock and feeder fry")
+	check(restored_brood == 1 and restored_fry == 2, "save and restore keep broodstock and feeder fry")
 	print("Broodstock failures: ", failures)
 	quit(1 if failures else 0)

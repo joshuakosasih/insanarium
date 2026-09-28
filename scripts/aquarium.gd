@@ -150,7 +150,7 @@ func total_piranhas() -> int:
 
 func tank_data_only(data: Dictionary) -> Dictionary:
 	var core: Dictionary = data.duplicate(true)
-	for key in ["tank2_owned", "active_tank", "other_tank", "fish_transfers_used"]:
+	for key in ["tank2_owned", "active_tank", "other_tank", "fish_transfers_used", "booster_doses"]:
 		core.erase(key)
 	return core
 
@@ -168,7 +168,6 @@ func make_second_tank() -> Dictionary:
 	data.reserve = []
 	data.cleanliness = 100.0
 	data.serum_doses = 0
-	data.booster_doses = 0
 	data.population_goal_complete = true
 	data.piranha_unlocked = true
 	data.guppy_sex_bag = []
@@ -218,7 +217,7 @@ func switch_tank(destination: int) -> void:
 	target.next_fish_id = next_id
 	other_tank = current
 	active_tank = destination
-	if active_tank == 2 and shop_selected_id in ["serum", "tank2"]:
+	if active_tank == 2 and shop_selected_id == "tank2":
 		shop_selected_id = "fish"
 	var wallet: float = economy.money + gained
 	shop_panel.hide()
@@ -603,7 +602,7 @@ func purchase_serum() -> void:
 	update_money(economy.money)
 
 func purchase_booster_serum() -> void:
-	if active_tank == 2 or not piranha_unlocked or booster_doses >= 10 or not economy.spend(FishBroodstock.BOOSTER_PRICE):
+	if active_tank != 2 or not piranha_unlocked or booster_doses >= 10 or not economy.spend(FishBroodstock.BOOSTER_PRICE):
 		return
 	booster_doses += 1
 	audio.play("buy")
@@ -612,9 +611,7 @@ func purchase_booster_serum() -> void:
 
 func inject_selected() -> void:
 	if active_tank == 2:
-		return
-	if is_instance_valid(selected_fish) and FishBroodstock.can_boost(selected_fish):
-		if booster_doses <= 0:
+		if booster_doses <= 0 or not is_instance_valid(selected_fish) or not FishBroodstock.can_boost(selected_fish):
 			return
 		booster_doses -= 1
 		selected_fish.brood_boosted = true
@@ -623,6 +620,8 @@ func inject_selected() -> void:
 		show_feedback(selected_fish.position, "Breeder boosted!")
 		update_inspection()
 		save_now()
+		return
+	if active_tank != 1:
 		return
 	if serum_doses <= 0 or not is_instance_valid(selected_fish) or not FishBroodstock.can_convert(selected_fish):
 		return
@@ -702,8 +701,9 @@ func update_inspection() -> void:
 	move_fish_button.text = "Move to Tank %d · $%d" % [3 - active_tank, FISH_TRANSFER_PRICE] if fish_transfers_used >= FREE_FISH_TRANSFERS else "Move to Tank %d · Free (%d left)" % [3 - active_tank, FREE_FISH_TRANSFERS - fish_transfers_used]
 	move_fish_button.disabled = valid and fish_transfers_used >= FREE_FISH_TRANSFERS and economy.money < FISH_TRANSFER_PRICE
 	sell_button.disabled = not valid
-	var can_boost: bool = valid and FishBroodstock.can_boost(selected_fish)
-	inject_button.visible = valid and active_tank == 1 and (FishBroodstock.can_convert(selected_fish) or can_boost)
+	var can_boost: bool = valid and active_tank == 2 and FishBroodstock.can_boost(selected_fish)
+	var can_convert: bool = valid and active_tank == 1 and FishBroodstock.can_convert(selected_fish)
+	inject_button.visible = can_boost or can_convert
 	inject_button.disabled = booster_doses <= 0 if can_boost else serum_doses <= 0
 	inject_button.text = ("Boost breeder (%d)" % booster_doses if booster_doses > 0 else "Buy booster") if can_boost else ("Inject serum (%d)" % serum_doses if serum_doses > 0 else "Buy serum")
 	sell_button.position.x = 174 if inject_button.visible else 69
@@ -1323,7 +1323,11 @@ func activate_shop_item() -> void:
 		"fish": purchase_fish()
 		"tank2": purchase_second_tank()
 		"piranha": purchase_piranha()
-		"serum": purchase_serum()
+		"serum":
+			if active_tank == 2:
+				purchase_booster_serum()
+			else:
+				purchase_serum()
 		"snail":
 			if assets.owned.snail:
 				purchase_upgrade("snail_speed")
@@ -1362,9 +1366,7 @@ func activate_shop_item() -> void:
 	refresh_shop()
 
 func activate_shop_secondary() -> void:
-	if shop_selected_id == "serum":
-		purchase_booster_serum()
-	elif shop_selected_id == "snail" and assets.owned.snail:
+	if shop_selected_id == "snail" and assets.owned.snail:
 		purchase_upgrade("snail_stamina")
 	elif shop_selected_id == "puffer" and assets.owned.puffer:
 		purchase_upgrade("puffer_curiosity")
@@ -1445,7 +1447,7 @@ func refresh_shop() -> void:
 	var statuses := {
 		"fish": "$%d · %d/%d fish" % [current_fish_price, fish_count, tank_capacity()],
 		"piranha": "$%d · %d owned" % [current_piranha_price, piranha_count] if piranha_unlocked else "Locked · 10 fish",
-		"serum": "%d base · %d booster" % [serum_doses, booster_doses] if piranha_unlocked else "Locked · 10 fish",
+		"serum": "%d doses · $%d" % [booster_doses, FishBroodstock.BOOSTER_PRICE] if active_tank == 2 else ("%d doses · $%d" % [serum_doses, FishBroodstock.SERUM_PRICE] if piranha_unlocked else "Locked · 10 fish"),
 		"tank2": "Owned · Switch tanks" if tank2_owned else ("$%d" % SECOND_TANK_PRICE if population_goal_complete else "Locked · 15 fish"),
 		"snail": "$%d" % assets.PRICES.snail if not assets.owned.snail else "SPD %d · STA %d · SLP %d" % [int(assets.levels.snail_speed) + 1, int(assets.levels.snail_stamina) + 1, int(assets.levels.snail_sleep) + 1],
 		"shrimp": "$%d" % assets.PRICES.shrimp if not assets.owned.shrimp else "Speed %d · Digestion %d" % [int(assets.levels.shrimp_speed) + 1, int(assets.levels.shrimp_digestion) + 1],
@@ -1476,14 +1478,15 @@ func refresh_shop() -> void:
 		"bubbles": int(assets.levels.bubble_capacity) > 0 or int(assets.levels.bubble_value) > 0}
 	shop_cards.fish.display_title = "Feeder fry" if active_tank == 2 else "Baby guppy"
 	shop_cards.fish.icon_preview.icon_kind = "feeder_fry" if active_tank == 2 else "fish"
-	shop_cards.serum.visible = active_tank == 1
+	shop_cards.serum.display_title = "Breeder booster" if active_tank == 2 else "Broodstock serum"
+	shop_cards.serum.visible = true
 	shop_cards.tank2.visible = active_tank == 1
 	for key in shop_cards:
 		shop_cards[key].set_status(statuses[key])
 		shop_cards[key].set_discovered(bool(discoveries[key]))
 	var item = shop_items[shop_selected_id]
-	shop_detail_title.text = "Feeder fry" if shop_selected_id == "fish" and active_tank == 2 else item.title
-	shop_detail_description.text = "Cheap, sterile prey for piranhas. Guppies and broodstock must be moved from Tank 1." if shop_selected_id == "fish" and active_tank == 2 else item.description
+	shop_detail_title.text = "Feeder fry" if shop_selected_id == "fish" and active_tank == 2 else ("Breeder booster" if shop_selected_id == "serum" and active_tank == 2 else item.title)
+	shop_detail_description.text = "Cheap, sterile prey for piranhas. Guppies and broodstock must be moved from Tank 1." if shop_selected_id == "fish" and active_tank == 2 else ("Boost an existing broodstock guppy brought from Tank 1. It keeps producing only feeder fry and waste." if shop_selected_id == "serum" and active_tank == 2 else item.description)
 	shop_action_button.position = Vector2(24, 350)
 	shop_action_button.size = Vector2(333, 58)
 	shop_action_button.add_theme_font_size_override("font_size", 17)
@@ -1512,17 +1515,16 @@ func refresh_shop() -> void:
 			shop_detail_state.text = "Reach 15 fish, then open a larger 25-fish habitat. Your fish can move between tanks."
 			shop_action_button.text = "Already owned" if tank2_owned else ("Reach 15 fish" if not population_goal_complete else "Open Tank 2  $%d" % SECOND_TANK_PRICE)
 		"serum":
-			action_price = FishBroodstock.SERUM_PRICE
-			unavailable = not piranha_unlocked or serum_doses >= 10
-			shop_detail_state.text = "%d base · %d booster doses.\nBase serum converts an Adult guppy. Booster serum raises one breeder's live-fry limit from 2 to 4 and shortens its interval by 35%%." % [serum_doses, booster_doses]
-			shop_action_button.position = Vector2(24, 350)
-			shop_action_button.size = Vector2(160, 58)
-			shop_action_button.text = "Reach 10 fish" if not piranha_unlocked else ("Base stock full" if serum_doses >= 10 else "Base serum  $%d" % action_price)
-			shop_secondary_button.position = Vector2(222, 350)
-			shop_secondary_button.size = Vector2(160, 58)
-			shop_secondary_button.text = "Booster full" if booster_doses >= 10 else "Booster  $%d" % FishBroodstock.BOOSTER_PRICE
-			shop_secondary_button.disabled = not piranha_unlocked or booster_doses >= 10 or economy.money < FishBroodstock.BOOSTER_PRICE
-			shop_secondary_button.show()
+			if active_tank == 2:
+				action_price = FishBroodstock.BOOSTER_PRICE
+				unavailable = booster_doses >= 10
+				shop_detail_state.text = "%d booster dose(s) ready. Select an existing broodstock guppy to inject. Its live-fry limit rises from 2 to 4 and its interval falls by 35%%." % booster_doses
+				shop_action_button.text = "Booster stock full" if booster_doses >= 10 else "Buy booster  $%d" % action_price
+			else:
+				action_price = FishBroodstock.SERUM_PRICE
+				unavailable = not piranha_unlocked or serum_doses >= 10
+				shop_detail_state.text = "%d serum dose(s) ready. Select an Adult or Royal guppy to convert. Broodstock produce feeder fry and waste, and never reach Diamond stage." % serum_doses
+				shop_action_button.text = "Reach 10 fish" if not piranha_unlocked else ("Serum stock full" if serum_doses >= 10 else "Buy serum  $%d" % action_price)
 		"snail":
 			if not assets.owned.snail:
 				action_price = assets.PRICES.snail
@@ -2160,6 +2162,8 @@ func restore(data: Dictionary, include_portfolio: bool = true) -> void:
 		active_tank = clampi(int(data.get("active_tank", 1)), 1, 2) if tank2_owned else 1
 		other_tank = data.get("other_tank", {}).duplicate(true) if tank2_owned else {}
 		fish_transfers_used = maxi(0, int(data.get("fish_transfers_used", 0)))
+		booster_doses = clampi(int(data.get("booster_doses", 0)) + int(other_tank.get("booster_doses", 0)), 0, 10)
+		other_tank.erase("booster_doses")
 	update_viewport_layout()
 	breeding.capacity = tank_capacity()
 	guppy_sex_bag.from_data(data.get("guppy_sex_bag", []))
@@ -2171,7 +2175,6 @@ func restore(data: Dictionary, include_portfolio: bool = true) -> void:
 	population_goal_complete = bool(data.get("population_goal_complete", false))
 	piranha_unlocked = bool(data.get("piranha_unlocked", false)) or population_goal_complete or data.get("fish", []).size() >= 10
 	serum_doses = clampi(int(data.get("serum_doses", 0)), 0, 10)
-	booster_doses = clampi(int(data.get("booster_doses", 0)), 0, 10)
 	breeding_toggle.set_pressed_no_signal(breeding.enabled)
 	economy.money = maxf(0.0, float(data.get("money", 100)))
 	environment.cleanliness = clampf(float(data.get("cleanliness", TankEnvironment.MAX_CLEANLINESS)), 0.0, TankEnvironment.MAX_CLEANLINESS)

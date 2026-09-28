@@ -14,7 +14,7 @@ static func live_limit_for(boosted: bool) -> int:
 	return BOOSTED_LIVE_FRY if boosted else MAX_LIVE_FRY
 
 static func can_convert(fish: AquariumFish) -> bool:
-	return not fish.dead and fish.profile.species_id == "starter_fish" and fish.growth.stage >= 2 and not fish.broodstock
+	return not fish.dead and fish.profile.species_id == "starter_fish" and fish.growth.stage >= 2 and fish.growth.stage < fish.profile.diamond_stage and not fish.broodstock
 
 static func can_boost(fish: AquariumFish) -> bool:
 	return not fish.dead and fish.broodstock and not fish.brood_boosted

@@ -8,11 +8,12 @@ var growth_credit: float = 0.0
 var diamond_trial_done: bool = false
 var diamond_bag: FishDiamondBag
 
-func record_meal(profile: FishProfile, credit: int = 1, multiplier: float = 1.0) -> void:
+func record_meal(profile: FishProfile, credit: int = 1, multiplier: float = 1.0, maximum_stage: int = -1) -> void:
 	meals += 1
 	growth_credit += maxi(0, credit) * maxf(0.0, multiplier)
 	var next_stage: int = stage
-	for i in range(mini(profile.growth_meals.size(), profile.max_growth_stage + 1)):
+	var stage_limit: int = profile.max_growth_stage if maximum_stage < 0 else mini(profile.max_growth_stage, maximum_stage)
+	for i in range(mini(profile.growth_meals.size(), stage_limit + 1)):
 		if growth_credit >= profile.growth_meals[i] and meals >= profile.minimum_meals[i]:
 			if i == profile.diamond_stage and stage < i:
 				if not diamond_trial_done:

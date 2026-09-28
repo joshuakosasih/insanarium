@@ -242,6 +242,8 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 				report.fed += 1
 				var old_stage: int = int(fish.get("stage", 0))
 				for stage in range(fish_profile.max_growth_stage + 1):
+					if bool(fish.get("broodstock", false)) and stage >= fish_profile.diamond_stage:
+						continue
 					if fish.credit >= fish_profile.growth_meals[stage] and fish.meals >= fish_profile.minimum_meals[stage]:
 						if stage == fish_profile.diamond_stage and int(fish.get("stage", 0)) < stage:
 							if not bool(fish.get("diamond_trial_done", false)):

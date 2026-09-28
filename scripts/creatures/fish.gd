@@ -143,7 +143,7 @@ func _process(delta: float) -> void:
 		if food_target.consume():
 			hunger = maxf(0.0, hunger - food_target.profile.nutrition)
 			survival.fed()
-			growth.record_meal(profile, food_target.profile.growth_credit, genome.growth_multiplier())
+			growth.record_meal(profile, food_target.profile.growth_credit, genome.growth_multiplier(), 3 if broodstock else -1)
 		food_target = null
 		choose_destination()
 	if prey_target != null and position.distance_to(prey_target.position) < 20.0 * visual_size + 8.0:
@@ -199,7 +199,7 @@ func sell_value() -> int:
 	return mutation.sell_value(growth.stage)
 
 func wears_crown() -> bool:
-	return growth.stage >= profile.diamond_stage
+	return not broodstock and growth.stage >= profile.diamond_stage
 
 func _on_stage_changed(stage: int) -> void:
 	if profile.species_id != "feeder_guppy" and mutation.roll():

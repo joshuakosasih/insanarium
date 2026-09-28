@@ -18,6 +18,9 @@ static func upgrade(source: Dictionary) -> Dictionary:
 			var old_stage: int = clampi(int(item.get("stage", 0)), 0, 3)
 			# Insert Teen while preserving the equivalent maturity of existing fish.
 			item["stage"] = old_stage + 1 if old_stage > 0 or float(item.get("credit", 0)) >= 2.0 else 0
+		if item.broodstock and int(item.get("stage", 0)) >= 4:
+			item["stage"] = 3
+			item["diamond_trial_done"] = true
 		var life: Dictionary = item.get("life", {})
 		var genome := FishGenome.new()
 		genome.from_data(item.get("genome", {}))
