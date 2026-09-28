@@ -12,7 +12,7 @@ var running: bool = true
 var bounds := Rect2(98, 218, 956, 410)
 var presentation_scale: float = 1.0
 var tank_index: int = 1
-var tank_two_bag: Array[bool] = []
+@export var hunter_chance: float = 0.5
 var upcoming_hunter: bool = false
 var last_defeated_hunter: bool = false
 
@@ -26,10 +26,7 @@ func schedule_next() -> void:
 func draw_next_hunter() -> bool:
 	if tank_index != 2:
 		return false
-	if tank_two_bag.is_empty():
-		tank_two_bag = [false, false, true]
-		tank_two_bag.shuffle()
-	return tank_two_bag.pop_back()
+	return randf() < clampf(hunter_chance, 0.0, 1.0)
 
 func begin_warning() -> void:
 	if not running or warning_left > 0.0 or is_instance_valid(active):

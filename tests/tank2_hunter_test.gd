@@ -14,11 +14,11 @@ func run() -> void:
 	director.tank_index = 2
 	root.add_child(director)
 	director.set_process(false)
-	var hunter_draws: int = 0
-	for i in range(3):
-		if director.draw_next_hunter():
-			hunter_draws += 1
-	check(hunter_draws == 1, "each three-encounter Tank 2 bag contains two blue aliens and one hunter")
+	check(is_equal_approx(director.hunter_chance, 0.5), "Tank 2 gives the hunter an independent 50% spawn chance")
+	director.hunter_chance = 0.0
+	check(not director.draw_next_hunter(), "zero hunter chance always selects the blue alien")
+	director.hunter_chance = 1.0
+	check(director.draw_next_hunter(), "full hunter chance always selects the hunter")
 	director.tank_index = 1
 	check(not director.draw_next_hunter(), "Tank 1 only draws the original blue alien")
 	var habitat := Node2D.new()
