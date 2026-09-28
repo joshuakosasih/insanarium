@@ -1507,7 +1507,7 @@ func refresh_shop() -> void:
 		"piranha":
 			action_price = current_piranha_price
 			unavailable = fish_count >= tank_capacity() or not piranha_unlocked
-			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies, bite blue aliens, and flee purple hunters." % [fish_count, tank_capacity(), piranha_count]
+			shop_detail_state.text = "Population %d/%d · %d piranhas\nJuveniles eat pellets. Adults hunt young guppies, bite blue aliens, and flee larger hunters." % [fish_count, tank_capacity(), piranha_count]
 			shop_action_button.text = "Reach 10 fish to unlock" if not piranha_unlocked else "Buy piranha  $%d" % action_price
 		"tank2":
 			action_price = SECOND_TANK_PRICE
@@ -1822,7 +1822,7 @@ func build_hud() -> void:
 		debug_reset_dialog.popup_centered(Vector2i(480, 170)))
 	inspector_panel = Panel.new()
 	inspector_panel.position = Vector2(735, 66)
-	inspector_panel.size = Vector2(348, 580)
+	inspector_panel.size = Vector2(348, 512)
 	inspector_panel.z_index = 15
 	var inspector_style := StyleBoxFlat.new()
 	inspector_style.bg_color = Color("0c2636")
@@ -1831,12 +1831,12 @@ func build_hud() -> void:
 	inspector_style.set_corner_radius_all(12)
 	inspector_panel.add_theme_stylebox_override("panel", inspector_style)
 	hud.add_child(inspector_panel)
-	inspector_detail = label_at(inspector_panel, "", Vector2(16, 14), 13, Color("d2e6df"))
-	inspector_detail.size = Vector2(316, 276)
+	inspector_detail = label_at(inspector_panel, "", Vector2(16, 14), 12, Color("d2e6df"))
+	inspector_detail.size = Vector2(316, 238)
 	inspector_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for index in range(5):
 		var trait_bar: FishTraitBar = FishTraitBarScript.new()
-		trait_bar.position = Vector2(16, 300 + index * 32)
+		trait_bar.position = Vector2(16, 265 + index * 29)
 		inspector_panel.add_child(trait_bar)
 		inspector_trait_bars.append(trait_bar)
 	make_button(inspector_panel, "×", Vector2(308, 5), Vector2(30, 28), func() -> void:
@@ -1846,11 +1846,11 @@ func build_hud() -> void:
 		update_inspection())
 	inspector_panel.hide()
 	inspect_label = label_at(hud, "Tap a fish to inspect it", Vector2(49, 32), 12, Color("83a9b7"))
-	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 478), Vector2(210, 38), sell_selected)
+	sell_button = make_button(inspector_panel, "Select a fish to sell", Vector2(69, 465), Vector2(210, 38), sell_selected)
 	sell_button.disabled = true
-	move_fish_button = make_button(inspector_panel, "Move fish", Vector2(56, 528), Vector2(236, 40), move_selected_fish)
+	move_fish_button = make_button(inspector_panel, "Move fish", Vector2(56, 416), Vector2(236, 40), move_selected_fish)
 	move_fish_button.hide()
-	inject_button = make_button(inspector_panel, "Buy serum", Vector2(15, 478), Vector2(150, 38), inject_selected)
+	inject_button = make_button(inspector_panel, "Buy serum", Vector2(15, 465), Vector2(150, 38), inject_selected)
 	inject_button.hide()
 	var challenge := CheckButton.new()
 	challenge.text = "Alien challenges"

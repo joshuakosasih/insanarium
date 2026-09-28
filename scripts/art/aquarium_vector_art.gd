@@ -30,9 +30,9 @@ static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, r
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	# Sit on the head; move just left when a diamond crown shares that spot.
 	var flower_x: float = -1.0 if crowned else 11.0
-	for petal in [Vector2(-4, -21), Vector2(-2, -25), Vector2(2, -25), Vector2(4, -21), Vector2(0, -18)]:
+	for petal in [Vector2(-4, -16), Vector2(-2, -20), Vector2(2, -20), Vector2(4, -16), Vector2(0, -13)]:
 		canvas.draw_circle(petal + Vector2(flower_x, 0), 3.8, Color("c99bea"))
-	canvas.draw_circle(Vector2(flower_x, -21), 3.2, Color("ffe18a"))
+	canvas.draw_circle(Vector2(flower_x, -16), 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false) -> void:
