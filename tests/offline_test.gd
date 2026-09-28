@@ -31,6 +31,23 @@ func run() -> void:
 	check(result.report.simulated == 20.0 and result.report.earned + result.report.waste == 5, "ten-percent elapsed time and deterministic fish output")
 	check(result.data.money == data.money and result.data.coins.size() + result.data.waste.size() == 5, "outputs become collectible coins or visible waste")
 	check(result.data.cleanliness < data.cleanliness, "offline population and waste reduce cleanliness")
+	var fragile_case: Dictionary = data.duplicate(true)
+	fragile_case.fish = [fragile_case.fish[0]]
+	fragile_case.cleanliness = 85.0
+	fragile_case.food = []
+	fragile_case.coins = []
+	fragile_case.waste = []
+	fragile_case.fish[0].health = 50.0
+	fragile_case.fish[0].hunger = 0.0
+	fragile_case.fish[0].coin_left = 1000.0
+	fragile_case.fish[0].genome.vitality = [0.1, 0.1]
+	fragile_case.fish[0].genome.allocation = [0.9, 0.9]
+	var hardy_case: Dictionary = fragile_case.duplicate(true)
+	hardy_case.fish[0].genome.vitality = [0.9, 0.9]
+	hardy_case.fish[0].genome.allocation = [0.1, 0.1]
+	var fragile_health: float = OfflineProgress.advance(fragile_case, 1010.0).data.fish[0].health
+	var hardy_health: float = OfflineProgress.advance(hardy_case, 1010.0).data.fish[0].health
+	check(hardy_health > fragile_health, "offline water recovery follows Vitality rather than Productivity")
 	var sponge_case: Dictionary = data.duplicate(true)
 	sponge_case.fish = []
 	sponge_case.food = []

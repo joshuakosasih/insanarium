@@ -219,7 +219,7 @@ func _draw() -> void:
 	else:
 		VectorArt.draw_fish(self, Vector2.ZERO, 1.0, color, tail, dead, wears_crown(), vitality, agility, productivity)
 		if broodstock:
-			VectorArt.draw_guppy_role_mark(self, Vector2.ZERO, 1.0, "broodstock", wears_crown(), vitality)
+			VectorArt.draw_guppy_role_mark(self, Vector2.ZERO, 1.0, "broodstock", wears_crown(), vitality, brood_boosted)
 	if not dead and hunger >= profile.hungry_threshold:
 		draw_circle(Vector2(0, -34), 5, Color("ff657f") if hunger >= 1.0 else Color("ffa86b"))
 	if not dead and hunger >= 1.0:

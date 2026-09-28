@@ -222,7 +222,7 @@ static func advance(source: Dictionary, now: float) -> Dictionary:
 					report.first_old_age_loss_at = elapsed - remaining
 				continue
 			var health_rate: float = FishHealth.rate_for_conditions(cleanliness, fish.hunger < fish_profile.hungry_threshold)
-			var constitution: float = FishGenome.constitution_for(allocation)
+			var constitution: float = FishGenome.constitution_for(vitality)
 			health_rate = health_rate * constitution if health_rate >= 0.0 else health_rate / constitution
 			var maximum_health: float = FishGenome.max_health_for(vitality)
 			fish.health = clampf(float(fish.get("health", maximum_health)) + health_rate * dt, 0.0, maximum_health)

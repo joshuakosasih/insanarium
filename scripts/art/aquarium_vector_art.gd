@@ -34,16 +34,20 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_circle(Vector2(13, -16 + crown_offset), 1.3, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false, vitality: float = 0.5) -> void:
+static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false, vitality: float = 0.5, boosted: bool = false) -> void:
 	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	# Sit on the head; move just left when a diamond crown shares that spot.
 	var flower_x: float = -1.0 if crowned else 11.0
 	var flower_y: float = (0.85 - lerpf(0.60, 1.12, clampf(vitality, 0.0, 1.0))) * 19.0
-	for petal in [Vector2(-4, -16), Vector2(-2, -20), Vector2(2, -20), Vector2(4, -16), Vector2(0, -13)]:
-		canvas.draw_circle(petal + Vector2(flower_x, flower_y), 3.8, Color("c99bea"))
-	canvas.draw_circle(Vector2(flower_x, -16 + flower_y), 3.2, Color("ffe18a"))
+	var flower_centers: Array[Vector2] = [Vector2(flower_x, flower_y)]
+	if boosted:
+		flower_centers = [Vector2(flower_x - 8, flower_y), Vector2(flower_x + 5, flower_y)]
+	for center in flower_centers:
+		for petal in [Vector2(-4, -16), Vector2(-2, -20), Vector2(2, -20), Vector2(4, -16), Vector2(0, -13)]:
+			canvas.draw_circle(petal + center, 2.8 if boosted else 3.8, Color("c99bea"))
+		canvas.draw_circle(center + Vector2(0, -16), 2.4 if boosted else 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
 static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5) -> void:
