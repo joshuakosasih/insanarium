@@ -28,7 +28,7 @@ func run() -> void:
 	check(fast.hunger_multiplier() > slow.hunger_multiplier(), "fast metabolism reduces visible food endurance")
 	check(fast.growth_multiplier() > slow.growth_multiplier() and fast.output_interval(20.0) < slow.output_interval(20.0), "fast metabolism accelerates growth and output")
 	check(fast.coin_chance() > slow.coin_chance() and fast.constitution() > slow.constitution(), "productivity favors coins while vitality independently improves resilience")
-	check(fast.breeding_cooldown() < slow.breeding_cooldown(), "high fertility shortens the natural breeding cooldown")
+	check(is_equal_approx(slow.breeding_cooldown(), 480.0) and is_equal_approx(fast.breeding_cooldown(), 120.0), "natural breeding Fertility spans eight to two minutes")
 	check(FishAging.lifespan_for(fast) > FishAging.lifespan_for(slow), "extreme vitality can outweigh the longevity cost of fast metabolism")
 	var encoded: Dictionary = fast.to_data()
 	var decoded := FishGenome.new()

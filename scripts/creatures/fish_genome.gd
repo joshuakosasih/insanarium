@@ -12,8 +12,8 @@ const MIN_MAX_HEALTH: float = 60.0
 const MAX_MAX_HEALTH: float = 160.0
 const MIN_SPEED_MULTIPLIER: float = 0.65
 const MAX_SPEED_MULTIPLIER: float = 1.40
-const MIN_BREEDING_COOLDOWN: float = 180.0
-const MAX_BREEDING_COOLDOWN: float = 420.0
+const MIN_BREEDING_COOLDOWN: float = 120.0
+const MAX_BREEDING_COOLDOWN: float = 480.0
 
 func randomize_traits(balanced: bool = false) -> void:
 	var range_limits := Vector2(0.44, 0.56) if balanced else Vector2(0.12, 0.88)

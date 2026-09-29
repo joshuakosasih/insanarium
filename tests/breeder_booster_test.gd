@@ -45,12 +45,23 @@ func run() -> void:
 	tank.selected_fish = parent
 	tank.inject_selected()
 	check(parent.brood_boosted and tank.booster_doses == 0 and FishBroodstock.interval_for(parent.genome.fertility_value(), true) < FishBroodstock.interval_for(parent.genome.fertility_value()), "booster upgrades only existing broodstock")
+	var adult_piranha := FishProfile.for_species("piranha")
+	var neutral_prey_interval: float = adult_piranha.prey_nutrition / (adult_piranha.hunger_rate_at(2) * FishGenome.hunger_multiplier_for(0.5))
+	var low_support: float = neutral_prey_interval / FishBroodstock.interval_for(0.0, true)
+	var high_support: float = neutral_prey_interval / FishBroodstock.interval_for(1.0, true)
+	check(absf(low_support - 1.0) < 0.05 and absf(high_support - 3.5) < 0.1, "boosted breeder Fertility spans about one to 3.5 neutral Adult piranhas")
+	check(FishBroodstock.interval_for(0.5, true) < 136.5, "midrange breeders improve rather than slowing under the wider Fertility curve")
 	for i in range(5):
 		parent.brood_left = 0.0
 		tank.advance_broodstock(0.1)
 	check(FishBroodstock.live_fry_for(parent_id, get_nodes_in_group("fish")) == 4, "boosted breeder supports four live fry, then stops")
 	var saved: Dictionary = tank.snapshot()
 	check(not BackupValidation.parse(JSON.stringify(saved)).is_empty(), "booster state validates in a two-tank backup")
+	var long_clock: Dictionary = saved.duplicate(true)
+	for fish in long_clock.fish:
+		if bool(fish.get("broodstock", false)):
+			fish.brood_left = FishBroodstock.MAX_INTERVAL
+	check(not BackupValidation.parse(JSON.stringify(long_clock)).is_empty() and SaveMigration.upgrade(long_clock).fish.any(func(fish: Dictionary) -> bool: return bool(fish.get("broodstock", false)) and is_equal_approx(float(fish.brood_left), FishBroodstock.MAX_INTERVAL)), "longer low-Fertility breeder clocks survive save validation and migration")
 	var old_stock: Dictionary = saved.duplicate(true)
 	old_stock.booster_doses = 2
 	old_stock.other_tank.booster_doses = 1

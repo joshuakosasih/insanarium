@@ -921,7 +921,7 @@ func _process(delta: float) -> void:
 			fish.die("Poor water quality")
 		else:
 			fish.queue_redraw()
-	breeding_status.text = "Breeding paused: population %d/%d" % [count, tank_capacity()] if count >= tank_capacity() else "Well-fed adult pairs · 3–7 min cooldown"
+	breeding_status.text = "Breeding paused: population %d/%d" % [count, tank_capacity()] if count >= tank_capacity() else "Well-fed adult pairs · 2–8 min cooldown"
 	assets.feeder_left -= simulation_delta
 	if assets.owned.feeder and assets.feeder_left <= 0.0:
 		assets.feeder_left = 2.0
@@ -2224,7 +2224,7 @@ func restore(data: Dictionary, include_portfolio: bool = true) -> void:
 		fish.breeding_left = clampf(float(item.get("breeding_left", 0)), 0, FishGenome.MAX_BREEDING_COOLDOWN)
 		fish.broodstock = bool(item.get("broodstock", false)) and fish.profile.species_id == "starter_fish"
 		fish.brood_boosted = fish.broodstock and bool(item.get("brood_boosted", false))
-		fish.brood_left = clampf(float(item.get("brood_left", 0)), 0.0, 270.0) if fish.broodstock else 0.0
+		fish.brood_left = clampf(float(item.get("brood_left", 0)), 0.0, FishBroodstock.MAX_INTERVAL) if fish.broodstock else 0.0
 		fish.position = Vector2(item.get("x", 500), item.get("y", 350)).clamp(swim_bounds.position, swim_bounds.end)
 		fish.hunger = clampf(float(item.get("hunger", 0)), 0, 1)
 		fish.health.current = clampf(float(item.get("health", fish.health.maximum)), 0.01, fish.health.maximum)

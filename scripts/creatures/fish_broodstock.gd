@@ -5,10 +5,16 @@ const SERUM_PRICE: int = 180
 const BOOSTER_PRICE: int = 400
 const MAX_LIVE_FRY: int = 2
 const BOOSTED_LIVE_FRY: int = 4
+const MAX_INTERVAL: float = 365.0
+const MIN_INTERVAL: float = 104.0
+const BOOSTED_INTERVAL_FACTOR: float = 0.65
 
 static func interval_for(fertility: float, boosted: bool = false) -> float:
-	var interval: float = lerpf(270.0, 150.0, clampf(fertility, 0.0, 1.0))
-	return interval * 0.65 if boosted else interval
+	# A max-Fertility boosted broodstock supplies about 3.5 neutral Adult
+	# piranhas; the minimum supplies about one. The curve also improves
+	# midrange breeders so existing tanks are not slowed by the wider spread.
+	var interval: float = lerpf(MAX_INTERVAL, MIN_INTERVAL, sqrt(clampf(fertility, 0.0, 1.0)))
+	return interval * BOOSTED_INTERVAL_FACTOR if boosted else interval
 
 static func live_limit_for(boosted: bool) -> int:
 	return BOOSTED_LIVE_FRY if boosted else MAX_LIVE_FRY

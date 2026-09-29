@@ -62,3 +62,15 @@ Run the calculation from the repository root with:
 ```sh
 godot --headless --path . --script tests/economy_estimate.gd -- --test
 ```
+
+## Breeder fry and Adult piranha demand
+
+At neutral Metabolism, an Adult piranha gains hunger at `(1 / 300) × 1.075` per simulation second. One prey reduces hunger by `0.85`, so its steady-state demand is about one fry every **237 seconds**. A broodstock's Fertility phenotype ranges from 0 to 1. Its unboosted fry interval is `365 − 261 × sqrt(Fertility)` seconds; a Tank 2 booster multiplies that interval by `0.65`. Natural Male/Female pair cooldowns separately range from eight to two minutes, but the tank-wide 25% breeding check every 30 seconds can limit pair births further.
+
+| Broodstock Fertility | Unboosted fry interval | Boosted fry interval | Neutral Adult piranhas supported by one boosted breeder |
+| --- | ---: | ---: | ---: |
+| 0% | 365 s | 237 s | 1.0 |
+| 50% | 180 s | 117 s | 2.0 |
+| 100% | 104 s | 68 s | 3.5 |
+
+These are ideal throughput ratios. The broodstock must be fed, breeding enabled, and tank space available; piranhas must be able to reach the fry. Each unboosted breeder can have at most two of its fry alive, or four when boosted. The data-only care simulation in `tests/predator_supply_test.gd` checks that three maximum-Fertility boosted breeders sustain eight and ten neutral Adult piranhas for the full 48-minute simulated cap of an eight-hour away period under ideal care, while one minimum-Fertility boosted breeder sustains one but not two. `tests/predator_active_supply_test.gd` also exercises an hour of actual swimming, hunting, and pellet movement for the eight-piranha setup with attentive restocking and regular water cleaning. A maximum sponge alone does not offset all waste from this dense population indefinitely.

@@ -103,7 +103,7 @@ static func parse(text: String) -> Dictionary:
 			return {}
 		if bool(fish.get("broodstock", false)) and str(fish.get("species_id", "starter_fish")) != "starter_fish":
 			return {}
-		if not number(fish.get("brood_left", 0), 0, 270):
+		if not number(fish.get("brood_left", 0), 0, FishBroodstock.MAX_INTERVAL):
 			return {}
 		for key in ["x", "y", "hunger", "stage", "meals", "credit", "mutation", "starving", "coin_left", "sex", "breeding_left"]:
 			if not number(fish.get(key, 0), 0, 1000000000000):

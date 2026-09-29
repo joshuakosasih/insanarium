@@ -13,7 +13,7 @@ static func upgrade(source: Dictionary) -> Dictionary:
 			item["mutation"] = 0
 		item["broodstock"] = bool(item.get("broodstock", false)) and item.species_id == "starter_fish"
 		item["brood_boosted"] = bool(item.get("brood_boosted", false)) and item.broodstock
-		item["brood_left"] = clampf(float(item.get("brood_left", 0)), 0.0, 270.0) if item.broodstock else 0.0
+		item["brood_left"] = clampf(float(item.get("brood_left", 0)), 0.0, FishBroodstock.MAX_INTERVAL) if item.broodstock else 0.0
 		if source_version < 3:
 			var old_stage: int = clampi(int(item.get("stage", 0)), 0, 3)
 			# Insert Teen while preserving the equivalent maturity of existing fish.
