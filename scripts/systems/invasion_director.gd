@@ -12,7 +12,7 @@ var running: bool = true
 var bounds := Rect2(98, 218, 956, 410)
 var presentation_scale: float = 1.0
 var tank_index: int = 1
-@export var hunter_chance: float = 0.5
+@export var hunter_chance: float = 1.0 / 3.0
 var upcoming_hunter: bool = false
 var last_defeated_hunter: bool = false
 

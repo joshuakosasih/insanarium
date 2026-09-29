@@ -94,12 +94,15 @@ func _process(delta: float) -> void:
 		prey_target = FishPredation.nearest(self, get_tree().get_nodes_in_group("fish"))
 	alien_target = null
 	var feared_alien: TankAlien
+	var nearest_threat: float = 210.0
 	var nearest_alien: float = 520.0
 	for candidate in get_tree().get_nodes_in_group("invaders"):
 		if not candidate is TankAlien or candidate.dead or candidate.is_queued_for_deletion():
 			continue
 		var gap: float = position.distance_to(candidate.position)
-		if profile.species_id == "piranha" and candidate.threatens_piranhas and gap < 210.0:
+		var threatened: bool = candidate.threatens_piranhas or not can_fight_alien()
+		if threatened and gap < nearest_threat:
+			nearest_threat = gap
 			feared_alien = candidate
 		elif can_fight_alien() and not candidate.threatens_piranhas and gap < nearest_alien:
 			nearest_alien = gap
@@ -130,7 +133,13 @@ func _process(delta: float) -> void:
 	elif wander_left <= 0.0 or position.distance_to(destination) < 12.0:
 		choose_destination()
 	var movement: Vector2 = destination - position
-	var movement_speed: float = swim_speed() * (1.7 if feared_alien != null else (1.35 if alien_target != null or prey_target != null else (1.5 if food_target != null else 1.0)))
+	var movement_speed: float = swim_speed()
+	if feared_alien != null:
+		movement_speed *= lerpf(1.2, 1.85, genome.speed_value())
+	elif alien_target != null or prey_target != null:
+		movement_speed *= pursuit_multiplier()
+	elif food_target != null:
+		movement_speed *= pursuit_multiplier() + 0.15
 	position = position.move_toward(destination, movement_speed * delta)
 	position = position.clamp(bounds.position, bounds.end)
 	if absf(movement.x) > 3.0:
@@ -237,11 +246,18 @@ func apply_genome(fill_health: bool = false) -> void:
 func swim_speed() -> float:
 	return profile.swim_speed * genome.speed_multiplier()
 
+func pursuit_multiplier() -> float:
+	return lerpf(1.15, 1.75, genome.speed_value())
+
+func alien_bite_interval() -> float:
+	var stage_interval: float = 1.25 if growth.stage == 2 else (0.85 if growth.stage == 3 else 0.6)
+	return stage_interval * lerpf(1.3, 0.65, genome.speed_value())
+
 func can_fight_alien() -> bool:
 	return profile.alien_defense_stage >= 0 and growth.stage >= profile.alien_defense_stage and not dead
 
 func attack_alien(alien: TankAlien) -> void:
 	if not can_fight_alien() or alien_attack_left > 0.0 or not is_instance_valid(alien) or alien.dead:
 		return
-	alien_attack_left = 1.25 if growth.stage == 2 else (0.85 if growth.stage == 3 else 0.6)
+	alien_attack_left = alien_bite_interval()
 	alien.hit(position)

@@ -127,11 +127,11 @@ func run() -> void:
 	check(not predator.dead and adult.dead and defending_alien.health == alien_health, "alien ignores an Adult piranha and attacks a vulnerable guppy")
 	predator.alien_attack_left = 0.0
 	predator._process(0.1)
-	check(defending_alien.health == alien_health - 1 and predator.position.distance_to(defending_alien.position) > 0.0 and predator.alien_attack_left <= 1.25, "Adult piranha bites from outside the alien center with a shorter cooldown")
+	check(defending_alien.health == alien_health - 1 and predator.position.distance_to(defending_alien.position) > 0.0 and is_equal_approx(predator.alien_attack_left, predator.alien_bite_interval()), "Adult piranha bites from outside the alien center with an Agility-based cooldown")
 	predator.growth.stage = 4
 	predator.alien_attack_left = 0.0
 	predator.attack_alien(defending_alien)
-	check(predator.alien_attack_left <= 0.6 and predator.alien_attack_left > 0.0, "older piranhas bite aliens faster")
+	check(is_equal_approx(predator.alien_attack_left, predator.alien_bite_interval()) and predator.alien_attack_left > 0.0, "older piranhas bite aliens faster")
 	while not defending_alien.dead:
 		predator.alien_attack_left = 0.0
 		predator.attack_alien(defending_alien)
