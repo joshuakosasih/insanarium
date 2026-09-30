@@ -9,6 +9,7 @@ var icon_kind: String = "fish"
 var icon_color: Color = Color("f6be73")
 var crowned: bool = false
 var vitality: float = 0.5
+var metabolism: float = 0.5
 var agility: float = 0.5
 var productivity: float = 0.5
 var title_label: Label
@@ -36,6 +37,7 @@ func present(data: Dictionary) -> void:
 	icon_color = data.get("color", Color("f6be73"))
 	crowned = bool(data.get("crowned", false))
 	vitality = float(data.get("vitality", 0.5))
+	metabolism = float(data.get("metabolism", 0.5))
 	agility = float(data.get("agility", 0.5))
 	productivity = float(data.get("productivity", 0.5))
 	title_label.text = str(data.get("title", "NEW FRIEND!"))
@@ -86,8 +88,8 @@ func _draw() -> void:
 		"sponge": VectorArt.draw_sponge(self, center + Vector2(0, 15), icon_scale, elapsed)
 		"seahorse": VectorArt.draw_seahorse(self, center + Vector2(0, 12), icon_scale, elapsed)
 		"puffer": VectorArt.draw_puffer(self, center, icon_scale, elapsed < 0.55, elapsed)
-		"piranha": VectorArt.draw_piranha(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned, vitality, agility, productivity)
-		_: VectorArt.draw_fish(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned, vitality, agility, productivity)
+		"piranha": VectorArt.draw_piranha(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned, vitality, agility, productivity, metabolism)
+		_: VectorArt.draw_fish(self, center, icon_scale, icon_color, sin(elapsed * 10.0) * 3.0, false, crowned, vitality, agility, productivity, metabolism)
 	draw_string(ThemeDB.fallback_font, Vector2(40, 527), "A NEW DISCOVERY", HORIZONTAL_ALIGNMENT_CENTER, size.x - 80, 12, Color("83a9b7"))
 
 func make_label(value: String, at: Vector2, dimensions: Vector2, font_size: int, color: Color) -> Label:

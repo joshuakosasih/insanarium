@@ -2,8 +2,8 @@ class_name AquariumVectorArt
 extends RefCounted
 ## Shared procedural silhouettes used by both live entities and shop previews.
 
-static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5) -> void:
-	var body_height := lerpf(0.60, 1.12, clampf(vitality, 0.0, 1.0))
+static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5, metabolism: float = 0.5) -> void:
+	var body_height := lerpf(1.12, 0.60, clampf(metabolism, 0.0, 1.0))
 	var tail_length := lerpf(36.0, 50.0, clampf(agility, 0.0, 1.0))
 	var tail_spread := lerpf(11.0, 25.0, clampf(agility, 0.0, 1.0))
 	var sweep := smoothstep(0.15, 0.85, agility)
@@ -19,7 +19,8 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 	canvas.draw_circle(Vector2.ZERO, 19, color)
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	canvas.draw_arc(Vector2(-2, 0), 10, -1.1, 1.1, 16, color.darkened(0.28), 2, true)
-	draw_productivity_scales(canvas, color, productivity, false)
+	draw_scale_sheen(canvas, vitality, false)
+	draw_productivity_mark(canvas, color, productivity, false)
 	canvas.draw_circle(Vector2(16, -5), 6, Color("fff9e8"))
 	if dead:
 		canvas.draw_line(Vector2(13, -8), Vector2(20, -1), Color("173348"), 2, true)
@@ -34,13 +35,13 @@ static func draw_fish(canvas: CanvasItem, at: Vector2, size: float, color: Color
 		canvas.draw_circle(Vector2(13, -16 + crown_offset), 1.3, Color("d5f5ff"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false, vitality: float = 0.5, boosted: bool = false) -> void:
+static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, role: String, crowned: bool = false, metabolism: float = 0.5, boosted: bool = false) -> void:
 	if role != "broodstock":
 		return
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)
 	# Sit on the head; move just left when a diamond crown shares that spot.
 	var flower_x: float = -1.0 if crowned else 11.0
-	var flower_y: float = (0.85 - lerpf(0.60, 1.12, clampf(vitality, 0.0, 1.0))) * 19.0
+	var flower_y: float = (0.85 - lerpf(1.12, 0.60, clampf(metabolism, 0.0, 1.0))) * 19.0
 	var flower_centers: Array[Vector2] = [Vector2(flower_x, flower_y)]
 	if boosted:
 		flower_centers = [Vector2(flower_x - 8, flower_y), Vector2(flower_x + 5, flower_y)]
@@ -50,8 +51,8 @@ static func draw_guppy_role_mark(canvas: CanvasItem, at: Vector2, size: float, r
 		canvas.draw_circle(center + Vector2(0, -16), 2.4 if boosted else 3.2, Color("ffe18a"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5) -> void:
-	var body_height := lerpf(0.82, 1.18, clampf(vitality, 0.0, 1.0))
+static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Color, tail: float = 0.0, dead: bool = false, crowned: bool = false, vitality: float = 0.5, agility: float = 0.5, productivity: float = 0.5, metabolism: float = 0.5) -> void:
+	var body_height := lerpf(1.18, 0.82, clampf(metabolism, 0.0, 1.0))
 	var tail_reach := lerpf(40.0, 52.0, clampf(agility, 0.0, 1.0))
 	var tail_height := lerpf(11.0, 21.0, clampf(agility, 0.0, 1.0))
 	var sweep := smoothstep(0.15, 0.85, agility)
@@ -73,7 +74,8 @@ static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Co
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-27, -5), Vector2(-23, -18), Vector2(-11, -24), Vector2(5, -25), Vector2(20, -20), Vector2(30, -11), Vector2(32, 0), Vector2(25, 11), Vector2(10, 20), Vector2(-9, 20), Vector2(-22, 11)]), back)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-23, 3), Vector2(-13, 8), Vector2(3, 7), Vector2(19, 0), Vector2(31, -3), Vector2(29, 10), Vector2(12, 20), Vector2(-9, 20), Vector2(-22, 11)]), color)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(-18, 10), Vector2(-2, 13), Vector2(17, 7), Vector2(29, 7), Vector2(12, 19), Vector2(-9, 19)]), belly)
-	draw_productivity_scales(canvas, color, productivity, true)
+	draw_scale_sheen(canvas, vitality, true)
+	draw_productivity_mark(canvas, color, productivity, true)
 	# The hinged lower jaw projects past the head and carries tiny visible teeth.
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(16, 9), Vector2(31, 5), Vector2(39, 10), Vector2(31, 19), Vector2(19, 18)]), outline)
 	canvas.draw_colored_polygon(PackedVector2Array([Vector2(19, 11), Vector2(32, 8), Vector2(36, 11), Vector2(30, 17), Vector2(20, 16)]), belly)
@@ -93,12 +95,21 @@ static func draw_piranha(canvas: CanvasItem, at: Vector2, size: float, color: Co
 		canvas.draw_colored_polygon(PackedVector2Array([Vector2(8, -24), Vector2(7, -31), Vector2(11, -28), Vector2(15, -34), Vector2(18, -28), Vector2(22, -31), Vector2(21, -23)]), Color("57b9ec"))
 	canvas.draw_set_transform(Vector2.ZERO)
 
-static func draw_productivity_scales(canvas: CanvasItem, color: Color, productivity: float, piranha: bool) -> void:
-	var marks := [Vector2(-15, -7), Vector2(-7, -9), Vector2(1, -8), Vector2(-13, 2), Vector2(-5, 3), Vector2(3, 2)] if piranha else [Vector2(-14, -6), Vector2(-6, -7), Vector2(2, -6), Vector2(-13, 3), Vector2(-5, 4), Vector2(3, 3)]
+static func draw_scale_sheen(canvas: CanvasItem, vitality: float, piranha: bool) -> void:
+	# A few fixed scale arcs keep the fish readable even when many share a tank.
+	# Only their reflected light changes with Vitality; mutation hue stays intact.
+	var marks := [Vector2(-17, -12), Vector2(-7, -14), Vector2(3, -12), Vector2(-15, -3), Vector2(-5, -4), Vector2(5, -3)] if piranha else [Vector2(-14, -6), Vector2(-6, -7), Vector2(2, -6), Vector2(-13, 2), Vector2(-5, 2), Vector2(3, 2)]
+	var sheen := Color(1.0, 1.0, 1.0, lerpf(0.08, 0.66, clampf(vitality, 0.0, 1.0)))
+	for mark in marks:
+		canvas.draw_arc(mark, 3.0 if piranha else 2.5, -2.5, -0.65, 8, sheen, 1.35, true)
+
+static func draw_productivity_mark(canvas: CanvasItem, color: Color, productivity: float, piranha: bool) -> void:
+	# Warm spots on the rear belly are distinct from the cool scale sheen.
+	var marks := [Vector2(-23, 10), Vector2(-17, 11), Vector2(-11, 11)] if piranha else [Vector2(-18, 6), Vector2(-12, 6), Vector2(-6, 6)]
 	var count := clampi(roundi(clampf(productivity, 0.0, 1.0) * marks.size()), 0, marks.size())
-	var scale_color := color.lerp(Color("fff0b3"), 0.70)
+	var mark_color := color.lerp(Color("ffcf61"), 0.82)
 	for index in range(count):
-		canvas.draw_circle(marks[index], 2.0 if piranha else 1.7, scale_color)
+		canvas.draw_circle(marks[index], 1.8 if piranha else 1.6, mark_color)
 
 static func draw_snail(canvas: CanvasItem, at: Vector2, size: float = 1.0, retracted: bool = false) -> void:
 	canvas.draw_set_transform(at, 0.0, Vector2.ONE * size)

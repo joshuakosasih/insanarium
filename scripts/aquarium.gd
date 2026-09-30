@@ -1168,7 +1168,7 @@ func purchase_piranha() -> void:
 func show_fish_reveal(fish: AquariumFish, heading: String, parents: Array = []) -> void:
 	var data: Dictionary = FishRevealPanelScript.capture(fish, heading, parents)
 	queue_acquisition({"icon": "piranha" if fish.profile.species_id == "piranha" else "fish", "color": data.color, "crowned": fish.wears_crown(),
-		"vitality": data.vitality, "agility": data.agility, "productivity": data.productivity,
+		"vitality": data.vitality, "metabolism": data.metabolism, "agility": data.agility, "productivity": data.productivity,
 		"title": "NEW OFFSPRING!" if heading == "NEW OFFSPRING" else "NEW FISH!",
 		"subtitle": "%s joined your aquarium." % fish.life.id, "reveal": data})
 
