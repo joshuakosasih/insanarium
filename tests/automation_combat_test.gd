@@ -76,7 +76,7 @@ func run() -> void:
 	predator.set_process(false)
 	predator.growth.stage = 2
 	predator.position = Vector2(485, 360)
-	predator.hunger = 0.8
+	predator.hunger = 0.9
 	predator._process(0.1)
 	var effects: Array = tank.get_children().filter(func(node: Node) -> bool: return node is BiteBurst)
 	check(prey.dead and effects.size() == 1, "piranha catch creates one short bite burst")

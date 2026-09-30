@@ -50,7 +50,7 @@ func run() -> void:
 	var low_support: float = neutral_prey_interval / FishBroodstock.interval_for(0.0, true)
 	var high_support: float = neutral_prey_interval / FishBroodstock.interval_for(1.0, true)
 	check(absf(low_support - 1.0) < 0.05 and absf(high_support - 3.5) < 0.1, "boosted breeder Fertility spans about one to 3.5 neutral Adult piranhas")
-	check(FishBroodstock.interval_for(0.5, true) < 136.5, "midrange breeders improve rather than slowing under the wider Fertility curve")
+	check(FishBroodstock.interval_for(0.5, true) >= 75.0 and FishBroodstock.interval_for(0.5, true) <= 85.0 and adult_piranha.predation_hunger >= adult_piranha.prey_nutrition, "average boosted breeders produce near 80 seconds while piranhas use the full prey meal")
 	for i in range(5):
 		parent.brood_left = 0.0
 		tank.advance_broodstock(0.1)

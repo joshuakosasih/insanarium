@@ -12,7 +12,8 @@ static func assess(data: Dictionary) -> Dictionary:
 		var fish_profile := FishProfile.for_species(str(fish.get("species_id", "starter_fish")))
 		var metabolism: float = FishGenome.phenotype_from_data(fish.get("genome", {}), "metabolism")
 		if fish_profile.eats_pellets_at(int(fish.get("stage", 0))):
-			demand += fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
+			var hunger_rate: float = fish_profile.hunger_rate_at(int(fish.get("stage", 0))) * (FishBroodstock.HUNGER_FACTOR if bool(fish.get("broodstock", false)) else 1.0)
+			demand += hunger_rate * FishGenome.hunger_multiplier_for(metabolism) / minf(fish_profile.hungry_threshold, FeedProfile.new().nutrition)
 	var seahorse_level: int = clampi(int(data.get("asset_levels", {}).get("seahorse_interval", 0)), 0, IdleAssets.SEAHORSE_INTERVALS.size() - 1)
 	# One pellet per new hunger episode; the cooldown is only an upper bound.
 	var seahorse_supply: float = minf(demand, 1.0 / IdleAssets.SEAHORSE_INTERVALS[seahorse_level]) if data.owned.seahorse else 0.0

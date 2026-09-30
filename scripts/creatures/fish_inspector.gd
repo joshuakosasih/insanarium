@@ -37,7 +37,8 @@ static func trait_rows(fish: AquariumFish) -> Array[Dictionary]:
 	var profile := fish.profile
 	var hunts_prey: bool = not profile.eats_pellets_at(fish.growth.stage)
 	var hunger_threshold: float = profile.predation_hunger if hunts_prey else profile.hungry_threshold
-	var food_endurance: float = hunger_threshold / (profile.hunger_rate_at(fish.growth.stage) * fish.genome.hunger_multiplier())
+	var hunger_rate: float = profile.hunger_rate_at(fish.growth.stage) * (FishBroodstock.HUNGER_FACTOR if fish.broodstock else 1.0)
+	var food_endurance: float = hunger_threshold / (hunger_rate * fish.genome.hunger_multiplier())
 	var actual_speed: float = fish.swim_speed()
 	var coin_chance: float = 0.0 if fish.broodstock or profile.produces_only_waste else fish.genome.coin_chance()
 	var lifespan: float = minf(FishAging.lifespan_for(fish.genome), profile.maximum_lifespan)

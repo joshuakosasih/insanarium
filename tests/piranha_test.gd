@@ -99,13 +99,13 @@ func run() -> void:
 	predator._process(0.1)
 	check(pellet.consumed and not baby.dead and predator.growth.meals == 1, "baby piranhas grow by eating ordinary pellets")
 	predator.growth.stage = 2
-	predator.hunger = 0.8
+	predator.hunger = 0.9
 	baby.growth.stage = 1
 	var decoy: FishFood = tank.spawn_food(Vector2(590, 350), tank.feeds[0])
 	predator._process(0.1)
 	check(baby.dead and not decoy.consumed and predator.food_target == null and predator.growth.meals == 2, "adult piranha ignores pellets and hunts a young guppy")
 	decoy.free()
-	check(baby.is_queued_for_deletion() and predator.hunger < 0.8, "hunting feeds the adult piranha")
+	check(baby.is_queued_for_deletion() and predator.hunger < 0.9, "hunting feeds the adult piranha")
 	check(predator.profile.reward_grade(1) == 3 and not predator.profile.reward_is_diamond(1) and predator.profile.reward_is_diamond(2) and predator.profile.growth_rewards[2] * predator.profile.coin_value > FishProfile.new().growth_rewards[4], "teen piranhas make gold and adults make a stronger diamond")
 	var adult: AquariumFish = starters[1]
 	adult.growth.stage = 2

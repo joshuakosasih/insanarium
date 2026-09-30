@@ -76,12 +76,12 @@ func run() -> void:
 	var hunter := AquariumFish.new()
 	hunter.profile = FishProfile.for_species("piranha")
 	hunter.growth.stage = 2
-	hunter.hunger = 0.8
+	hunter.hunger = 0.9
 	hunter.position = fry.position + Vector2(5, 0)
 	hunter.bounds = tank.swim_bounds
 	tank.add_child(hunter)
 	hunter.set_process(false)
-	hunter.hunger = 0.8
+	hunter.hunger = 0.9
 	check(FishPredation.eligible(hunter, fry) and FishPredation.nearest(hunter, [fry]) == fry, "Adult piranha hunts feeder fry")
 	var saved: Dictionary = tank.snapshot()
 	check(not BackupValidation.parse(JSON.stringify(saved)).is_empty(), "backup with broodstock and feeder fry validates")
@@ -96,7 +96,7 @@ func run() -> void:
 			item.credit = 74.0
 			item.diamond_trial_done = false
 		else:
-			item.hunger = 0.8
+			item.hunger = 0.9
 		item.coin_left = 1000.0
 	offline_source.food = [{"x": 500.0, "y": 640.0, "tier": 0, "life": 14.0, "settled": true}]
 	offline_source.asset_levels.idle_duration = 4

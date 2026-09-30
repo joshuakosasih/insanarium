@@ -58,12 +58,15 @@ static func for_species(id: String) -> FishProfile:
 		profile.max_prey_stage = 1
 		profile.hunter_stage = 2
 		profile.prey_nutrition = 0.85
+		# Hunt near the amount restored by one fry so an immediate catch does
+		# not waste a quarter of its nutrition at the zero-hunger clamp.
+		profile.predation_hunger = 0.85
 		profile.alien_defense_stage = 2
 	elif id == "feeder_guppy":
 		profile.species_id = "feeder_guppy"
 		profile.species_name = "Feeder Fry"
 		profile.body_color = Color("f6ddb0")
-		profile.hunger_rate = 1.0 / 240.0
+		profile.hunger_rate = 1.0 / 900.0
 		profile.starvation_grace = 120.0
 		profile.growth_sizes = PackedFloat32Array([0.45, 0.70, 0.70, 0.70, 0.70])
 		profile.max_growth_stage = 1

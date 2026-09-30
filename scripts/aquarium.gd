@@ -1748,7 +1748,7 @@ func label_at(parent: Node, text: String, at: Vector2, size: int, color: Color) 
 func refresh_care() -> void:
 	care_refresh = 10.0
 	var care := TankCare.assess(snapshot())
-	var capacity: String = "Supply meets average demand" if care.adequate else "Supply below average demand: manual feeding needed"
+	var capacity: String = "Supply meets average demand while stocked" if care.adequate else "Supply below average demand: manual feeding needed"
 	care_details.text = "Stock: %d / %d pellets | Fish: %d / %d\nAutomation: %.1f meals/min | Estimated need: %.1f/min active\n%s\n\n%s\n\nApproximate care, not a guarantee. Swimming and food competition vary.\nOffline estimates include broodstock fry and predation, but no natural pair breeding or aliens. Refreshes every 10s." % [care.stock, assets.capacity(), care.count, tank_capacity(), care.supply, care.demand, capacity, TankCare.forecast_text(care)]
 	care_warnings.text = TankCare.warnings(get_tree().get_nodes_in_group("fish"), assets.reserve.size(), assets.owned.feeder, environment.cleanliness, tank_capacity())
 

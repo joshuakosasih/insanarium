@@ -70,6 +70,14 @@ func run() -> void:
 	var living_predators: int = result.data.fish.filter(func(fish: Dictionary) -> bool: return str(fish.get("species_id", "")) == "piranha").size()
 	check(result.report.simulated == 2880.0 and result.report.brood_fry > 40 and result.report.preyed > 40, "selected breeders supply prey through a long bounded away estimate")
 	check(living_predators == 8 and result.report.lost == 0, "three max-Fertility boosted breeders sustain eight neutral Adult piranhas under ideal care")
+	var average_source: Dictionary = source.duplicate(true)
+	average_source.reserve = average_source.reserve.slice(0, 150)
+	for i in range(3):
+		average_source.fish[i].genome.fertility = [0.5, 0.5]
+	var average_result: Dictionary = OfflineProgress.advance(average_source, 29800.0)
+	var average_predators: int = average_result.data.fish.filter(func(fish: Dictionary) -> bool: return str(fish.get("species_id", "")) == "piranha").size()
+	var remaining_fry: int = average_result.data.fish.filter(func(fish: Dictionary) -> bool: return str(fish.get("species_id", "")) == "feeder_guppy").size()
+	check(average_predators == 8 and remaining_fry > 0 and average_result.report.lost == 0 and average_result.report.stock_empty_at < 0.0, "three average-Fertility boosted breeders keep eight predators supplied through an eight-hour away period with 150 pellets")
 	var ten_source: Dictionary = source.duplicate(true)
 	for i in range(8, 10):
 		var extra_predator: Dictionary = ten_source.fish[3].duplicate(true)

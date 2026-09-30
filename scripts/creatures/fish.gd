@@ -61,7 +61,8 @@ func _process(delta: float) -> void:
 	if life.age_seconds >= minf(FishAging.lifespan_for(genome), profile.maximum_lifespan):
 		die("Old age")
 		return
-	hunger = minf(1.0, hunger + profile.hunger_rate_at(growth.stage) * genome.hunger_multiplier() * delta)
+	var hunger_rate: float = profile.hunger_rate_at(growth.stage) * (FishBroodstock.HUNGER_FACTOR if broodstock else 1.0)
+	hunger = minf(1.0, hunger + hunger_rate * genome.hunger_multiplier() * delta)
 	coin_left -= delta
 	alien_attack_left = maxf(0.0, alien_attack_left - delta)
 	if coin_left <= 0.0:
