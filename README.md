@@ -4,6 +4,10 @@ Play the current browser build at **https://joshuakosasih.github.io/insanarium/*
 
 Godot 4.5.1, GDScript, Compatibility renderer. Entirely frontend-only, with original procedural vector artwork. No backend or account required.
 
+## License
+
+The original Insanarium game code and assets are **source-available for noncommercial use** under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). See [project and third-party notices](NOTICE.md). Commercial reuse of this project's protected material requires separate permission from the copyright holder. The bundled CC0 music and Godot Engine runtime keep their own licenses. A noncommercial restriction means this is not an OSI-defined open-source license, and copyright in the game does not cover independently developed games based on a similar idea.
+
 Long-term design: [Agreed ecosystem direction](docs/DESIGN_DIRECTION.md). Future features in that document are plans, not all implemented.
 
 ## Run

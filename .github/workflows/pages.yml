@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v6
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      - name: Include license notices in web build
+        run: cp LICENSE.md NOTICE.md GODOT_LICENSE.txt build/web/
       - name: Upload Godot web export
         uses: actions/upload-pages-artifact@v4
         with:
